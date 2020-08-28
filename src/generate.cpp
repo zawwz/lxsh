@@ -6,6 +6,8 @@
 #include "options.hpp"
 #include "parse.hpp"
 
+#include <unistd.h>
+
 std::vector<std::string> included;
 
 bool is_sub_special_cmd(std::string in)
@@ -99,10 +101,24 @@ std::string concatargs(std::vector<std::string> args)
 
 std::string generate_resolve(std::vector<std::string> args, int ind)
 {
+  std::string ret;
+
   auto opts=create_resolve_opts();
   auto rargs = opts.process(args, false, true, false);
 
   std::string cmd=concatargs(rargs);
+  std::string dir;
+
+  if(!opts['C'] && !piped)
+  {
+    dir=pwd();
+    std::string cddir=ztd::exec("dirname", g_origin).first;
+    cddir.pop_back();
+    chdir(cddir.c_str());
+  }
+
+
+  // exec call
   auto p=ztd::shp("exec "+cmd);
 
   if(!opts['f'] && p.second!=0)
@@ -114,17 +130,29 @@ std::string generate_resolve(std::vector<std::string> args, int ind)
 
   if(opts['p'])
   {
-    block bl = parse(p.first);
-    std::string ret = bl.generate(ind, false);
+    block bl;
+    try
+    {
+      bl = parse(p.first);
+    }
+    catch(ztd::format_error& e)
+    {
+      throw ztd::format_error(e.what(), "command `"+cmd+'`', e.data(), e.where());
+    }
+    ret = bl.generate(ind, false);
     std::string tmpind=INDENT;
     ret = ret.substr(tmpind.size());
     ret.pop_back(); // remove \n
-    return ret;
   }
   else
   {
-    return p.first;
+    ret = p.first;
   }
+
+  if(!opts['C'] && !piped)
+    chdir(dir.c_str());
+
+  return ret;
 }
 
 std::string generate_include(std::vector<std::string> args, int ind)
@@ -140,6 +168,17 @@ std::string generate_include(std::vector<std::string> args, int ind)
   else if(opts['d'])
     quote = '"';
 
+  std::string curfile=g_origin;
+  std::string dir;
+
+  if(!opts['C'] && !piped)
+  {
+    dir=pwd();
+    std::string cddir=ztd::exec("dirname", curfile).first;
+    cddir.pop_back();
+    chdir(cddir.c_str());
+  }
+
   // do shell resolution
   std::string command="for I in ";
   for(auto it: rargs)
@@ -148,6 +187,7 @@ std::string generate_include(std::vector<std::string> args, int ind)
   std::string inc=ztd::sh(command);
 
   auto v = split(inc, '\n');
+
 
   std::string file;
   block bl;
@@ -159,10 +199,13 @@ std::string generate_include(std::vector<std::string> args, int ind)
         add_include(it) ) // not already included
     {
       file=import_file(it);
+      if(opts['e'])
+        file = stringReplace(file, "\"", "\\\"");
       if(opts['r'])
         ret += file;
       else
       {
+        g_origin=it;
         try
         {
           bl = parse(quote + file + quote);
@@ -182,6 +225,9 @@ std::string generate_include(std::vector<std::string> args, int ind)
       }
     }
   }
+  if(!opts['C'] && !piped)
+    chdir(dir.c_str());
+  g_origin=curfile;
 
   if(!opts['r'])
     ret.pop_back();
@@ -215,13 +261,17 @@ std::string block::generate_case(int ind)
   ind++;
   for(auto cs: this->cases)
   {
+    // case definition : foo)
     if(!opt_minimize) ret += INDENT;
     ret += cs.first.generate(ind) + ')';
     if(!opt_minimize) ret += '\n';
+    // commands
     for(auto it: cs.second)
       ret += it.generate(ind+1);
+    // end of case: ;;
     if(opt_minimize)
     {
+      // ;; can be right after command
       if(ret[ret.size()-1] == '\n')
         ret.pop_back();
     }
@@ -233,6 +283,7 @@ std::string block::generate_case(int ind)
     }
     ret += ";;\n";
   }
+  // close case
   ind--;
   if(!opt_minimize) ret += INDENT;
   ret += "esac";
@@ -251,25 +302,30 @@ std::string block::generate(int ind, bool print_shebang)
   {
     if(type==function)
     {
+      // function definition
       ret += shebang + "()";
       if(!opt_minimize) ret += '\n' + INDENT;
-        ret += "{\n";
+      ret += "{\n";
+      // commands
       for(auto it: cls)
         ret += it.generate(ind+1);
-      if(!opt_minimize)
-        ret += INDENT;
+      if(!opt_minimize) ret += INDENT;
+      // end function
       ret += '}';
     }
     else if(type==subshell)
     {
+      // open subshell
       ret += '(';
       if(!opt_minimize) ret += '\n';
+      // commands
       for(auto it: cls)
         ret += it.generate(ind+1);
       if(opt_minimize)
-        ret.pop_back();
+        ret.pop_back(); // ) can be right after command
       else
         ret += INDENT;
+      // close subshell
       ret += ')';
     }
     else if(type==brace)

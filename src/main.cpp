@@ -7,18 +7,19 @@
 
 #include <unistd.h>
 
+#include "util.hpp"
 #include "struc.hpp"
 #include "parse.hpp"
 #include "options.hpp"
 
 int main(int argc, char* argv[])
 {
-  auto args=options.process(argc, argv);
+  auto args=options.process(argc, argv, false, true);
 
   if(options['m'])
     opt_minimize=true;
 
-  bool piped=false;
+  piped=false;
 
   if(options['h'])
   {
@@ -58,34 +59,48 @@ int main(int argc, char* argv[])
     }
   }
 
-  if(!piped && !options['C'])
-  {
-    std::string dir=ztd::exec("dirname", file).first;
-    dir.pop_back();
-    file=ztd::exec("basename", file).first;
-    file.pop_back();
-    chdir(dir.c_str());
-  }
-
   g_origin=file;
   add_include(file);
 
-  if(args.size()>0)
+  try
   {
-    try
+    block sh(parse(import_file(file)));
+    if(options['E'])
     {
-      block sh(parse(import_file(file)));
+      std::string data=sh.generate();
+      // generate path
+      std::string tmpdir = (getenv("TMPDIR") != NULL) ? getenv("TMPDIR") : "/tmp" ;
+      std::string filepath = tmpdir + "/lxsh_exec_" + ztd::sh("tr -dc '[:alnum:]' < /dev/urandom | head -c10");
+      // create stream
+      std::ofstream stream(filepath);
+      if(!stream)
+        throw std::runtime_error("Failed to write to file '"+filepath+'\'');
+
+      // output
+      stream << data;
+      stream.close();
+      auto p = ztd::exec("chmod", "+x", filepath);
+      if(p.second != 0)
+        return p.second;
+
+      args.erase(args.begin());
+      _exec(filepath, args);
+
+    }
+    else
+    {
       std::cout << sh.generate();
     }
-    catch(ztd::format_error& e)
-    {
-      printFormatException(e);
-    }
-    catch(std::exception& e)
-    {
-      std::cerr << e.what() << std::endl;
-    }
   }
+  catch(ztd::format_error& e)
+  {
+    printFormatException(e);
+  }
+  catch(std::exception& e)
+  {
+    std::cerr << e.what() << std::endl;
+  }
+
 
   return 0;
 }

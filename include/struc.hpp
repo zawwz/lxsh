@@ -11,13 +11,16 @@
 /*
 structure:
 
+list_t : condlist[]
+
 block:
 - group
-  - brace:  condlist[]
-  - subsh:  condlist[]
+  - brace:  list_t
+  - subsh:  list_t
 - cmd: arglist[]
-- if
-  - pair<condlist[]>[]
+- case
+  - arg                (input)
+  - pair<arg,list_t>[] (cases)
 
 condlist:
   pipeline[]
@@ -30,14 +33,11 @@ arglist:
 
 arg:
 - raw
-- subarg[]
+- subarg[]      split into subarguments in case of subshells
 
 subarg:
 - raw
-- variable
-- block: subshell
-
-
+- block: subshell (substitution)
 */
 
 #define AND_OP false
@@ -49,6 +49,7 @@ class pipeline;
 class arg;
 class subarg;
 
+// type pack of condlist
 typedef std::vector<condlist> list_t;
 
 block make_cmd(std::vector<std::string> args);
@@ -63,11 +64,14 @@ public:
 
   void setstring(std::string const& str);
 
+  // has to be set manually
   std::string raw;
 
   std::vector<subarg> sa;
 
+  // return if is a string and only one subarg
   std::string string();
+
   std::string generate(int ind);
 };
 
@@ -99,12 +103,17 @@ public:
 class block
 {
 public:
+  // type
   enum blocktype { none, subshell, brace, main, cmd, function, case_block, for_block, if_block, while_block};
+  blocktype type;
+
+  // ctor
   block() { type=none; }
   block(blocktype in) { type=in; }
-  blocktype type;
+
   // subshell/brace/main
   list_t cls;
+
   // cmd
   arglist args;
 
@@ -143,12 +152,13 @@ public:
   condlist() { parallel=false; }
   condlist(block const& pl) { parallel=false; this->add(pl);}
   condlist(pipeline const& pl) { parallel=false; this->add(pl);}
-  void add(pipeline const& pl, bool or_op=false);
 
-  bool parallel;
-  // don't push_back here
-  std::vector<bool> or_ops;
+  bool parallel; // & at the end
+
+  void add(pipeline const& pl, bool or_op=false);
+  // don't push_back here, use add() instead
   std::vector<pipeline> pls;
+  std::vector<bool> or_ops; // size of 1 less than pls, defines separator between pipelines
 
   std::string generate(int ind);
 };
@@ -157,12 +167,15 @@ public:
 class subarg
 {
 public:
+  // type
   enum argtype { string, subshell };
+  argtype type;
+
+  // ctor
   subarg(argtype in) { this->type=in; }
   subarg(std::string const& in="") { type=string; val=in; }
   subarg(block const& in) { type=subshell; sbsh=in; }
 
-  argtype type;
   // raw string
   std::string val;
   // subshell

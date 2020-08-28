@@ -241,7 +241,9 @@ std::pair<condlist, uint32_t> parse_condlist(const char* in, uint32_t size, uint
   return std::make_pair(ret, i);
 }
 
-// parse condlists until )
+// parse a subshell
+// must start right after the opening (
+// ends at ) and nothing else
 std::pair<block, uint32_t> parse_subshell(const char* in, uint32_t size, uint32_t start)
 {
   uint32_t i = skip_unread(in, size, start);
@@ -258,7 +260,9 @@ std::pair<block, uint32_t> parse_subshell(const char* in, uint32_t size, uint32_
   return std::make_pair(ret,i);
 }
 
-// parse condlists until }
+// parse a brace block
+// must start right after the opening {
+// ends at } and nothing else
 std::pair<block, uint32_t> parse_brace(const char* in, uint32_t size, uint32_t start)
 {
   uint32_t i = skip_unread(in, size, start);
@@ -279,6 +283,9 @@ std::pair<block, uint32_t> parse_brace(const char* in, uint32_t size, uint32_t s
   return std::make_pair(ret,i);
 }
 
+// parse a functions
+// must start right after the ()
+// then parses a brace block
 std::pair<block, uint32_t> parse_function(const char* in, uint32_t size, uint32_t start)
 {
   block ret(block::function);
@@ -301,16 +308,18 @@ std::pair<block, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t sta
   block ret(block::cmd);
   uint32_t i=start;
 
+  // parse first arg and keep it
   auto tp=parse_arg(in, size, i);
   i=skip_unread(in, size, tp.second);
-  if(word_eq("()", in, size, i))
+  if(word_eq("()", in, size, i)) // is a function
   {
     i += 2;
     auto pp = parse_function(in, size, i);
+    // first arg is function name
     pp.first.shebang = tp.first.raw;
     return pp;
   }
-  else
+  else // is a command
   {
     auto pp=parse_arglist(in, size, start);
     ret.args = pp.first;
@@ -320,16 +329,20 @@ std::pair<block, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t sta
   return std::make_pair(ret, i);
 }
 
+// parse a case block
+// must start right after the case
+// ends at } and nothing else
 std::pair<block, uint32_t> parse_case(const char* in, uint32_t size, uint32_t start)
 {
   block ret(block::case_block);
-  uint32_t i=start;
+  uint32_t i=skip_unread(in, size, start);;
 
-  auto pa = parse_arg(in, size, i); // case arg
+  // get the treated argument
+  auto pa = parse_arg(in, size, i);
   ret.carg = pa.first;
   i=skip_unread(in, size, pa.second);
 
-
+  // must be an 'in'
   if(!word_eq("in", in, size, i))
   {
     auto pp=parse_arg(in, size, i);
@@ -338,6 +351,7 @@ std::pair<block, uint32_t> parse_case(const char* in, uint32_t size, uint32_t st
 
   i=skip_unread(in, size, i+2);
 
+  // parse all cases
   while(i<size && !word_eq("esac", in, size, i, " \t\n;()&") )
   {
     // toto)
@@ -361,18 +375,21 @@ std::pair<block, uint32_t> parse_case(const char* in, uint32_t size, uint32_t st
       if(in[i] == ')')
         throw ztd::format_error( strf("Unexpected token '%c', expecting ';;'", in[i]), g_origin, in, i );
 
+      // end of case: on same line
       if(in[i-1] == ';' && in[i] == ';')
       {
         i++;
         break;
       }
 
+      // end of case: on new line
       i=skip_unread(in, size, i);
       if(word_eq(";;", in, size, i))
       {
         i+=2;
         break;
       }
+      // end of block: ignore missing ;;
       if(word_eq("esac", in, size, i))
         break;
 
@@ -381,6 +398,7 @@ std::pair<block, uint32_t> parse_case(const char* in, uint32_t size, uint32_t st
     ret.cases.push_back(cc);
   }
 
+  // ended before finding esac
   if(i>=size)
     throw ztd::format_error("Expecting 'esac'", g_origin, in, i);
   i+=4;
@@ -405,8 +423,7 @@ std::pair<block, uint32_t> parse_block(const char* in, uint32_t size, uint32_t s
   }
   else if(word_eq("case", in, size, i))
   {
-    i = skip_unread(in, size, i+4);
-    ret = parse_case(in, size, i);
+    ret = parse_case(in, size, i+4);
   }
   else // command
   {
@@ -424,15 +441,16 @@ std::pair<block, uint32_t> parse_block(const char* in, uint32_t size, uint32_t s
 // parse main
 block parse(const char* in, uint32_t size)
 {
-
   block ret(block::main);
   uint32_t i=0;
+  // get shebang
   if(word_eq("#!", in, size, 0))
   {
     i=skip_until(in, size, 0, "\n");
     ret.shebang=std::string(in, i);
   }
   i = skip_unread(in, size, i);
+  // parse all commands
   while(i<size)
   {
     auto pp=parse_condlist(in, size, i);
@@ -442,6 +460,7 @@ block parse(const char* in, uint32_t size)
   return ret;
 }
 
+// import a file's contents into a string
 std::string import_file(std::string const& path)
 {
   std::ifstream st(path);

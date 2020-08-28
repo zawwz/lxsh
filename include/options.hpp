@@ -6,6 +6,8 @@
 extern ztd::option_set options;
 
 extern bool opt_minimize;
+extern bool piped; // for cd in substitutions
+
 
 ztd::option_set gen_options();
 void print_help(const char* arg0);

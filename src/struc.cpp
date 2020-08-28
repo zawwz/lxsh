@@ -2,6 +2,8 @@
 
 #include "util.hpp"
 
+#include <unistd.h>
+
 block make_cmd(std::vector<std::string> args)
 {
   block cmd(block::cmd);
@@ -24,6 +26,7 @@ void arg::setstring(std::string const& str)
 {
   sa.resize(0);
   sa.push_back(subarg(str));
+  raw = str;
 }
 
 void condlist::add(pipeline const& pl, bool or_op)
