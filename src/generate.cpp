@@ -44,6 +44,9 @@ std::string pipeline::generate(int ind)
 {
   std::string ret;
 
+  if(cmds.size()<=0)
+    return "";
+
   ret += cmds[0].generate(ind);
   for(uint32_t i=1 ; i<cmds.size() ; i++)
   {
@@ -57,7 +60,10 @@ std::string pipeline::generate(int ind)
 std::string condlist::generate(int ind)
 {
   std::string ret;
-  if(!opt_minimize) ret += INDENT;
+  if(pls.size() <= 0)
+    return "";
+  if(!opt_minimize)
+    ret += INDENT;
   ret += pls[0].generate(ind);
   for(uint32_t i=0 ; i<pls.size()-1 ; i++)
   {
@@ -114,7 +120,8 @@ std::string generate_resolve(std::vector<std::string> args, int ind)
     dir=pwd();
     std::string cddir=ztd::exec("dirname", g_origin).first;
     cddir.pop_back();
-    chdir(cddir.c_str());
+    if(chdir(cddir.c_str()) != 0)
+      throw std::runtime_error("Cannot cd to '"+cddir+"'");
   }
 
 
@@ -150,7 +157,8 @@ std::string generate_resolve(std::vector<std::string> args, int ind)
   }
 
   if(!opts['C'] && !piped)
-    chdir(dir.c_str());
+    if(chdir(dir.c_str()) != 0)
+      throw std::runtime_error("Cannot cd to '"+dir+"'");
 
   return ret;
 }
@@ -176,7 +184,8 @@ std::string generate_include(std::vector<std::string> args, int ind)
     dir=pwd();
     std::string cddir=ztd::exec("dirname", curfile).first;
     cddir.pop_back();
-    chdir(cddir.c_str());
+    if(chdir(cddir.c_str()) != 0)
+      throw std::runtime_error("Cannot cd to '"+cddir+"'");
   }
 
   // do shell resolution
@@ -199,7 +208,7 @@ std::string generate_include(std::vector<std::string> args, int ind)
         add_include(it) ) // not already included
     {
       file=import_file(it);
-      if(opts['e'])
+      if(opts['d'])
         file = stringReplace(file, "\"", "\\\"");
       if(opts['r'])
         ret += file;
@@ -226,7 +235,8 @@ std::string generate_include(std::vector<std::string> args, int ind)
     }
   }
   if(!opts['C'] && !piped)
-    chdir(dir.c_str());
+    if(chdir(dir.c_str()) != 0)
+      throw std::runtime_error("Cannot cd to '"+dir+"'");
   g_origin=curfile;
 
   if(!opts['r'])
@@ -321,7 +331,7 @@ std::string block::generate(int ind, bool print_shebang)
       // commands
       for(auto it: cls)
         ret += it.generate(ind+1);
-      if(opt_minimize)
+      if(opt_minimize && ret.size()>1)
         ret.pop_back(); // ) can be right after command
       else
         ret += INDENT;

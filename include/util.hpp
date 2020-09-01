@@ -7,6 +7,8 @@
 #include <exception>
 #include <stdexcept>
 
+#include <ztd/filedat.hpp>
+
 #define INDENT indent(ind)
 
 extern std::string indenting_string;
@@ -35,5 +37,8 @@ std::string pwd();
 void _exec(std::string const& bin, std::vector<std::string> const& args);
 
 std::string stringReplace(std::string subject, const std::string& search, const std::string& replace);
+
+void printFormatError(ztd::format_error const& e, bool print_line=true);
+void printErrorIndex(const char* in, const int index, const std::string& message, const std::string& origin, bool print_line=true);
 
 #endif //UTIL_HPP

@@ -4,13 +4,12 @@ ztd::option_set options = gen_options();
 bool opt_minimize;
 bool piped=false;
 
-
 ztd::option_set gen_options()
 {
   ztd::option_set ret;
   ret.add(ztd::option('h', "help",     false, "Display this help message"));
   ret.add(ztd::option('m', "minimize", false, "Minimize code"));
-  ret.add(ztd::option('E', "exec",     false, "Directly exec instead of outputting"));
+  ret.add(ztd::option('e', "exec",     false, "Directly exec instead of outputting"));
   ret.add(ztd::option("help-commands", false, "Print help for linker commands"));
   return ret;
 }

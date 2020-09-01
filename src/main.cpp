@@ -65,7 +65,7 @@ int main(int argc, char* argv[])
   try
   {
     block sh(parse(import_file(file)));
-    if(options['E'])
+    if(options['e'])
     {
       std::string data=sh.generate();
       // generate path
@@ -94,11 +94,13 @@ int main(int argc, char* argv[])
   }
   catch(ztd::format_error& e)
   {
-    printFormatException(e);
+    printFormatError(e);
+    return 100;
   }
   catch(std::exception& e)
   {
     std::cerr << e.what() << std::endl;
+    return 2;
   }
 
 

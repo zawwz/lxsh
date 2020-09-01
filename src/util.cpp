@@ -89,3 +89,49 @@ std::string stringReplace(std::string subject, const std::string& search, const 
   }
   return subject;
 }
+
+void printFormatError(ztd::format_error const& e, bool print_line)
+{
+  printErrorIndex(e.data(), e.where(), e.what(), e.origin(), print_line);
+}
+
+std::string repeatString(std::string const& str, uint32_t n)
+{
+  std::string ret;
+  for(uint32_t i=0; i<n; i++)
+    ret += str;
+  return ret;
+}
+
+void printErrorIndex(const char* in, const int index, const std::string& message, const std::string& origin, bool print_line)
+{
+  int i=0, j=0; // j: last newline
+  int line=1; //n: line #
+  int in_size=strlen(in);
+  if(index >= 0)
+  {
+    while(i < in_size && i < index)
+    {
+      if(in[i] == '\n')
+      {
+        line++;
+        j=i+1;
+      }
+      i++;
+    }
+    while(i < in_size && in[i]!='\n')
+    {
+      i++;
+    }
+  }
+  if(origin != "")
+  {
+    fprintf(stderr, "%s:%u:%u: %s\n", origin.c_str(), line, index-j+1, message.c_str());
+    if(print_line)
+    {
+      std::cerr << std::string(in+j, i-j) << std::endl;
+      std::cerr << repeatString(" ", index-j) << '^' << std::endl;
+    }
+  }
+}
+

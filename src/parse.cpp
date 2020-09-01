@@ -10,7 +10,7 @@ std::string g_origin;
 
 inline bool is_in(char c, const char* set)
 {
-  return index(set, c) != NULL;
+  return strchr(set, c) != NULL;
 }
 
 inline bool is_alphanum(char c)
@@ -36,6 +36,15 @@ bool word_eq(const char* word, const char* in, uint32_t size, uint32_t start, co
       return is_in(in[start+wordsize], end_set);
   }
   return false;
+}
+
+std::string get_word(const char* in, uint32_t size, uint32_t start, const char* end_set)
+{
+  uint32_t i=start;
+  while(i<size && !is_in(in[i], end_set))
+    i++;
+
+  return std::string(in+start, i-start);
 }
 
 uint32_t skip_chars(const char* in, uint32_t size, uint32_t start, const char* set)
@@ -77,7 +86,11 @@ std::pair<arg, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start
 {
   arg ret;
   // j : start of subarg
-  uint32_t i=start,j=start;
+  uint32_t i=start,j=start,q=start;
+
+  if(is_in(in[i], "&|;\n#()"))
+    throw ztd::format_error( strf("Unexpected token '%c'", in[i]) , g_origin, in, i);
+
   while(i<size && !is_in(in[i], " \t|&;\n()"))
   {
     if(i+1<size && is_in(in[i], "<>") && in[i+1]=='&') // special case for <& and >&
@@ -93,15 +106,13 @@ std::pair<arg, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start
     }
     else if(in[i] == '"') // start double quote
     {
+      q=i;
       i++;
-      while(i<size && in[i] != '"') // while inside quoted string
+      while(in[i] != '"') // while inside quoted string
       {
         if(in[i] == '\\') // backslash: don't check next char
         {
-          i++;
-          if(i>=size)
-            break;
-          i++;
+          i+=2;
         }
         else if( word_eq("$(", in, size, i) ) // substitution
         {
@@ -115,18 +126,20 @@ std::pair<arg, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start
         }
         else
           i++;
+
+        if(i>=size)
+          throw ztd::format_error("Unterminated double quote", g_origin, in, q);
       }
-      if(i>=size)
-        break;
       i++;
     }
     else if(in[i] == '\'') // start single quote
     {
+      q=i;
       i++;
       while(i<size && in[i]!='\'')
         i++;
       if(i>=size)
-        break;
+        throw ztd::format_error("Unterminated single quote", g_origin, in, q);
       i++;
     }
     else if( word_eq("$(", in, size, i) ) // substitution
@@ -155,10 +168,17 @@ std::pair<arg, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start
 // must start at a read char
 // first char has to be read
 // ends at either &|;\n#()
-std::pair<arglist, uint32_t> parse_arglist(const char* in, uint32_t size, uint32_t start)
+std::pair<arglist, uint32_t> parse_arglist(const char* in, uint32_t size, uint32_t start, bool hard_error=false)
 {
   uint32_t i=start;
   arglist ret;
+  if(is_in(in[i], "&|;\n#(){}"))
+  {
+    if(hard_error)
+      throw ztd::format_error( strf("Unexpected token '%c'", in[i]) , g_origin, in, i);
+    else
+      return std::make_pair(ret, i);
+  }
   while(i<size)
   {
     auto pp=parse_arg(in, size, i);
@@ -178,7 +198,7 @@ std::pair<block, uint32_t> parse_block(const char* in, uint32_t size, uint32_t s
 // ends at either &;\n#)
 std::pair<pipeline, uint32_t> parse_pipeline(const char* in, uint32_t size, uint32_t start)
 {
-  uint32_t i = skip_unread(in, size, start);
+  uint32_t i=start;
   pipeline ret;
   while(i<size)
   {
@@ -237,6 +257,9 @@ std::pair<condlist, uint32_t> parse_condlist(const char* in, uint32_t size, uint
       throw ztd::format_error( strf("Unexpected token: '%c%c'", in[i], in[i+1]), g_origin, in, i);
     else // unknown
       throw ztd::format_error("Unknown error", g_origin, in, i);
+    i = skip_unread(in, size, i);
+    if(i>=size)
+      throw ztd::format_error( "Unexpected end of file", g_origin, in, i );
   }
   return std::make_pair(ret, i);
 }
@@ -248,14 +271,16 @@ std::pair<block, uint32_t> parse_subshell(const char* in, uint32_t size, uint32_
 {
   uint32_t i = skip_unread(in, size, start);
   block ret(block::subshell);
-  while(i<size && in[i] != ')')
+  while(in[i] != ')')
   {
     auto pp=parse_condlist(in, size, i);
     ret.cls.push_back(pp.first);
     i = skip_unread(in, size, pp.second);
+    if(i>=size)
+      throw ztd::format_error("Expecting )", g_origin, in, start-1);
   }
-  if(i>=size)
-    throw ztd::format_error("Expecting )", g_origin, in, start-1);
+  if(ret.cls.size()<=0)
+    throw ztd::format_error("Subshell is empty", g_origin, in, start-1);
   i++;
   return std::make_pair(ret,i);
 }
@@ -267,17 +292,18 @@ std::pair<block, uint32_t> parse_brace(const char* in, uint32_t size, uint32_t s
 {
   uint32_t i = skip_unread(in, size, start);
   block ret(block::brace);
-  while(i<size && in[i] != '}')
+  while(in[i] != '}')
   {
     auto pp=parse_condlist(in, size, i);
     ret.cls.push_back(pp.first);
     i = skip_unread(in, size, pp.second);
+    if(i>=size)
+      throw ztd::format_error("Expecting }", g_origin, in, start-1);
     if(is_in(in[i], ")"))
       throw ztd::format_error( strf("Unexpected token: '%c'", in[i]) , g_origin, in, i );
   }
-  if(i>=size)
-    throw ztd::format_error("Expecting }", g_origin, in, start-1);
-
+  if(ret.cls.size()<=0)
+    throw ztd::format_error("Brace block is empty", g_origin, in, start-1);
   i++;
 
   return std::make_pair(ret,i);
@@ -321,7 +347,7 @@ std::pair<block, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t sta
   }
   else // is a command
   {
-    auto pp=parse_arglist(in, size, start);
+    auto pp=parse_arglist(in, size, start, true);
     ret.args = pp.first;
     i = pp.second;
   }
@@ -335,7 +361,7 @@ std::pair<block, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t sta
 std::pair<block, uint32_t> parse_case(const char* in, uint32_t size, uint32_t start)
 {
   block ret(block::case_block);
-  uint32_t i=skip_unread(in, size, start);;
+  uint32_t i=skip_chars(in, size, start, " \t");;
 
   // get the treated argument
   auto pa = parse_arg(in, size, i);
@@ -343,10 +369,10 @@ std::pair<block, uint32_t> parse_case(const char* in, uint32_t size, uint32_t st
   i=skip_unread(in, size, pa.second);
 
   // must be an 'in'
-  if(!word_eq("in", in, size, i))
+  if(!word_eq("in", in, size, i, " \t\n"))
   {
-    auto pp=parse_arg(in, size, i);
-    throw ztd::format_error("Unexpected word: '"+pp.first.raw+"', expecting 'in' after case", g_origin, in, i);
+    std::string pp=get_word(in, size, i, " \t\n");
+    throw ztd::format_error("Unexpected word: '"+pp+"', expecting 'in' after case", g_origin, in, i);
   }
 
   i=skip_unread(in, size, i+2);
@@ -357,6 +383,8 @@ std::pair<block, uint32_t> parse_case(const char* in, uint32_t size, uint32_t st
     // toto)
     std::pair<arg, list_t> cc;
     pa = parse_arg(in, size, i);
+    if(pa.first.raw == "")
+      throw ztd::format_error("Empty case value", g_origin, in, i);
     cc.first = pa.first;
     i=skip_unread(in, size, pa.second);
 
@@ -410,6 +438,8 @@ std::pair<block, uint32_t> parse_case(const char* in, uint32_t size, uint32_t st
 std::pair<block, uint32_t> parse_block(const char* in, uint32_t size, uint32_t start)
 {
   uint32_t i = skip_chars(in, size, start, " \n\t");
+  if(i>=size)
+    throw ztd::format_error("Unexpected end of file", g_origin, in, i);
   std::pair<block, uint32_t> ret;
   if(in[i] == '{') // brace block
   {
@@ -431,7 +461,7 @@ std::pair<block, uint32_t> parse_block(const char* in, uint32_t size, uint32_t s
   }
   if(ret.first.args.args.size()<=0)
   {
-    auto pp=parse_arglist(in, size, ret.second); // in case of redirects
+    auto pp=parse_arglist(in, size, ret.second, false); // in case of redirects
     ret.second=pp.second;
     ret.first.args=pp.first;
   }

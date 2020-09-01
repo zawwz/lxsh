@@ -9,7 +9,7 @@ BINDIR=.
 NAME = $(shell readlink -f . | xargs basename)
 
 # global links
-LDFLAGS = -lpthread
+LDFLAGS = -Wl,--no-as-needed -lpthread
 
 # compiler
 CC=g++
