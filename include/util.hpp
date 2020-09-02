@@ -34,7 +34,7 @@ std::string delete_brackets(std::string const& in);
 
 std::string pwd();
 
-void _exec(std::string const& bin, std::vector<std::string> const& args);
+int _exec(std::string const& bin, std::vector<std::string> const& args);
 
 std::string stringReplace(std::string subject, const std::string& search, const std::string& replace);
 

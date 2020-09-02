@@ -16,9 +16,23 @@ These commands can be placed anywhere within the script like regular commands.
 
 ## Other features
 
+### Output generated code
+
+Output the generated shell code to stdout with either:
+- `-o` option
+- shebang other than lxsh
+
+> Redirect stdout to a file to create a script file. <br>
+> The resulting script is not dependent on lxsh
+
 ### Live execution
 
-Execute an extended shell script directly with the `-e` option.
+Directly execute an extended shell script with either
+- `-e` option
+- shebang is lxsh
+
+> Direct execution introduces direct dependency on lxsh and overhead,
+> therefore it should be avoided outside of development use
 
 ### Minimize code
 
@@ -30,5 +44,6 @@ lxsh should currently fully support POSIX syntax. <br>
 A POSIX shell script should give a working output.
 
 Some specific features are missing:
-- link commands inside arithmetics (`$(())`) are not resolved
+- link commands in subshells inside arithmetics are not resolved
+- arithmetics cannot be minimized
 - link commands placed on the same line as keywords `if`, `then`, `elif`, `else`, `for`, `while`, `do` or `done` are not resolved

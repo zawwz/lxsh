@@ -1,6 +1,10 @@
 #include "util.hpp"
 
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#include <iostream>
 
 #include <ztd/shell.hpp>
 
@@ -69,14 +73,40 @@ std::string pwd()
   return std::string(buf);
 }
 
-void _exec(std::string const& bin, std::vector<std::string> const& args)
+int _exec(std::string const& bin, std::vector<std::string> const& args)
 {
   std::vector<char*> rargs;
-  rargs.push_back((char*) bin.c_str());
   for(auto it=args.begin(); it!=args.end(); it++)
     rargs.push_back((char*) it->c_str());
   rargs.push_back(NULL);
-  execvp(bin.c_str(), rargs.data());
+
+  pid_t pid;
+
+  // forking
+  if((pid = fork()) == -1)
+  {
+    perror("fork");
+    exit(1);
+  }
+  // child process
+  if(pid == 0)
+  {
+    setpgid(pid, pid); //Needed so negative PIDs can kill children of /bin/sh
+    execvp(bin.c_str(), rargs.data());
+    exit(1); // exec didn't work
+  }
+
+  int stat;
+  // wait for end and get return value
+  while (waitpid(pid, &stat, 0) == -1)
+  {
+    if (errno != EINTR)
+    {
+      stat = -1;
+      break;
+    }
+  }
+  return stat;
 }
 
 std::string stringReplace(std::string subject, const std::string& search, const std::string& replace)
@@ -134,4 +164,3 @@ void printErrorIndex(const char* in, const int index, const std::string& message
     }
   }
 }
-
