@@ -124,7 +124,6 @@ std::string generate_resolve(std::vector<std::string> args, int ind)
       throw std::runtime_error("Cannot cd to '"+cddir+"'");
   }
 
-
   // exec call
   auto p=ztd::shp("exec "+cmd);
 
@@ -210,6 +209,8 @@ std::string generate_include(std::vector<std::string> args, int ind)
       file=import_file(it);
       if(opts['d'])
         file = stringReplace(file, "\"", "\\\"");
+      if(opts['s'])
+        file = stringReplace(file, "'", "'\\''");
       if(opts['r'])
         ret += file;
       else
@@ -377,6 +378,10 @@ std::string subarg::generate(int ind)
   if(type == subarg::string)
   {
     ret += val;
+  }
+  else if(type == subarg::arithmetic)
+  {
+    ret += "$(("+val+"))";
   }
   else if(type == subarg::subshell)
   {

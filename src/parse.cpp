@@ -79,6 +79,25 @@ uint32_t skip_unread(const char* in, uint32_t size, uint32_t start)
 
 std::pair<block, uint32_t> parse_subshell(const char* in, uint32_t size, uint32_t start);
 
+// parse an arithmetic
+// ends at ))
+// for now, uses subshell parsing then takes raw string value
+// temporary, to improve
+std::pair<subarg, uint32_t> parse_arithmetic(const char* in, uint32_t size, uint32_t start)
+{
+  subarg ret(subarg::arithmetic);
+  uint32_t i=start;
+
+  auto pp=parse_subshell(in, size, i);
+  i=pp.second;
+  if(i >= size || in[i]!=')')
+    throw ztd::format_error( "Unexpected token ')', expecting '))'", g_origin, in, i );
+  ret.val = std::string(in+start, i-start-1);
+  i++;
+
+  return std::make_pair(ret, i);
+}
+
 // parse one argument
 // must start at a read char
 // ends at either " \t|&;\n()"
@@ -114,12 +133,22 @@ std::pair<arg, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start
         {
           i+=2;
         }
+        else if( word_eq("$((", in, size, i) ) // arithmetic operation
+        {
+          // add previous subarg
+          ret.sa.push_back(subarg(std::string(in+j, i-j)));
+          i+=3;
+          // get arithmetic
+          auto r=parse_arithmetic(in, size, i);
+          ret.sa.push_back(r.first);
+          j = i = r.second;
+        }
         else if( word_eq("$(", in, size, i) ) // substitution
         {
-          // add string subarg
+          // add previous subarg
           ret.sa.push_back(subarg(std::string(in+j, i-j)));
           i+=2;
-          // add subshell subarg
+          // get subshell
           auto r=parse_subshell(in, size, i);
           ret.sa.push_back(subarg(r.first));
           j = i = r.second;
@@ -142,10 +171,22 @@ std::pair<arg, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start
         throw ztd::format_error("Unterminated single quote", g_origin, in, q);
       i++;
     }
+    else if( word_eq("$((", in, size, i) ) // arithmetic operation
+    {
+      // add previous subarg
+      ret.sa.push_back(subarg(std::string(in+j, i-j)));
+      i+=3;
+      // get arithmetic
+      auto r=parse_arithmetic(in, size, i);
+      ret.sa.push_back(r.first);
+      j = i = r.second;
+    }
     else if( word_eq("$(", in, size, i) ) // substitution
     {
+      // add previous subarg
       ret.sa.push_back(subarg(std::string(in+j, i-j)));
       i+=2;
+      // get subshell
       auto r=parse_subshell(in, size, i);
       ret.sa.push_back(subarg(r.first));
       j = i = r.second;

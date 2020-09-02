@@ -168,7 +168,7 @@ class subarg
 {
 public:
   // type
-  enum argtype { string, subshell };
+  enum argtype { string, subshell, arithmetic };
   argtype type;
 
   // ctor
