@@ -9,26 +9,26 @@ BINDIR=.
 NAME = $(shell readlink -f . | xargs basename)
 
 # global links
-LDFLAGS = -Wl,--no-as-needed -lpthread
+LDFLAGS = -lpthread
 
 # compiler
 CC=g++
 # compiler flags
 CXXFLAGS= -I$(IDIR) -Wall -pedantic -std=c++17
 ifeq     ($(DEBUG),true)
-        # debugging flags
-	CC=clang++
-        CXXFLAGS += -g
+  # debugging flags
+  CC=clang++
+  CXXFLAGS += -g
 else
-        # release flags
-        CXXFLAGS += -O2
+  # release flags
+  CXXFLAGS += -O2
 endif
 ifeq    ($(STATIC),true)
-        # static links
-        LDFLAGS += -l:libztd.a
+  # static links
+  LDFLAGS += -l:libztd.a
 else
-        # dynamic links
-        LDFLAGS += -lztd
+  # dynamic links
+  LDFLAGS += -lztd
 endif
 
 ## END CONFIG ##
@@ -50,7 +50,7 @@ $(ODIR)/%.o: $(SRCDIR)/%.cpp $(DEPS)
 	$(CC) $(CXXFLAGS) -c -o $@ $<
 
 $(BINDIR)/$(NAME): $(OBJ)
-	$(CC) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CC) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 test: $(BINDIR)/$(NAME)
 	$(BINDIR)/$(NAME)
