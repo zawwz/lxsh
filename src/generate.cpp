@@ -274,7 +274,10 @@ std::string block::generate_case(int ind)
   {
     // case definition : foo)
     if(!opt_minimize) ret += INDENT;
-    ret += cs.first.generate(ind) + ')';
+    for(auto it: cs.first)
+      ret += it.generate(ind) + '|';
+    ret.pop_back();
+    ret += ')';
     if(!opt_minimize) ret += '\n';
     // commands
     for(auto it: cs.second)

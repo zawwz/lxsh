@@ -10,7 +10,8 @@ ztd::option_set gen_options()
   ret.add(ztd::option('h', "help",     false, "Display this help message"));
   ret.add(ztd::option('m', "minimize", false, "Minimize code"));
   ret.add(ztd::option('e', "exec",     false, "Directly execute script"));
-  ret.add(ztd::option('o', "output",   false, "Output result script to stdout"));
+  ret.add(ztd::option('o', "output",   true , "Output result script to file", "file"));
+  ret.add(ztd::option('c', "stdout",   false, "Output result script to stdout"));
   ret.add(ztd::option("help-commands", false, "Print help for linker commands"));
   return ret;
 }
@@ -43,7 +44,8 @@ ztd::option_set create_resolve_opts()
 void print_help(const char* arg0)
 {
   printf("%s [options] <file> [arg...]\n", arg0);
-  printf("Link extended shell, allows file including and command resolving\n");
+  printf("Link extended shell\n");
+  printf("Allows file including and command resolving\n");
   printf("See --help-commands for help on linker commands\n");
   printf("\n");
   printf("Options:\n");

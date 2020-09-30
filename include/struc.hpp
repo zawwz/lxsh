@@ -119,7 +119,7 @@ public:
 
   // case
   arg carg;
-  std::vector< std::pair<arg, list_t> > cases;
+  std::vector< std::pair<std::vector<arg>, list_t> > cases;
 
   // main: shebang
   // function: name

@@ -110,7 +110,7 @@ std::pair<arg, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start
   if(is_in(in[i], "&|;\n#()"))
     throw ztd::format_error( strf("Unexpected token '%c'", in[i]) , g_origin, in, i);
 
-  while(i<size && !is_in(in[i], " \t|&;\n()"))
+  while(i<size && !is_in(in[i], " \t&|;\n#()"))
   {
     if(i+1<size && is_in(in[i], "<>") && in[i+1]=='&') // special case for <& and >&
     {
@@ -422,15 +422,22 @@ std::pair<block, uint32_t> parse_case(const char* in, uint32_t size, uint32_t st
   while(i<size && !word_eq("esac", in, size, i, " \t\n;()&") )
   {
     // toto)
-    std::pair<arg, list_t> cc;
-    pa = parse_arg(in, size, i);
-    if(pa.first.raw == "")
-      throw ztd::format_error("Empty case value", g_origin, in, i);
-    cc.first = pa.first;
-    i=skip_unread(in, size, pa.second);
-
-    if(in[i] != ')')
-      throw ztd::format_error( strf("Unexpected token '%c', expecting ')'", in[i]), g_origin, in, i );
+    std::pair<std::vector<arg>, list_t> cc;
+    while(true)
+    {
+      pa = parse_arg(in, size, i);
+      if(pa.first.raw == "")
+        throw ztd::format_error("Empty case value", g_origin, in, i);
+      cc.first.push_back(pa.first);
+      i=skip_unread(in, size, pa.second);
+      if(i>=size )
+        throw ztd::format_error("Unexpected end of file. Expecting 'esac'", g_origin, in, i);
+      if(is_in(in[i], "&;\n#("))
+        throw ztd::format_error( strf("Unexpected token '%c', expecting ')'", in[i]), g_origin, in, i );
+      if(in[i] == ')')
+        break;
+      i=skip_unread(in, size, i+1);
+    }
     i++;
 
     while(true) // blocks

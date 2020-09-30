@@ -117,9 +117,17 @@ int main(int argc, char* argv[])
     {
       return execute(sh, args);
     }
-    else if(options['o'])
+    else if(options['c'])
     {
       std::cout << sh.generate();
+    }
+    else if(options['o'])
+    {
+      std::string destfile=options['o'];
+      if(destfile == "-")
+        destfile = "/dev/stdout";
+      std::ofstream(destfile) << sh.generate();
+      ztd::exec("chmod", "+x", destfile);
     }
     else
     {
