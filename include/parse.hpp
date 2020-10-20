@@ -11,7 +11,7 @@ extern std::string g_origin;
 
 std::string import_file(std::string const& path);
 
-block parse(const char* in, uint32_t size);
-inline block parse(std::string const& in) { return parse(in.c_str(), in.size()); }
+shmain* parse(const char* in, uint32_t size);
+inline shmain* parse(std::string const& in) { return parse(in.c_str(), in.size()); }
 
 #endif //PARSE_HPP

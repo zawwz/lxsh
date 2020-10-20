@@ -4,6 +4,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+#include <tuple>
+
 #include <iostream>
 
 #include <ztd/shell.hpp>
@@ -120,17 +122,17 @@ std::string stringReplace(std::string subject, const std::string& search, const 
   return subject;
 }
 
-void printFormatError(ztd::format_error const& e, bool print_line)
-{
-  printErrorIndex(e.data(), e.where(), e.what(), e.origin(), print_line);
-}
-
 std::string repeatString(std::string const& str, uint32_t n)
 {
   std::string ret;
   for(uint32_t i=0; i<n; i++)
-    ret += str;
+  ret += str;
   return ret;
+}
+
+void printFormatError(ztd::format_error const& e, bool print_line)
+{
+  printErrorIndex(e.data(), e.where(), e.what(), e.origin(), print_line);
 }
 
 void printErrorIndex(const char* in, const int index, const std::string& message, const std::string& origin, bool print_line)

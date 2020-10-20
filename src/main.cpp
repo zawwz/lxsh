@@ -12,9 +12,9 @@
 #include "parse.hpp"
 #include "options.hpp"
 
-int execute(block& sh, std::vector<std::string>& args)
+int execute(shmain* sh, std::vector<std::string>& args)
 {
-  std::string data=sh.generate();
+  std::string data=sh->generate();
 
   std::string filename=ztd::exec("basename", args[0]).first;
   filename.pop_back();
@@ -76,10 +76,11 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  // resolve input
   std::string file;
-  if(args.size() > 0)
+  if(args.size() > 0) // argument provided
   {
-    if(args[0] == "-")
+    if(args[0] == "-" || args[0] == "/dev/stdin") //stdin
     {
       piped=true;
       file = "/dev/stdin";
@@ -89,55 +90,63 @@ int main(int argc, char* argv[])
   }
   else
   {
-    if(isatty(fileno(stdin)))
+    if(isatty(fileno(stdin))) // stdin is interactive
     {
       print_help(argv[0]);
       return 1;
     }
-    else
+    else // is piped
     {
       piped=true;
       file = "/dev/stdin";
     }
   }
 
-
+  // set origin file
   g_origin=file;
   add_include(file);
 
+  shmain* sh=nullptr;
   try
   {
-    block sh(parse(import_file(file)));
+    // parse
+    sh = parse(import_file(file));
+    // resolve shebang
     std::string curbin, binshebang;
     curbin=ztd::exec("basename", argv[0]).first;
-    binshebang=ztd::exec("basename", sh.shebang).first;
+    binshebang=ztd::exec("basename", sh->shebang).first;
     if(binshebang==curbin)
-      sh.shebang="#!/bin/sh";
-    if(options['e'])
+      sh->shebang="#!/bin/sh";
+    // process
+    if(options['e']) // force exec
     {
       return execute(sh, args);
     }
-    else if(options['c'])
+    else if(options['c']) // force console out
     {
-      std::cout << sh.generate();
+      std::cout << sh->generate();
     }
-    else if(options['o'])
+    else if(options['o']) // file output
     {
       std::string destfile=options['o'];
+      // resolve - to stdout
       if(destfile == "-")
         destfile = "/dev/stdout";
-      std::ofstream(destfile) << sh.generate();
-      ztd::exec("chmod", "+x", destfile);
+      // output
+      std::ofstream(destfile) << sh->generate();
+      // don't chmod on /dev/
+      if(destfile.substr(0,5) != "/dev/")
+        ztd::exec("chmod", "+x", destfile);
     }
-    else
+    else // other process
     {
-      if(binshebang == curbin)
+      if(binshebang == curbin) // exec if shebang is program
       {
         return execute(sh, args);
       }
-      else
+      else // output otherwise
       {
-        std::cout << sh.generate();
+        std::cout << sh->generate();
       }
     }
   }
@@ -151,6 +160,9 @@ int main(int argc, char* argv[])
     std::cerr << e.what() << std::endl;
     return 2;
   }
+  
+  if(sh!=nullptr)
+    delete sh;
 
 
   return 0;
