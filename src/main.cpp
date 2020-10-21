@@ -76,6 +76,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+
   // resolve input
   std::string file;
   if(args.size() > 0) // argument provided
@@ -99,6 +100,7 @@ int main(int argc, char* argv[])
     {
       piped=true;
       file = "/dev/stdin";
+      args.push_back("/dev/stdin");
     }
   }
 
@@ -160,7 +162,7 @@ int main(int argc, char* argv[])
     std::cerr << e.what() << std::endl;
     return 2;
   }
-  
+
   if(sh!=nullptr)
     delete sh;
 
