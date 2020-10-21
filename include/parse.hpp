@@ -1,4 +1,4 @@
-#ifndef PARSE_HPP
+  #ifndef PARSE_HPP
 #define PARSE_HPP
 
 #include "struc.hpp"
@@ -6,6 +6,16 @@
 #include <string>
 
 #include <ztd/filedat.hpp>
+
+#define SPACES          " \t"
+#define SEPARATORS      " \t\n"
+#define ARG_END         " \t\n;#()&|"
+#define COMMAND_SEPARATOR  "\n;"
+#define CONTROL_END           "#)"
+#define PIPELINE_END       "\n;#()&"
+#define ARGLIST_END        "\n;#()&|"
+#define SPECIAL_TOKENS     "\n;#()&|"
+#define ALL_TOKENS         "\n;#()&|{}"
 
 extern std::string g_origin;
 

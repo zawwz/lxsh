@@ -8,12 +8,6 @@
 
 std::string g_origin;
 
-const char* SPACES=" \t";
-const char* SEPARATORS=" \t\n";
-const char* ARG_END=" \t&|;\n#()";
-const char* SPECIAL_TOKENS="&|;\n#()";
-const char* ALL_TOKENS="&|;\n#(){}";
-
 const std::vector<std::string> reserved_words = { "if", "then", "else", "fi", "case", "esac", "for", "while", "until", "do", "done", "{", "}" };
 
 std::string g_expecting;
@@ -263,6 +257,8 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         ret->sa.push_back(new subarg_subshell(r.first));
         j = i = r.second;
       }
+      else if( word_eq("$#", in, size, i) )
+        i+=2;
       else
         i++;
     }
@@ -343,9 +339,9 @@ std::pair<pipeline*, uint32_t> parse_pipeline(const char* in, uint32_t size, uin
       auto pp=parse_block(in, size, i);
       ret->add(pp.first);
       i = skip_chars(in, size, pp.second, SPACES);
-      if( i>=size || is_in(in[i], "&;\n#)") || word_eq("||", in, size, i) )
+      if( i>=size || is_in(in[i], PIPELINE_END) || word_eq("||", in, size, i) )
         return std::make_pair(ret, i);
-      else if( in[i] != '|')
+      else if( in[i] != '|' )
         throw ztd::format_error( strf("Unexpected token: '%c'", in[i] ), g_origin, in, i);
       i++;
     }
@@ -374,11 +370,11 @@ std::pair<condlist*, uint32_t> parse_condlist(const char* in, uint32_t size, uin
       auto pp=parse_pipeline(in, size, i);
       ret->add(pp.first, optype);
       i = pp.second;
-      if(i>=size || is_in(in[i], ")#")) // end here exactly: used for control later
+      if(i>=size || is_in(in[i], CONTROL_END)) // end here exactly: used for control later
       {
         return std::make_pair(ret, i);
       }
-      else if(is_in(in[i], ";\n")) // end one char after: skip them for next parse
+      else if(is_in(in[i], COMMAND_SEPARATOR)) // end one char after: skip them for next parse
       {
         return std::make_pair(ret, i+1);
       }
@@ -398,10 +394,8 @@ std::pair<condlist*, uint32_t> parse_condlist(const char* in, uint32_t size, uin
         i += 2;
         optype=OR_OP;
       }
-      else if(i<size-1) // bad combination
-        throw ztd::format_error( strf("Unexpected token: '%c%c'", in[i], in[i+1]), g_origin, in, i);
-      else // unknown
-        throw ztd::format_error("Unknown error", g_origin, in, i);
+      else
+        throw ztd::format_error( strf("Unexpected token: '%c'", in[i]), g_origin, in, i);
       i = skip_unread(in, size, i);
       if(i>=size)
         throw ztd::format_error( "Unexpected end of file", g_origin, in, i );
@@ -660,7 +654,7 @@ std::pair<case_block*, uint32_t> parse_case(const char* in, uint32_t size, uint3
     i=skip_unread(in, size, i+2);
 
     // parse all cases
-    while(i<size && !word_eq("esac", in, size, i, " \t\n;()&") )
+    while(i<size && !word_eq("esac", in, size, i, ARG_END) )
     {
       // add one element
       ret->cases.push_back( std::pair<arglist_t, list_t>() );
@@ -919,7 +913,7 @@ std::pair<block*, uint32_t> parse_fct_or_cmd(const char* in, uint32_t size, uint
 // detect if brace, subshell, case or other
 std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t start)
 {
-  uint32_t i = skip_chars(in, size, start, " \n\t");
+  uint32_t i = skip_chars(in, size, start, SEPARATORS);
   block* ret = nullptr;
 
   try
