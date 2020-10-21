@@ -87,7 +87,7 @@ std::string condlist::generate(int ind, bool pre_indent)
     return "";
   if(parallel)
   {
-    ret += opt_minimize ? "&" : "&\n";
+    ret += opt_minimize ? "&" : " &\n";
   }
   else
     ret += '\n';
@@ -158,7 +158,8 @@ std::string generate_resolve(std::vector<std::string> args, int ind)
     ret = sh->generate(false, ind);
     delete sh;
     ret = ret.substr(indent(ind).size());
-    ret.pop_back(); // remove \n
+    if(ret[ret.size()-1] != '\n')
+      ret += '\n';
   }
   else
   {
@@ -206,7 +207,6 @@ std::string generate_include(std::vector<std::string> args, int ind)
 
   auto v = split(inc, '\n');
 
-
   std::string file;
   shmain* bl=nullptr;
   bool indent_remove=true;
@@ -235,6 +235,8 @@ std::string generate_include(std::vector<std::string> args, int ind)
           throw ztd::format_error(e.what(), it, e.data(), e.where());
         }
         file = bl->generate(false, ind);
+        if(file[file.size()-1] != '\n')
+          file += '\n';
         delete bl;
         if(indent_remove)
         {
@@ -249,9 +251,6 @@ std::string generate_include(std::vector<std::string> args, int ind)
     if(chdir(dir.c_str()) != 0)
       throw std::runtime_error("Cannot cd to '"+dir+"'");
   g_origin=curfile;
-
-  if(!opts['r'])
-    ret.pop_back();
 
   return ret;
 }
@@ -376,6 +375,8 @@ std::string shmain::generate(bool print_shebang, int ind)
     ret += shebang + '\n';
   for(auto it: cls)
     ret += it->generate(ind);
+  if( opt_minimize && ret[ret.size()-1] == '\n')
+    ret.pop_back();
   return ret;
 }
 
