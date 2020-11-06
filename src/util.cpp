@@ -20,14 +20,38 @@ std::string indent(int n)
   return ret;
 }
 
-std::vector<std::string> split(std::string const& in, char c)
+std::vector<std::string> split(std::string const& in, const char* splitters)
 {
   uint32_t i=0,j=0;
+  std::vector<std::string> ret;
+  // skip first splitters
+  while(i<in.size() && is_in(in[i], splitters))
+    i++;
+
+  j=i;
+  while(j<in.size())
+  {
+    while(i<in.size() && !is_in(in[i], splitters)) // count all non-splitters
+      i++;
+    ret.push_back(in.substr(j,i-j));
+    i++;
+    while(i<in.size() && is_in(in[i], splitters)) // skip splitters
+      i++;
+    j=i;
+  }
+  return ret;
+}
+
+std::vector<std::string> split(std::string const& in, char c)
+{
+  size_t i=0,j=0;
   std::vector<std::string> ret;
   while(j<in.size())
   {
     i=in.find(c, j);
     ret.push_back(in.substr(j,i-j));
+    if(i==std::string::npos)
+      return ret;
     j=i+1;
   }
   return ret;
@@ -63,16 +87,49 @@ std::string delete_brackets(std::string const& in)
   return ret;
 }
 
-std::string pwd()
+std::string concatargs(std::vector<std::string> const& args)
 {
-  char buf[2048];
-  if(getcwd(buf, 2048) != NULL)
+  std::string ret;
+  for(auto it: args)
+    ret += it + ' ';
+  ret.pop_back();
+  return ret;
+}
+
+void concat_sets(std::set<std::string>& a, std::set<std::string> const& b)
+{
+  for(auto it: b)
   {
-    std::string ret=ztd::exec("pwd").first; // getcwd failed: call pwd
-    ret.pop_back();
-    return ret;
+    a.insert( it );
   }
-  return std::string(buf);
+}
+
+std::set<std::string> prune_matching(std::set<std::string>& in, std::regex re)
+{
+  std::set<std::string> ret;
+  auto it=in.begin();
+  auto prev=in.end();
+  while(it!=in.end())
+  {
+    if( std::regex_match(*it, re) )
+    {
+      ret.insert(*it);
+      in.erase(it);
+      if(prev == in.end())
+        it = in.begin();
+      else
+      {
+        it = prev;
+        it++;
+      }
+    }
+    else
+    {
+      prev=it;
+      it++;
+    }
+  }
+  return ret;
 }
 
 int _exec(std::string const& bin, std::vector<std::string> const& args)
@@ -165,4 +222,47 @@ void printErrorIndex(const char* in, const int index, const std::string& message
       std::cerr << repeatString(" ", index-j) << '^' << std::endl;
     }
   }
+}
+
+
+int execute(shmain* sh, std::vector<std::string>& args)
+{
+  std::string data=sh->generate();
+
+  std::string filename=ztd::exec("basename", args[0]).first;
+  filename.pop_back();
+
+  // generate path
+  std::string tmpdir = (getenv("TMPDIR") != NULL) ? getenv("TMPDIR") : "/tmp" ;
+  std::string dirpath = tmpdir + "/lxsh_" + ztd::sh("tr -dc '[:alnum:]' < /dev/urandom | head -c10");
+  std::string filepath = dirpath+'/'+filename;
+
+  // create dir
+  if(ztd::exec("mkdir", "-p", dirpath).second)
+  {
+    throw std::runtime_error("Failed to create directory '"+dirpath+'\'');
+  }
+
+  // create stream
+  std::ofstream stream(filepath);
+  if(!stream)
+  {
+    ztd::exec("rm", "-rf", dirpath);
+    throw std::runtime_error("Failed to write to '"+filepath+'\'');
+  }
+
+  // output
+  stream << data;
+  stream.close();
+  if(ztd::exec("chmod", "+x", filepath).second != 0)
+  {
+    ztd::exec("rm", "-rf", dirpath);
+    throw std::runtime_error("Failed to make '"+filepath+"' executable");
+  }
+
+  // exec
+  int retval=_exec(filepath, args);
+  ztd::exec("rm", "-rf", dirpath);
+
+  return retval;
 }

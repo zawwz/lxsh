@@ -6,15 +6,21 @@
 #include <memory>
 #include <exception>
 #include <stdexcept>
+#include <map>
+#include <set>
+#include <algorithm>
+#include <functional>
+#include <regex>
 
 #include <ztd/filedat.hpp>
 
-#define INDENT indent(ind)
+#include "struc.hpp"
 
 extern std::string indenting_string;
 
 std::string indent(int n);
 
+std::vector<std::string> split(std::string const& in, const char* splitters);
 std::vector<std::string> split(std::string const& in, char c);
 
 std::string escape_str(std::string const& in);
@@ -30,9 +36,81 @@ std::string strf( const std::string& format, Args ... args )
     return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
 }
 
+
+template <class KEY, class VAL>
+std::vector<std::pair<KEY, VAL>> sort_by_value(std::map<KEY,VAL> const& in)
+{
+  typedef std::pair<KEY,VAL> pair_t;
+  // create an empty vector of pairs
+	std::vector<pair_t> ret;
+
+	// copy key-value pairs from the map to the vector
+	std::copy(in.begin(),
+			in.end(),
+			std::back_inserter<std::vector<pair_t>>(ret));
+
+	// sort the vector by increasing order of its pair's second value
+	// if second value are equal, order by the pair's first value
+	std::sort(ret.begin(), ret.end(),
+			[](const pair_t& l, const pair_t& r) {
+				if (l.second != r.second)
+					return l.second > r.second;
+				return l.first > r.first;
+			});
+  return ret;
+}
+
+inline bool is_in(char c, const char* set) {
+  return strchr(set, c) != NULL;
+}
+
+template <class T>
+std::set<std::string> prune_matching(std::map<std::string, T>& in, std::regex re)
+{
+  std::set<std::string> ret;
+  auto it=in.begin();
+  auto prev=in.end();
+  while(it!=in.end())
+  {
+    if( std::regex_match(it->first, re) )
+    {
+      ret.insert(it->first);
+      in.erase(it);
+      if(prev == in.end())
+        it = in.begin();
+      else
+      {
+        it = prev;
+        it++;
+      }
+    }
+    else
+    {
+      prev=it;
+      it++;
+    }
+  }
+  return ret;
+}
+
+template <class T, class T2>
+std::set<T> map_to_set(std::map<T,T2> in)
+{
+  std::set<T> ret;
+  for(auto it: in)
+  {
+    ret.insert(it.first);
+  }
+  return ret;
+}
+
+void concat_sets(std::set<std::string>& a, std::set<std::string> const& b);
+
+std::set<std::string> prune_matching(std::set<std::string>& in, std::regex re);
+
 std::string delete_brackets(std::string const& in);
 
-std::string pwd();
+std::string concatargs(std::vector<std::string> const& args);
 
 int _exec(std::string const& bin, std::vector<std::string> const& args);
 
@@ -40,5 +118,7 @@ std::string stringReplace(std::string subject, const std::string& search, const 
 
 void printFormatError(ztd::format_error const& e, bool print_line=true);
 void printErrorIndex(const char* in, const int index, const std::string& message, const std::string& origin, bool print_line=true);
+
+int execute(shmain* sh, std::vector<std::string>& args);
 
 #endif //UTIL_HPP

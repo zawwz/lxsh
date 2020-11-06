@@ -11,71 +11,41 @@
 #include "struc.hpp"
 #include "parse.hpp"
 #include "options.hpp"
+#include "recursive.hpp"
+#include "minimize.hpp"
+#include "resolve.hpp"
 
-int execute(shmain* sh, std::vector<std::string>& args)
+void oneshot_opt_process(const char* arg0)
 {
-  std::string data=sh->generate();
-
-  std::string filename=ztd::exec("basename", args[0]).first;
-  filename.pop_back();
-
-  // generate path
-  std::string tmpdir = (getenv("TMPDIR") != NULL) ? getenv("TMPDIR") : "/tmp" ;
-  std::string dirpath = tmpdir + "/lxsh_" + ztd::sh("tr -dc '[:alnum:]' < /dev/urandom | head -c10");
-  std::string filepath = dirpath+'/'+filename;
-
-  // create dir
-  if(ztd::exec("mkdir", "-p", dirpath).second)
-  {
-    throw std::runtime_error("Failed to create directory '"+dirpath+'\'');
-  }
-
-  // create stream
-  std::ofstream stream(filepath);
-  if(!stream)
-  {
-    ztd::exec("rm", "-rf", dirpath);
-    throw std::runtime_error("Failed to write to '"+filepath+'\'');
-  }
-
-  // output
-  stream << data;
-  stream.close();
-  if(ztd::exec("chmod", "+x", filepath).second != 0)
-  {
-    ztd::exec("rm", "-rf", dirpath);
-    throw std::runtime_error("Failed to make '"+filepath+"' executable");
-  }
-
-  // exec
-  int retval=_exec(filepath, args);
-  ztd::exec("rm", "-rf", dirpath);
-
-  return retval;
-}
-
-int main(int argc, char* argv[])
-{
-  auto args=options.process(argc, argv, false, true);
-
-  if(options['m'])
-    opt_minimize=true;
-
-  piped=false;
-
   if(options['h'])
   {
-    print_help(argv[0]);
-    return 1;
+    print_help(arg0);
+    exit(1);
   }
   if(options["help-commands"])
   {
     print_include_help();
     printf("\n\n");
     print_resolve_help();
+    exit(1);
+  }
+}
+
+int main(int argc, char* argv[])
+{
+  std::vector<std::string> args;
+
+  int ret=0;
+
+  try
+  {
+    args=options.process(argc, argv, false, true);
+  }
+  catch(std::exception& e)
+  {
+    std::cerr << e.what() << std::endl;
     return 1;
   }
-
 
   // resolve input
   std::string file;
@@ -83,11 +53,12 @@ int main(int argc, char* argv[])
   {
     if(args[0] == "-" || args[0] == "/dev/stdin") //stdin
     {
-      piped=true;
       file = "/dev/stdin";
     }
     else
+    {
       file=args[0];
+    }
   }
   else
   {
@@ -98,35 +69,91 @@ int main(int argc, char* argv[])
     }
     else // is piped
     {
-      piped=true;
       file = "/dev/stdin";
       args.push_back("/dev/stdin");
     }
   }
 
-  // set origin file
-  g_origin=file;
-  add_include(file);
+  // parsing
 
-  shmain* sh=nullptr;
+  shmain* sh = new shmain(new list);
+  shmain* tsh = nullptr;
   try
   {
-    // parse
-    sh = parse(import_file(file));
-    // resolve shebang
-    std::string curbin, binshebang;
-    curbin=ztd::exec("basename", argv[0]).first;
-    binshebang=ztd::exec("basename", sh->shebang).first;
-    if(binshebang==curbin)
-      sh->shebang="#!/bin/sh";
-    // process
-    if(options['e']) // force exec
+    bool is_exec = false;
+    bool first_run = true;
+
+    // do parsing
+    for(uint32_t i=0 ; i<args.size() ; i++)
     {
-      return execute(sh, args);
+      std::string& file = args[i];
+      std::string filecontents=import_file(file);
+      // parse
+      g_origin=file;
+      if(!add_include(file))
+        continue;
+      tsh = parse_text(filecontents, file);
+      // resolve shebang
+      if(first_run)
+      {
+        first_run=false;
+        // resolve shebang
+        bool shebang_is_bin = ztd::exec("basename", argv[0]).first == ztd::exec("basename", tsh->shebang).first;
+        if(shebang_is_bin)
+          tsh->shebang="#!/bin/sh";
+
+        // detect if need execution
+        if(options['e'])
+          is_exec=true;
+        else if(options['c'] || options['o'])
+          is_exec=false;
+        else
+          is_exec = shebang_is_bin;
+
+        if(!is_exec && args.size() > 1) // not exec: parse options on args
+        {
+          std::string t=args[0];
+          args=options.process(args);
+        }
+
+        oneshot_opt_process(argv[0]);
+        get_opts();
+      }
+
+      /* mid processing */
+      // resolve/include
+      if(g_include || g_resolve)
+        resolve(tsh);
+
+      // concatenate to main
+      sh->concat(tsh);
+      delete tsh;
+      tsh = nullptr;
+
+      // is exec: break and exec
+      if(is_exec)
+        break;
     }
-    else if(options['c']) // force console out
+
+    // processing before output
+    if(options['m'])
+      opt_minimize=true;
+    if(options["minimize-var"])
+      minimize_var( sh, re_var_exclude );
+    if(options["minimize-fct"])
+      minimize_fct( sh, re_fct_exclude );
+    if(options["remove-unused"])
+      delete_unused_fct( sh, re_fct_exclude );
+
+    if(options["list-var"])
+      list_vars(sh, re_var_exclude);
+    else if(options["list-fct"])
+      list_fcts(sh, re_var_exclude);
+    else if(options["list-cmd"])
+      list_cmds(sh, re_var_exclude);
+    else if(is_exec)
     {
-      std::cout << sh->generate();
+      ret = execute(sh, args);
     }
     else if(options['o']) // file output
     {
@@ -138,34 +165,31 @@ int main(int argc, char* argv[])
       std::ofstream(destfile) << sh->generate();
       // don't chmod on /dev/
       if(destfile.substr(0,5) != "/dev/")
-        ztd::exec("chmod", "+x", destfile);
+      ztd::exec("chmod", "+x", destfile);
     }
-    else // other process
+    else // to console
     {
-      if(binshebang == curbin) // exec if shebang is program
-      {
-        return execute(sh, args);
-      }
-      else // output otherwise
-      {
-        std::cout << sh->generate();
-      }
+      std::cout << sh->generate();
     }
   }
   catch(ztd::format_error& e)
   {
+    if(tsh != nullptr)
+      delete tsh;
+    delete sh;
     printFormatError(e);
     return 100;
   }
   catch(std::exception& e)
   {
+    if(tsh != nullptr)
+      delete tsh;
+    delete sh;
     std::cerr << e.what() << std::endl;
     return 2;
   }
 
-  if(sh!=nullptr)
-    delete sh;
+  delete sh;
 
-
-  return 0;
+  return ret;
 }

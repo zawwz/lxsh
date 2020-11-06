@@ -6,8 +6,6 @@
 #include "options.hpp"
 #include "parse.hpp"
 
-#include <unistd.h>
-
 std::vector<std::string> included;
 
 bool is_sub_special_cmd(std::string in)
@@ -67,13 +65,11 @@ std::string pipeline::generate(int ind)
   return ret;
 }
 
-std::string condlist::generate(int ind, bool pre_indent)
+std::string condlist::generate(int ind)
 {
   std::string ret;
   if(pls.size() <= 0)
     return "";
-  if(pre_indent)
-    ret += indented("", ind);
   ret += pls[0]->generate(ind);
   for(uint32_t i=0 ; i<pls.size()-1 ; i++)
   {
@@ -94,6 +90,27 @@ std::string condlist::generate(int ind, bool pre_indent)
   return ret;
 }
 
+std::string list::generate(int ind, bool first_indent)
+{
+  std::string ret;
+  if(cls.size() <= 0)
+    return "";
+
+  for(uint32_t i=0; i<cls.size(); i++)
+  {
+    if(first_indent)
+    {
+      ret += indented(cls[i]->generate(ind), ind);
+    }
+    else
+    {
+      first_indent=true;
+      ret += cls[i]->generate(ind);
+    }
+  }
+  return ret;
+}
+
 bool add_include(std::string const& file)
 {
   std::string truepath=ztd::exec("readlink", "-f", file).first;
@@ -104,155 +121,6 @@ bool add_include(std::string const& file)
   }
   included.push_back(truepath);
   return true;
-}
-
-std::string concatargs(std::vector<std::string> args)
-{
-  std::string ret;
-  for(auto it: args)
-    ret += it + ' ';
-  ret.pop_back();
-  return ret;
-}
-
-std::string generate_resolve(std::vector<std::string> args, int ind)
-{
-  std::string ret;
-
-  auto opts=create_resolve_opts();
-  auto rargs = opts.process(args, false, true, false);
-
-  std::string cmd=concatargs(rargs);
-  std::string dir;
-
-  if(!opts['C'] && !piped)
-  {
-    dir=pwd();
-    std::string cddir=ztd::exec("dirname", g_origin).first;
-    cddir.pop_back();
-    if(chdir(cddir.c_str()) != 0)
-      throw std::runtime_error("Cannot cd to '"+cddir+"'");
-  }
-
-  // exec call
-  auto p=ztd::shp("exec "+cmd);
-
-  if(!opts['f'] && p.second!=0)
-  {
-    throw std::runtime_error(  strf("command `%s` returned %u", cmd.c_str(), p.second) );
-  }
-  while(p.first[p.first.size()-1] == '\n')
-    p.first.pop_back();
-
-  if(opts['p'])
-  {
-    shmain* sh;
-    try
-    {
-      sh = parse(p.first);
-    }
-    catch(ztd::format_error& e)
-    {
-      throw ztd::format_error(e.what(), "command `"+cmd+'`', e.data(), e.where());
-    }
-    ret = sh->generate(false, ind);
-    delete sh;
-    ret = ret.substr(indent(ind).size());
-    if(ret[ret.size()-1] != '\n')
-      ret += '\n';
-  }
-  else
-  {
-    ret = p.first;
-  }
-
-  if(!opts['C'] && !piped)
-    if(chdir(dir.c_str()) != 0)
-      throw std::runtime_error("Cannot cd to '"+dir+"'");
-
-  return ret;
-}
-
-std::string generate_include(std::vector<std::string> args, int ind)
-{
-  std::string ret;
-
-  auto opts=create_include_opts();
-  auto rargs = opts.process(args, false, true, false);
-
-  std::string quote;
-  if(opts['s'])
-    quote = '\'';
-  else if(opts['d'])
-    quote = '"';
-
-  std::string curfile=g_origin;
-  std::string dir;
-
-  if(!opts['C'] && !piped)
-  {
-    dir=pwd();
-    std::string cddir=ztd::exec("dirname", curfile).first;
-    cddir.pop_back();
-    if(chdir(cddir.c_str()) != 0)
-      throw std::runtime_error("Cannot cd to '"+cddir+"'");
-  }
-
-  // do shell resolution
-  std::string command="for I in ";
-  for(auto it: rargs)
-    command += it + ' ';
-  command += "; do echo $I ; done";
-  std::string inc=ztd::sh(command);
-
-  auto v = split(inc, '\n');
-
-  std::string file;
-  shmain* bl=nullptr;
-  bool indent_remove=true;
-
-  for(auto it : v)
-  {
-    if( opts['f'] ||      // force include
-        add_include(it) ) // not already included
-    {
-      file=import_file(it);
-      if(opts['d'])
-        file = stringReplace(file, "\"", "\\\"");
-      if(opts['s'])
-        file = stringReplace(file, "'", "'\\''");
-      if(opts['r'])
-        ret += file;
-      else
-      {
-        g_origin=it;
-        try
-        {
-          bl = parse(quote + file + quote);
-        }
-        catch(ztd::format_error& e)
-        {
-          throw ztd::format_error(e.what(), it, e.data(), e.where());
-        }
-        file = bl->generate(false, ind);
-        if(file[file.size()-1] != '\n')
-          file += '\n';
-        delete bl;
-        if(indent_remove)
-        {
-          indent_remove=false;
-          file = file.substr(indent(ind).size());
-        }
-        ret += file;
-      }
-    }
-  }
-  if(!opts['C'] && !piped)
-    if(chdir(dir.c_str()) != 0)
-      throw std::runtime_error("Cannot cd to '"+dir+"'");
-  g_origin=curfile;
-
-  return ret;
 }
 
 // BLOCK
@@ -280,26 +148,24 @@ std::string if_block::generate(int ind)
   {
     // condition
     if(i==0)
-      ret += "if ";
+      ret += "if";
     else
-      ret += "elif ";
-    // first cmd: on same line with no indent
-    ret += blocks[i].first[0]->generate(ind+1, false);
-    // other cmds: on new lines
-    for(uint32_t j=1; j<blocks[i].first.size(); j++ )
-      ret += blocks[i].first[j]->generate(ind+1);
+      ret += "elif";
+
+    if(blocks[i].first->size()==1)
+      ret += ' ' + blocks[i].first->generate(ind+1, false);
+    else
+      ret += '\n' + blocks[i].first->generate(ind+1);
 
     // execution
     ret += indented("then\n", ind);
-    for(auto it: blocks[i].second)
-      ret += it->generate(ind+1);
+    ret += blocks[i].second->generate(ind+1);
   }
 
-  if(else_cls.size()>0)
+  if(else_lst!=nullptr)
   {
     ret += indented("else\n", ind);
-    for(auto it: else_cls)
-      ret += it->generate(ind+1);
+    ret += else_lst->generate(ind+1);
   }
 
   ret += indented("fi", ind);
@@ -315,8 +181,7 @@ std::string for_block::generate(int ind)
     ret += " in " + iter->generate(ind);
   ret += '\n';
   ret += indented("do\n", ind);
-  for(auto it: ops)
-    ret += it->generate(ind+1);
+  ret += ops->generate(ind+1);
   ret += indented("done", ind);
 
   return ret;
@@ -327,19 +192,13 @@ std::string while_block::generate(int ind)
   std::string ret;
 
   ret += "while";
-  if(cond.size() == 1)
-  {
-    ret += " " + cond[0]->generate(ind+1, false);
-  }
+  if(cond->size() == 1)
+    ret += " " + cond->generate(ind+1, false);
   else
-  {
-    ret += '\n';
-    for(auto it: cond)
-      ret += it->generate(ind+1);
-  }
+    ret += '\n' + cond->generate(ind+1);
+
   ret += indented("do\n", ind);
-  for(auto it: ops)
-    ret += it->generate(ind+1);
+  ret += ops->generate(ind+1);
   ret += indented("done", ind);
 
   return ret;
@@ -352,8 +211,7 @@ std::string subshell::generate(int ind)
   ret += '(';
   if(!opt_minimize) ret += '\n';
   // commands
-  for(auto it: cls)
-    ret += it->generate(ind+1);
+  ret += lst->generate(ind+1);
   if(opt_minimize && ret.size()>1)
     ret.pop_back(); // ) can be right after command
   // close subshell
@@ -373,8 +231,7 @@ std::string shmain::generate(bool print_shebang, int ind)
   std::string ret;
   if(print_shebang && shebang!="")
     ret += shebang + '\n';
-  for(auto it: cls)
-    ret += it->generate(ind);
+  ret += lst->generate(ind);
   if( opt_minimize && ret[ret.size()-1] == '\n')
     ret.pop_back();
   return ret;
@@ -383,10 +240,9 @@ std::string shmain::generate(bool print_shebang, int ind)
 std::string brace::generate(int ind)
 {
   std::string ret;
-  ret += "{\n" ;
-  for(auto it: cls)
-    ret += it->generate(ind+1);
 
+  ret += "{\n" ;
+  ret += lst->generate(ind+1);
   ret += indented("}", ind);
 
   ret += generate_redirs(ind);
@@ -399,11 +255,10 @@ std::string function::generate(int ind)
   std::string ret;
   // function definition
   ret += name + "()";
-  if(!opt_minimize) ret += '\n' + indent(ind);
-  ret += "{\n";
+  if(!opt_minimize) ret += '\n';
   // commands
-  for(auto it: cls)
-    ret += it->generate(ind+1);
+  ret += indented("{\n", ind);
+  ret += lst->generate(ind+1);
   ret += indented("}", ind);
 
   ret += generate_redirs(ind);
@@ -427,15 +282,19 @@ std::string case_block::generate(int ind)
     ret += ')';
     if(!opt_minimize) ret += '\n';
     // commands
-    for(auto it: cs.second)
-      ret += it->generate(ind+1);
+    ret += cs.second->generate(ind+1);
     // end of case: ;;
     if(opt_minimize && ret[ret.size()-1] == '\n') // ;; can be right after command
-    {
       ret.pop_back();
-    }
     ret += indented(";;\n", ind+1);
   }
+
+  // remove ;; from last case
+  if(opt_minimize)
+  {
+    ret.erase(ret.size()-3, 2);
+  }
+
   // close case
   ind--;
   ret += indented("esac", ind);
@@ -448,19 +307,32 @@ std::string case_block::generate(int ind)
 std::string cmd::generate(int ind)
 {
   std::string ret;
+  // var assigns
+  for(auto it: var_assigns)
+    ret += it.first + '=' + it.second->generate(ind) + ' ';
+
   if(args==nullptr || args->size()<=0)
-    return "";
-  std::string cmdname=(*args)[0]->raw;
-  if(cmdname == "%include" || cmdname == "%include_s")
   {
-    ret += generate_include(args->strargs(1), ind);
+    ret.pop_back();
+    return ret;
   }
-  else if(cmdname == "%resolve" || cmdname == "%resolve_s")
-  {
-    ret += generate_resolve(args->strargs(1), ind);
-  }
-  else
-    ret = args->generate(ind);
+
+  // command
+  ret += args->generate(ind);
+  // delete potential trailing space
+  if(ret[ret.size()-1] == ' ')
+    ret.pop_back();
+
+  return ret;
+}
+
+// SUBARG
+
+std::string subshell_subarg::generate(int ind)
+{
+  std::string ret;
+  ret += '$';
+  ret += sbsh->generate(ind);
   return ret;
 }
 
@@ -471,39 +343,3 @@ std::string cmd::generate(int ind)
 //   std::string ret;
 //   return ret;
 // }
-
-// SUBARG
-
-std::string subarg::generate(int ind)
-{
-  switch(type)
-  {
-    case subarg::s_string:
-      return dynamic_cast<subarg_string*>(this)->generate(ind);
-    case subarg::s_arithmetic:
-      return dynamic_cast<subarg_arithmetic*>(this)->generate(ind);
-    case subarg::s_subshell:
-      return dynamic_cast<subarg_subshell*>(this)->generate(ind);
-  }
-  // doesn't happen, just to get rid of warning
-  return "";
-}
-
-std::string subarg_subshell::generate(int ind)
-{
-  std::string ret;
-  // includes and resolves inside command substitutions
-  // resolve here and not inside subshell
-  cmd* cmd = sbsh->single_cmd();
-  if( cmd != nullptr && (cmd->firstarg_raw() == "%include" || cmd->firstarg_raw() == "%resolve") )
-  {
-    ret += cmd->generate(ind);
-  }
-  // regular substitution
-  else
-  {
-    ret += '$';
-    ret += sbsh->generate(ind);
-  }
-  return ret;
-}

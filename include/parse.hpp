@@ -10,6 +10,8 @@
 #define SPACES          " \t"
 #define SEPARATORS      " \t\n"
 #define ARG_END         " \t\n;#()&|"
+#define VARNAME_END     " \t\n;#()&|=\"'\\{}"
+#define BLOCK_TOKEN_END " \t\n;#()&|=\"'\\"
 #define COMMAND_SEPARATOR  "\n;"
 #define CONTROL_END           "#)"
 #define PIPELINE_END       "\n;#()&"
@@ -17,11 +19,12 @@
 #define SPECIAL_TOKENS     "\n;#()&|"
 #define ALL_TOKENS         "\n;#()&|{}"
 
-extern std::string g_origin;
+#define SPECIAL_VARS "!#*@$?"
 
 std::string import_file(std::string const& path);
 
-shmain* parse(const char* in, uint32_t size);
-inline shmain* parse(std::string const& in) { return parse(in.c_str(), in.size()); }
+shmain* parse_text(const char* in, uint32_t size, std::string const& filename="");
+inline shmain* parse_text(std::string const& in, std::string const& filename="") { return parse_text(in.c_str(), in.size(), filename); }
+inline shmain* parse(std::string const& file) { return parse_text(import_file(file), file); }
 
 #endif //PARSE_HPP
