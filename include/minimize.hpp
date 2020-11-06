@@ -9,7 +9,7 @@
 extern std::regex re_var_exclude;
 extern std::regex re_fct_exclude;
 
-#define RESERVED_VARIABLES "HOME", "PATH", "SHELL", "PWD"
+#define RESERVED_VARIABLES "HOME", "PATH", "SHELL", "PWD", "OPTIND", "OPTARG"
 
 std::regex var_exclude_regex(std::string const& in);
 std::regex fct_exclude_regex(std::string const& in);

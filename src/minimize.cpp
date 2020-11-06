@@ -50,7 +50,7 @@ std::vector<subarg*> cmd::arg_vars()
     return ret;
   std::string cmdname=this->firstarg_string();
 
-  if(cmdname == "export" || cmdname == "unset" || cmdname == "local")
+  if(cmdname == "export" || cmdname == "unset" || cmdname == "local" || cmdname == "read")
   {
     for(uint32_t i=1; i<args->size(); i++)
     {
