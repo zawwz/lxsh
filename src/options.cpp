@@ -44,13 +44,10 @@ void get_opts()
   g_cd=!options['C'].activated;
   g_include=!options["no-include"].activated;
   g_resolve=!options["no-resolve"].activated;
-  if(options["var-exclude"])
-  {
-    std::string t=options["var-exclude"];
-    re_var_exclude=var_exclude_regex(t);
-  }
-  if(options["fct-exclude"])
-    re_fct_exclude=fct_exclude_regex(options["fct-exclude"]);
+  if(options["exclude-var"])
+    re_var_exclude=var_exclude_regex(options["exclude-var"]);
+  if(options["exclude-fct"])
+    re_fct_exclude=fct_exclude_regex(options["exclude-fct"]);
 }
 
 ztd::option_set create_include_opts()
