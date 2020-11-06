@@ -46,6 +46,8 @@ void get_opts()
   g_resolve=!options["no-resolve"].activated;
   if(options["exclude-var"])
     re_var_exclude=var_exclude_regex(options["exclude-var"]);
+  else
+    re_var_exclude=var_exclude_regex("");
   if(options["exclude-fct"])
     re_fct_exclude=fct_exclude_regex(options["exclude-fct"]);
 }
