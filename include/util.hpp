@@ -42,21 +42,21 @@ std::vector<std::pair<KEY, VAL>> sort_by_value(std::map<KEY,VAL> const& in)
 {
   typedef std::pair<KEY,VAL> pair_t;
   // create an empty vector of pairs
-	std::vector<pair_t> ret;
+  std::vector<pair_t> ret;
 
-	// copy key-value pairs from the map to the vector
-	std::copy(in.begin(),
-			in.end(),
-			std::back_inserter<std::vector<pair_t>>(ret));
+  // copy key-value pairs from the map to the vector
+  std::copy(in.begin(),
+  in.end(),
+  std::back_inserter<std::vector<pair_t>>(ret));
 
-	// sort the vector by increasing order of its pair's second value
-	// if second value are equal, order by the pair's first value
-	std::sort(ret.begin(), ret.end(),
-			[](const pair_t& l, const pair_t& r) {
-				if (l.second != r.second)
-					return l.second > r.second;
-				return l.first > r.first;
-			});
+  // sort the vector by increasing order of its pair's second value
+  // if second value are equal, order by the pair's first value
+  std::sort(ret.begin(), ret.end(),
+    [](const pair_t& l, const pair_t& r) {
+      if (l.second != r.second)
+        return l.second > r.second;
+      return l.first > r.first;
+    });
   return ret;
 }
 
