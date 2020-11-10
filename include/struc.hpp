@@ -82,7 +82,7 @@ class _obj
 {
 public:
   enum _objtype {
-    subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic,
+    subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic, subarg_manipulation,
     _arg,
     _arglist,
     _pipeline,
@@ -435,6 +435,19 @@ public:
 
   subshell* sbsh;
   bool quoted;
+
+  std::string generate(int ind);
+};
+
+class manipulation_subarg : public subarg
+{
+public:
+  manipulation_subarg(arg* in=nullptr) { type=_obj::subarg_manipulation; size=false; manip=in; }
+  ~manipulation_subarg() { if(manip!=nullptr) delete manip; }
+
+  bool size;
+  std::string varname;
+  arg* manip;
 
   std::string generate(int ind);
 };

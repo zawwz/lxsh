@@ -30,9 +30,9 @@ ztd::option_set gen_options()
       ztd::option("minimize-fct",       false, "Minimize function names"),
       ztd::option("exclude-var",        true,  "List of matching regex to ignore for variable processing", "list"),
       ztd::option("exclude-fct",        true,  "List of matching regex to ignore for function processing", "list"),
-      ztd::option("list-var",           false, "List all variables invoked in the script"),
-      ztd::option("list-fct",           false, "List all functions invoked in the script"),
-      ztd::option("list-cmd",           false, "List all functions invoked in the script"),
+      ztd::option("list-var",           false, "List all variables defined and invoked in the script"),
+      ztd::option("list-fct",           false, "List all functions defined in the script"),
+      ztd::option("list-cmd",           false, "List all commands invoked in the script"),
       // ztd::option("unset-var",          false, "Add 'unset' to vars"),
       ztd::option("remove-unused",      false, "Remove unused functions")
   );

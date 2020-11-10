@@ -98,6 +98,11 @@ void get_map_varname(_obj* in, std::map<std::string,uint32_t>* variable_map)
       if(!variable_map->insert( std::make_pair(t->varname, 1) ).second)
         (*variable_map)[t->varname]++;
     }; break;
+    case _obj::subarg_manipulation: {
+      manipulation_subarg* t = dynamic_cast<manipulation_subarg*>(in);
+      if(!variable_map->insert( std::make_pair(t->varname, 1) ).second)
+        (*variable_map)[t->varname]++;
+    }; break;
     case _obj::block_for: {
       for_block* t = dynamic_cast<for_block*>(in);
       if(!variable_map->insert( std::make_pair(t->varname, 1) ).second)
@@ -125,6 +130,12 @@ void replace_varname(_obj* in, std::map<std::string,std::string>* varmap)
   {
     case _obj::subarg_variable: {
       variable_subarg* t = dynamic_cast<variable_subarg*>(in);
+      auto el=varmap->find(t->varname);
+      if(el!=varmap->end())
+        t->varname = el->second;
+    }; break;
+    case _obj::subarg_manipulation: {
+      manipulation_subarg* t = dynamic_cast<manipulation_subarg*>(in);
       auto el=varmap->find(t->varname);
       if(el!=varmap->end())
         t->varname = el->second;

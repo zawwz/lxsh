@@ -330,10 +330,15 @@ std::string cmd::generate(int ind)
 
 std::string subshell_subarg::generate(int ind)
 {
-  std::string ret;
-  ret += '$';
-  ret += sbsh->generate(ind);
-  return ret;
+  return '$' + sbsh->generate(ind);
+}
+
+std::string manipulation_subarg::generate(int ind)
+{
+  if(size)
+    return "${#" + varname + "}";
+  else
+    return "${" + varname + manip->generate(ind) + "}";
 }
 
 // TEMPLATE

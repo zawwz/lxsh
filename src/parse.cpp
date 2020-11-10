@@ -176,10 +176,36 @@ std::pair<arithmetic_subarg*, uint32_t> parse_arithmetic(const char* in, uint32_
   return std::make_pair(ret, i);
 }
 
+std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start, const char* end=ARG_END, const char* unexpected=SPECIAL_TOKENS, bool doquote=true);
+
+std::pair<manipulation_subarg*, uint32_t> parse_manipulation(const char* in, uint32_t size, uint32_t start)
+{
+  manipulation_subarg* ret = new manipulation_subarg;
+  uint32_t i=start;
+
+  if(in[i] == '#')
+  {
+    ret->size=true;
+    i++;
+  }
+
+  auto p=parse_varname(in, size, i);
+  if(p.second == i)
+    throw PARSE_ERROR( "Bad variable name", i );
+  ret->varname=p.first;
+  i = p.second;
+
+  auto pa = parse_arg(in, size, i, "}", NULL, false);
+  ret->manip=pa.first;
+  i = pa.second+1;
+
+  return std::make_pair(ret, i);
+}
+
 // parse one argument
 // must start at a read char
 // ends at either " \t|&;\n()"
-std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start)
+std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start, const char* end, const char* unexpected, bool doquote)
 {
   arg* ret = new arg;
   // j : start of subarg , q = start of quote
@@ -188,23 +214,23 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
   try
   {
 
-    if(is_in(in[i], SPECIAL_TOKENS))
+    if(unexpected != NULL && is_in(in[i], unexpected))
       throw PARSE_ERROR( strf("Unexpected token '%c'", in[i]) , i);
 
-    while(i<size && !is_in(in[i], ARG_END))
+    while(i<size && !is_in(in[i], end))
     {
       if(i+1<size && is_in(in[i], "<>") && in[i+1]=='&') // special case for <& and >&
       {
         i+=2;
       }
-      else if(in[i]=='\\') // backslash: don't check next char
+      else if(doquote && in[i]=='\\') // backslash: don't check next char
       {
         i++;
         if(i>=size)
-        break;
+          break;
         i++;
       }
-      else if(in[i] == '"') // start double quote
+      else if(doquote && in[i] == '"') // start double quote
       {
         q=i;
         i++;
@@ -218,9 +244,8 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           {
             // add previous subarg
             ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
-            i+=3;
             // get arithmetic
-            auto r=parse_arithmetic(in, size, i);
+            auto r=parse_arithmetic(in, size, i+3);
             ret->sa.push_back(r.first);
             j = i = r.second;
           }
@@ -228,10 +253,18 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           {
             // add previous subarg
             ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
-            i+=2;
             // get subshell
-            auto r=parse_subshell(in, size, i);
+            auto r=parse_subshell(in, size, i+2);
             ret->sa.push_back(new subshell_subarg(r.first, true));
+            j = i = r.second;
+          }
+          else if( word_eq("${", in, size, i) ) // variable manipulation
+          {
+            // add previous subarg
+            ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+            // get manipulation
+            auto r=parse_manipulation(in, size, i+2);
+            ret->sa.push_back(r.first);
             j = i = r.second;
           }
           else if( in[i] == '$' )
@@ -256,7 +289,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         }
         i++;
       }
-      else if(in[i] == '\'') // start single quote
+      else if(doquote && in[i] == '\'') // start single quote
       {
         q=i;
         i++;
@@ -270,9 +303,8 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
       {
         // add previous subarg
         ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
-        i+=3;
         // get arithmetic
-        auto r=parse_arithmetic(in, size, i);
+        auto r=parse_arithmetic(in, size, i+3);
         ret->sa.push_back(r.first);
         j = i = r.second;
       }
@@ -280,10 +312,18 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
       {
         // add previous subarg
         ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
-        i+=2;
         // get subshell
-        auto r=parse_subshell(in, size, i);
+        auto r=parse_subshell(in, size, i+2);
         ret->sa.push_back(new subshell_subarg(r.first, false));
+        j = i = r.second;
+      }
+      else if( word_eq("${", in, size, i) ) // variable manipulation
+      {
+        // add previous subarg
+        ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+        // get manipulation
+        auto r=parse_manipulation(in, size, i+2);
+        ret->sa.push_back(r.first);
         j = i = r.second;
       }
       else if( in[i] == '$' )
