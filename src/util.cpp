@@ -24,7 +24,7 @@ std::string basename(std::string const& in)
 {
   size_t slr=in.rfind('/');
   if(slr != std::string::npos)
-    return in.substr(slr);
+    return in.substr(slr+1);
   else
     return in;
 }

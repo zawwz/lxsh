@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
       {
         first_run=false;
         // resolve shebang
-        bool shebang_is_bin = basename(argv[0]) == basename(tsh->shebang);
+        bool shebang_is_bin = ( basename(argv[0]) == basename(tsh->shebang) );
         if(shebang_is_bin)
           tsh->shebang="#!/bin/sh";
 
