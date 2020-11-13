@@ -18,7 +18,7 @@ CXXFLAGS= -I$(IDIR) -Wall -pedantic -std=c++17
 ifeq     ($(DEBUG),true)
   # debugging flags
   CC=clang++
-  CXXFLAGS += -g
+  CXXFLAGS += -g -pg
 else
   # release flags
   CXXFLAGS += -O2
@@ -32,7 +32,6 @@ else
 endif
 
 ## END CONFIG ##
-
 
 
 $(shell mkdir -p $(ODIR))

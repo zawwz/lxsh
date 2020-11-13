@@ -4,3 +4,6 @@
 /Zmakefile
 /TODO
 /lxsh
+/gmon.out
+/profiling/*
+/profiling.*
