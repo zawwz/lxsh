@@ -76,8 +76,6 @@ extern std::string g_origin;
 
 cmd* make_cmd(std::vector<std::string> args);
 
-bool add_include(std::string const& file);
-
 class _obj
 {
 public:

@@ -6,8 +6,6 @@
 #include "options.hpp"
 #include "parse.hpp"
 
-std::vector<std::string> included;
-
 bool is_sub_special_cmd(std::string in)
 {
   return in == "%include_sub" || in == "%resolve_sub";
@@ -109,18 +107,6 @@ std::string list::generate(int ind, bool first_indent)
     }
   }
   return ret;
-}
-
-bool add_include(std::string const& file)
-{
-  std::string truepath=ztd::exec("readlink", "-f", file).first;
-  for(auto it: included)
-  {
-    if(it == truepath)
-      return false;
-  }
-  included.push_back(truepath);
-  return true;
 }
 
 // BLOCK

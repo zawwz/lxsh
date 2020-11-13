@@ -87,10 +87,10 @@ std::string get_varname(subarg* in)
 
 /** VAR RECURSE **/
 
-void get_map_varname(_obj* in, std::map<std::string,uint32_t>* variable_map)
+bool get_map_varname(_obj* in, std::map<std::string,uint32_t>* variable_map)
 {
   if(variable_map == nullptr)
-    return;
+    return false;
   switch(in->type)
   {
     case _obj::subarg_variable: {
@@ -122,9 +122,10 @@ void get_map_varname(_obj* in, std::map<std::string,uint32_t>* variable_map)
     }; break;
     default: break;
   }
+  return true;
 }
 
-void replace_varname(_obj* in, std::map<std::string,std::string>* varmap)
+bool replace_varname(_obj* in, std::map<std::string,std::string>* varmap)
 {
   switch(in->type)
   {
@@ -170,15 +171,13 @@ void replace_varname(_obj* in, std::map<std::string,std::string>* varmap)
     }; break;
     default: break;
   }
+  return true;
 }
 
 /** FCT RECURSE **/
 
-void get_map_cmd(_obj* in, std::map<std::string,uint32_t>* all_cmds)
+bool get_map_cmd(_obj* in, std::map<std::string,uint32_t>* all_cmds)
 {
-  if(all_cmds == nullptr)
-    return;
-
   switch(in->type)
   {
     case _obj::block_cmd: {
@@ -189,12 +188,11 @@ void get_map_cmd(_obj* in, std::map<std::string,uint32_t>* all_cmds)
     }; break;
     default: break;
   }
+  return true;
 }
 
-void get_map_fctname(_obj* in, std::map<std::string,uint32_t>* fct_map)
+bool get_map_fctname(_obj* in, std::map<std::string,uint32_t>* fct_map)
 {
-  if(fct_map == nullptr)
-    return;
   switch(in->type)
   {
     case _obj::block_function: {
@@ -204,9 +202,10 @@ void get_map_fctname(_obj* in, std::map<std::string,uint32_t>* fct_map)
     }; break;
     default: break;
   }
+  return true;
 }
 
-void replace_fctname(_obj* in, std::map<std::string,std::string>* fctmap)
+bool replace_fctname(_obj* in, std::map<std::string,std::string>* fctmap)
 {
   switch(in->type)
   {
@@ -228,9 +227,10 @@ void replace_fctname(_obj* in, std::map<std::string,std::string>* fctmap)
     }; break;
     default: break;
   }
+  return true;
 }
 
-void delete_fcts(_obj* in, std::set<std::string>* fcts)
+bool delete_fcts(_obj* in, std::set<std::string>* fcts)
 {
   switch(in->type)
   {
@@ -253,6 +253,7 @@ void delete_fcts(_obj* in, std::set<std::string>* fcts)
     }
     default: break;
   }
+  return true;
 }
 
 /** name things **/
@@ -366,7 +367,7 @@ void delete_unused_fct(_obj* in, std::regex exclude)
     recurse(delete_fcts, in, &unused);
 }
 
-void list_stuff(_obj* in, std::regex exclude, void (&fct)(_obj*,std::map<std::string,uint32_t>*) )
+void list_stuff(_obj* in, std::regex exclude, bool (&fct)(_obj*,std::map<std::string,uint32_t>*) )
 {
   std::map<std::string,uint32_t> map;
   recurse(fct, in, &map);

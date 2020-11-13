@@ -7,13 +7,14 @@
 
 // boolean value of fct: if true, recurse on this object, if false, skip this object
 template<class... Args>
-void recurse(void (&fct)(_obj*, Args...), _obj* o, Args... args)
+void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
 {
   if(o == nullptr)
     return;
 
   // execution
-  fct(o, args...);
+  if(!fct(o, args...))
+    return; // skip recurse if false
 
   // recursive calls
   switch(o->type)

@@ -18,6 +18,9 @@
 
 extern std::string indenting_string;
 
+std::string basename(std::string const& in);
+std::string dirname(std::string const& in);
+
 std::string indent(int n);
 
 std::vector<std::string> split(std::string const& in, const char* splitters);

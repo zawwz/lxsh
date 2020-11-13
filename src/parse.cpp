@@ -243,7 +243,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           else if( word_eq("$((", in, size, i) ) // arithmetic operation
           {
             // add previous subarg
-            ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+            std::string tmpstr=std::string(in+j, i-j);
+            if(tmpstr!="")
+              ret->sa.push_back(new string_subarg(tmpstr));
             // get arithmetic
             auto r=parse_arithmetic(in, size, i+3);
             ret->sa.push_back(r.first);
@@ -252,7 +254,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           else if( word_eq("$(", in, size, i) ) // substitution
           {
             // add previous subarg
-            ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+            std::string tmpstr=std::string(in+j, i-j);
+            if(tmpstr!="")
+              ret->sa.push_back(new string_subarg(tmpstr));
             // get subshell
             auto r=parse_subshell(in, size, i+2);
             ret->sa.push_back(new subshell_subarg(r.first, true));
@@ -261,7 +265,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           else if( word_eq("${", in, size, i) ) // variable manipulation
           {
             // add previous subarg
-            ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+            std::string tmpstr=std::string(in+j, i-j);
+            if(tmpstr!="")
+              ret->sa.push_back(new string_subarg(tmpstr));
             // get manipulation
             auto r=parse_manipulation(in, size, i+2);
             ret->sa.push_back(r.first);
@@ -273,7 +279,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
             if(r.second > i+1)
             {
               // add previous subarg
-              ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+              std::string tmpstr=std::string(in+j, i-j);
+              if(tmpstr!="")
+                ret->sa.push_back(new string_subarg(tmpstr));
               // add varname
               ret->sa.push_back(new variable_subarg(r.first));
               j = i = r.second;
@@ -302,7 +310,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
       else if( word_eq("$((", in, size, i) ) // arithmetic operation
       {
         // add previous subarg
-        ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+        std::string tmpstr=std::string(in+j, i-j);
+        if(tmpstr!="")
+          ret->sa.push_back(new string_subarg(tmpstr));
         // get arithmetic
         auto r=parse_arithmetic(in, size, i+3);
         ret->sa.push_back(r.first);
@@ -311,7 +321,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
       else if( word_eq("$(", in, size, i) ) // substitution
       {
         // add previous subarg
-        ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+        std::string tmpstr=std::string(in+j, i-j);
+        if(tmpstr!="")
+          ret->sa.push_back(new string_subarg(tmpstr));
         // get subshell
         auto r=parse_subshell(in, size, i+2);
         ret->sa.push_back(new subshell_subarg(r.first, false));
@@ -320,7 +332,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
       else if( word_eq("${", in, size, i) ) // variable manipulation
       {
         // add previous subarg
-        ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+        std::string tmpstr=std::string(in+j, i-j);
+        if(tmpstr!="")
+          ret->sa.push_back(new string_subarg(tmpstr));
         // get manipulation
         auto r=parse_manipulation(in, size, i+2);
         ret->sa.push_back(r.first);
@@ -332,7 +346,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         if(r.second > i+1)
         {
           // add previous subarg
-          ret->sa.push_back(new string_subarg(std::string(in+j, i-j)));
+          std::string tmpstr=std::string(in+j, i-j);
+          if(tmpstr!="")
+            ret->sa.push_back(new string_subarg(tmpstr));
           // add varname
           ret->sa.push_back(new variable_subarg(r.first));
           j = i = r.second;
@@ -346,7 +362,8 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
 
     // add string subarg
     std::string val=std::string(in+j, i-j);
-    ret->sa.push_back(new string_subarg(val));
+    if(val != "")
+      ret->sa.push_back(new string_subarg(val));
 
   }
   catch(ztd::format_error& e)

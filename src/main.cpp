@@ -86,7 +86,7 @@ int main(int argc, char* argv[])
     // do parsing
     for(uint32_t i=0 ; i<args.size() ; i++)
     {
-      std::string& file = args[i];
+      std::string file = args[i];
       std::string filecontents=import_file(file);
       // parse
       g_origin=file;
@@ -98,7 +98,7 @@ int main(int argc, char* argv[])
       {
         first_run=false;
         // resolve shebang
-        bool shebang_is_bin = ztd::exec("basename", argv[0]).first == ztd::exec("basename", tsh->shebang).first;
+        bool shebang_is_bin = basename(argv[0]) == basename(tsh->shebang);
         if(shebang_is_bin)
           tsh->shebang="#!/bin/sh";
 
@@ -112,7 +112,6 @@ int main(int argc, char* argv[])
 
         if(!is_exec && args.size() > 1) // not exec: parse options on args
         {
-          std::string t=args[0];
           args=options.process(args);
         }
 
@@ -123,7 +122,9 @@ int main(int argc, char* argv[])
       /* mid processing */
       // resolve/include
       if(g_include || g_resolve)
+      {
         resolve(tsh);
+      }
 
       // concatenate to main
       sh->concat(tsh);
@@ -180,7 +181,7 @@ int main(int argc, char* argv[])
     printFormatError(e);
     return 100;
   }
-  catch(std::exception& e)
+  catch(std::runtime_error& e)
   {
     if(tsh != nullptr)
       delete tsh;

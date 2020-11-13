@@ -20,6 +20,24 @@ std::string indent(int n)
   return ret;
 }
 
+std::string basename(std::string const& in)
+{
+  size_t slr=in.rfind('/');
+  if(slr != std::string::npos)
+    return in.substr(slr);
+  else
+    return in;
+}
+
+std::string dirname(std::string const& in)
+{
+  size_t slr=in.rfind('/');
+  if(slr != std::string::npos)
+    return in.substr(0,slr);
+  else
+    return ".";
+}
+
 std::vector<std::string> split(std::string const& in, const char* splitters)
 {
   uint32_t i=0,j=0;
@@ -229,8 +247,7 @@ int execute(shmain* sh, std::vector<std::string>& args)
 {
   std::string data=sh->generate();
 
-  std::string filename=ztd::exec("basename", args[0]).first;
-  filename.pop_back();
+  std::string filename = basename(args[0]);
 
   // generate path
   std::string tmpdir = (getenv("TMPDIR") != NULL) ? getenv("TMPDIR") : "/tmp" ;
