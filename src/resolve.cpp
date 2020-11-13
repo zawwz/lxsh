@@ -7,7 +7,6 @@
 #include "options.hpp"
 #include "util.hpp"
 #include "parse.hpp"
-#include "timer.hpp"
 
 std::vector<std::string> included;
 
