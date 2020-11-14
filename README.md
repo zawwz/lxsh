@@ -4,7 +4,14 @@ Extended shell linker for linking, generating and minimizing shell code
 
 # Installing
 
-Put the `lxsh` binary in a PATH folder, `/usr/local/bin` is the recommended.
+## linux-amd64
+
+Download the `lxsh-linux-amd64.tar.gz` archive and move `lxsh` binary in a PATH folder,
+`/usr/local/bin` is the recommended.
+
+## Other
+
+See [Build](#build).
 
 # Features
 
@@ -52,7 +59,7 @@ Directly execute an extended lxsh script with either
 
 > There may be some issues with direct execution as of now
 
-# Development
+# Build <a name="build"></a>
 
 ## Dependencies
 
