@@ -15,20 +15,27 @@
 #include "minimize.hpp"
 #include "resolve.hpp"
 
+#include "version.h"
+#include "g_version.h"
+
 void oneshot_opt_process(const char* arg0)
 {
   if(options['h'])
   {
     print_help(arg0);
-    exit(1);
   }
-  if(options["help-commands"])
+  else if(options["version"])
+  {
+    printf("%s %s%s\n", arg0, VERSION_STRING, VERSION_SUFFIX);
+    printf("%s\n", VERSION_SHA);
+  }
+  else if(options["help-commands"])
   {
     print_include_help();
     printf("\n\n");
     print_resolve_help();
-    exit(1);
   }
+  exit(0);
 }
 
 int main(int argc, char* argv[])
@@ -46,6 +53,8 @@ int main(int argc, char* argv[])
     std::cerr << e.what() << std::endl;
     return 1;
   }
+
+  oneshot_opt_process(argv[0]);
 
   // resolve input
   std::string file;

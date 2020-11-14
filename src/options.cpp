@@ -15,6 +15,7 @@ ztd::option_set gen_options()
   ret.add(
       ztd::option("\r  [Help]"),
       ztd::option('h', "help",          false, "Display this help message"),
+      ztd::option("version",            false, "Display version"),
       ztd::option("help-commands",      false, "Print help for linker commands"),
       ztd::option("\r  [Output]"),
       ztd::option('o', "output",        true , "Output result script to file", "file"),
