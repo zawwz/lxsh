@@ -510,20 +510,20 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
     {
       auto pp=parse_condlist(in, size, i);
       ret->cls.push_back(pp.first);
-      if(pp.second < size)
+      i=pp.second;
+
+      if(i < size)
       {
-        if(in[pp.second] == end_c) // end char, stop here
+        if(in[i] == end_c) // end char, stop here
           break;
-        else if(is_in(in[pp.second], COMMAND_SEPARATOR)) // command separator: next char
-          i = skip_unread(in, size, pp.second+1);
-        else if(is_in(in[pp.second], CONTROL_END))
-          throw PARSE_ERROR(strf("Unexpected token: '%c'", in[pp.second]), pp.second);
-        else
-          i = skip_unread(in, size, pp.second);
-      }
-      else
-      {
-        i=pp.second;
+        else if(in[i] == '#')
+          ; // skip here
+        else if(is_in(in[i], COMMAND_SEPARATOR))
+          i++; // skip on next char
+        else if(is_in(in[i], CONTROL_END))
+          throw PARSE_ERROR(strf("Unexpected token: '%c'", in[i]), i);
+
+        i = skip_unread(in, size, i);
       }
 
       if(i>=size)
@@ -568,12 +568,19 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
       // do a parse
       auto pp=parse_condlist(in, size, i);
       ret->cls.push_back(pp.first);
-      if(is_in(in[pp.second], COMMAND_SEPARATOR))
-        i = skip_unread(in, size, pp.second+1);
-      else if(is_in(in[pp.second], CONTROL_END))
-        throw PARSE_ERROR(strf("Unexpected token: '%c'", in[pp.second]), pp.second);
-      else
-        i = skip_unread(in, size, pp.second);
+      i=pp.second;
+      if(i<size)
+      {
+        if(in[i] == '#')
+          ; // skip here
+        else if(is_in(in[i], COMMAND_SEPARATOR))
+          i++;
+        else if(is_in(in[i], CONTROL_END))
+          throw PARSE_ERROR(strf("Unexpected token: '%c'", in[i]), i);
+
+        i = skip_unread(in, size, i);
+      }
+
       // word wasn't found
       if(i>=size)
       {
@@ -627,10 +634,13 @@ std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32
       // do a parse
       auto pp=parse_condlist(in, size, i);
       ret->cls.push_back(pp.first);
-      if(is_in(in[pp.second], COMMAND_SEPARATOR))
-        i = skip_unread(in, size, pp.second+1);
-      else
-        i = skip_unread(in, size, pp.second);
+      i=pp.second;
+      if(in[i] == '#')
+        ; // skip here
+      else if(is_in(in[i], COMMAND_SEPARATOR))
+        i++; // skip on next
+
+      i = skip_unread(in, size, i);
       // word wasn't found
       if(i>=size)
       {
