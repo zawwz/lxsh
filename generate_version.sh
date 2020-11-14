@@ -9,6 +9,7 @@ OLD_SUFFIX=$(grep 'VERSION_SUFFIX' "$file" | cut -d '"' -f2)
 
 [ "$RELEASE" != "true" ] && SUFFIX="-dev-$(echo "$SHA_FULL" | cut -c1-10)"
 
+[ "$DEBUG" = "true" ] && SUFFIX="$SUFFIX-DEBUG"
 
 if [ "$OLD_SHA" != "$SHA_FULL" ] || [ "$OLD_SUFFIX" != "$SUFFIX"  ] ; then
   cat > "$file" << EOF
