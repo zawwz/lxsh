@@ -1,6 +1,10 @@
 # lxsh
 
-Extended shell linker for linking and generating shell code
+Extended shell linker for linking, generating and minimizing shell code
+
+# Installing
+
+Put the `lxsh` binary in a PATH folder, `/usr/local/bin` is the recommended.
 
 # Features
 
@@ -14,36 +18,60 @@ These commands can be placed anywhere within the script like regular commands.
 
 > See `lxsh --help-commands` for more details
 
+## Minimize code
+
+Reduce code size to a minimum without changing functionality with the `-m` option.
+
+### Further minimizing
+
+The script can be further minimized by altering code elements.
+This can cause some change in execution behavior if you are not careful.
+
+Variable names can be minimized with `--minimize-var`,
+use `--exclude-var` to exclude variables from being minimized (for example environment config).
+
+Function names can be minimized with `--minimize`
+
 ## Other features
 
 ### Output generated code
 
-Output the generated shell code to stdout with either:
-- `-o` option
-- shebang other than lxsh
+By default lxsh outputs generated shell code to stdout.
+You can use the `-o` option to output to a file and make this file directly executable.
 
-> Redirect stdout to a file to create a script file. <br>
 > The resulting script is not dependent on lxsh
 
 ### Live execution
 
-Directly execute an extended shell script with either
+Directly execute an extended lxsh script with either
 - `-e` option
 - shebang is lxsh
 
-> Direct execution introduces direct dependency on lxsh and overhead,
+> Direct execution introduces direct dependency on lxsh and code generation overhead,
 > therefore it should be avoided outside of development use
 
-### Minimize code
+> There may be some issues with direct execution as of now
 
-Reduce code size to minimum without changing functionality with the `-m` option.
+# Development
+
+## Dependencies
+
+Depends on [ztd](https://github.com/zawwz/ztd)
+
+## Building
+
+Use `make -j8` to build.<br>
+You can use environment variables to alter some aspects:
+- DEBUG: when set to `true` will generate a debug binary with profiling
+- RELEASE: when set to `true`, the version string will be generated for release format
+- STATIC: when set to `true` will statically link libraries
 
 # Work in progress
 
-lxsh should currently fully support POSIX syntax. <br>
-A POSIX shell script should give a working output.
+The full POSIX syntax is supported,
+however not all bash syntax is supported yet,
+for example `&>` and `|&` will produce unexpected results
 
 Some specific features are missing:
-- link commands in subshells inside arithmetics are not resolved
-- arithmetics cannot be minimized
-- link commands placed on the same line as keywords `if`, `then`, `elif`, `else`, `for`, `while`, `do` or `done` are not resolved
+- `$(())` arithmetics cannot be minimized
+- redirects are not fully minimized
