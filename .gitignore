@@ -7,3 +7,4 @@
 /gmon.out
 /profiling/*
 /profiling.*
+/include/g_version.h
