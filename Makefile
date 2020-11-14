@@ -21,7 +21,7 @@ ifeq     ($(DEBUG),true)
   CXXFLAGS += -g -pg
 else
   # release flags
-  CXXFLAGS += -O2
+  CXXFLAGS += -Ofast
 endif
 ifeq    ($(STATIC),true)
   # static links
