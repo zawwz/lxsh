@@ -510,10 +510,21 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
     {
       auto pp=parse_condlist(in, size, i);
       ret->cls.push_back(pp.first);
-      if(is_in(in[pp.second], COMMAND_SEPARATOR))
-        i = skip_unread(in, size, pp.second+1);
+      if(pp.second < size)
+      {
+        if(in[pp.second] == end_c) // end char, stop here
+          break;
+        else if(is_in(in[pp.second], COMMAND_SEPARATOR)) // command separator: next char
+          i = skip_unread(in, size, pp.second+1);
+        else if(is_in(in[pp.second], CONTROL_END))
+          throw PARSE_ERROR(strf("Unexpected token: '%c'", in[pp.second]), pp.second);
+        else
+          i = skip_unread(in, size, pp.second);
+      }
       else
-        i = skip_unread(in, size, pp.second);
+      {
+        i=pp.second;
+      }
 
       if(i>=size)
       {
@@ -559,6 +570,8 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
       ret->cls.push_back(pp.first);
       if(is_in(in[pp.second], COMMAND_SEPARATOR))
         i = skip_unread(in, size, pp.second+1);
+      else if(is_in(in[pp.second], CONTROL_END))
+        throw PARSE_ERROR(strf("Unexpected token: '%c'", in[pp.second]), pp.second);
       else
         i = skip_unread(in, size, pp.second);
       // word wasn't found
@@ -750,6 +763,8 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
       ret->args = pp.first;
       i = pp.second;
     }
+    else if(ret->var_assigns.size() <= 0)
+      throw PARSE_ERROR( strf("Unexpected token: '%c'", in[i]), i );
 
   }
   catch(ztd::format_error& e)
