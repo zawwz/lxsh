@@ -23,19 +23,21 @@ void oneshot_opt_process(const char* arg0)
   if(options['h'])
   {
     print_help(arg0);
+    exit(0);
   }
   else if(options["version"])
   {
     printf("%s %s%s\n", arg0, VERSION_STRING, VERSION_SUFFIX);
     printf("%s\n", VERSION_SHA);
+    exit(0);
   }
   else if(options["help-commands"])
   {
     print_include_help();
     printf("\n\n");
     print_resolve_help();
+    exit(0);
   }
-  exit(0);
 }
 
 int main(int argc, char* argv[])
