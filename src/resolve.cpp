@@ -380,7 +380,8 @@ bool resolve_recurse(_obj* o, shmain* parent)
         resolve_arg(it.second, parent, true); // force quoted
         resolve(it.second, parent);
       }
-      resolve(t->redirs, parent);
+      for(auto it: t->redirs)
+        resolve(it, parent);
       resolve(t->args, parent);
       return false;
     }; break;

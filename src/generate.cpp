@@ -109,20 +109,33 @@ std::string list::generate(int ind, bool first_indent)
   return ret;
 }
 
+std::string redirect::generate(int ind)
+{
+  std::string ret=op;
+  if(target!=nullptr)
+  {
+    if(!opt_minimize)
+      ret += ' ';
+    ret += target->generate(0);
+  }
+  return ret;
+}
+
 // BLOCK
 
-std::string block::generate_redirs(int ind)
+std::string block::generate_redirs(int ind, std::string const& _str)
 {
-  std::string ret;
-  if(redirs != nullptr)
+  std::string ret=" ";
+  bool previous_isnt_num = _str.size()>0 && !is_num(_str[_str.size()-1]);
+  for(auto it: redirs)
   {
-    std::string t = redirs->generate(ind);
-    if(t!="")
-    {
-      if(!opt_minimize) ret += ' ';
-      ret += t;
-    }
+    std::string _r = it->generate(0);
+    if(opt_minimize && _r.size() > 0 && !is_num(_r[0]) && previous_isnt_num)
+      ret.pop_back(); // remove one space if possible
+    ret += _r + ' ';
+    previous_isnt_num = ret.size()>1 && !is_num(ret[ret.size()-2]);
   }
+  ret.pop_back(); // remove last space
   return ret;
 }
 
@@ -155,6 +168,8 @@ std::string if_block::generate(int ind)
   }
 
   ret += indented("fi", ind);
+
+  ret += generate_redirs(ind, ret);
   return ret;
 }
 
@@ -170,6 +185,9 @@ std::string for_block::generate(int ind)
   ret += ops->generate(ind+1);
   ret += indented("done", ind);
 
+  if(opt_minimize && ret.size()>1 && !is_alpha(ret[ret.size()-2]))
+    ret.pop_back();
+  ret += generate_redirs(ind, ret);
   return ret;
 }
 
@@ -187,6 +205,9 @@ std::string while_block::generate(int ind)
   ret += ops->generate(ind+1);
   ret += indented("done", ind);
 
+  if(opt_minimize && ret.size()>1 && !is_alpha(ret[ret.size()-2]))
+    ret.pop_back();
+  ret += generate_redirs(ind, ret);
   return ret;
 }
 
@@ -203,8 +224,7 @@ std::string subshell::generate(int ind)
   // close subshell
   ret += indented(")", ind);
 
-  ret += generate_redirs(ind);
-
+  ret += generate_redirs(ind, ret);
   return ret;
 }
 
@@ -220,6 +240,8 @@ std::string shmain::generate(bool print_shebang, int ind)
   ret += lst->generate(ind);
   if( opt_minimize && ret[ret.size()-1] == '\n')
     ret.pop_back();
+
+  ret += generate_redirs(ind, ret);
   return ret;
 }
 
@@ -231,8 +253,7 @@ std::string brace::generate(int ind)
   ret += lst->generate(ind+1);
   ret += indented("}", ind);
 
-  ret += generate_redirs(ind);
-
+  ret += generate_redirs(ind, ret);
   return ret;
 }
 
@@ -247,8 +268,7 @@ std::string function::generate(int ind)
   ret += lst->generate(ind+1);
   ret += indented("}", ind);
 
-  ret += generate_redirs(ind);
-
+  ret += generate_redirs(ind, ret);
   return ret;
 }
 
@@ -285,8 +305,7 @@ std::string case_block::generate(int ind)
   ind--;
   ret += indented("esac", ind);
 
-  ret += generate_redirs(ind);
-
+  ret += generate_redirs(ind, ret);
   return ret;
 }
 
@@ -309,6 +328,7 @@ std::string cmd::generate(int ind)
   if(ret[ret.size()-1] == ' ')
     ret.pop_back();
 
+  ret += generate_redirs(ind, ret);
   return ret;
 }
 

@@ -9,8 +9,8 @@
 
 #define SPACES          " \t"
 #define SEPARATORS      " \t\n"
-#define ARG_END         " \t\n;#()&|"
-#define VARNAME_END     " \t\n;#()&|=\"'\\{}"
+#define ARG_END         " \t\n;#()&|<>"
+#define VARNAME_END     " \t\n;#()&|=\"'\\{}/-+"
 #define BLOCK_TOKEN_END " \t\n;#()&|=\"'\\"
 #define COMMAND_SEPARATOR  "\n;"
 #define CONTROL_END           "#)"
@@ -22,6 +22,10 @@
 #define SPECIAL_VARS "!#*@$?"
 
 std::string import_file(std::string const& path);
+
+bool is_num(char c);
+bool is_alpha(char c);
+bool is_alphanum(char c);
 
 shmain* parse_text(const char* in, uint32_t size, std::string const& filename="");
 inline shmain* parse_text(std::string const& in, std::string const& filename="") { return parse_text(in.c_str(), in.size(), filename); }

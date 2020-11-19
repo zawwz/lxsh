@@ -19,6 +19,12 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
   // recursive calls
   switch(o->type)
   {
+    case _obj::_redirect :
+    {
+      redirect* t = dynamic_cast<redirect*>(o);
+      recurse(fct, t->target, args...);
+      break;
+    }
     case _obj::_arg :
     {
       arg* t = dynamic_cast<arg*>(o);

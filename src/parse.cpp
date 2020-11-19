@@ -4,14 +4,22 @@
 #include <strings.h>
 #include <string.h>
 
+#include <ztd/shell.hpp>
+
 #include "util.hpp"
 
 #define ORIGIN_NONE ""
 
+// macro
+
 #define PARSE_ERROR(str, i) ztd::format_error(str, "", in, i)
+
+// constants
 
 const std::vector<std::string> all_reserved_words = { "if", "then", "else", "fi", "case", "esac", "for", "while", "do", "done", "{", "}" };
 const std::vector<std::string> out_reserved_words = { "then", "else", "fi", "esac", "do", "done", "}" };
+
+// stuff
 
 std::string g_expecting;
 
@@ -36,13 +44,17 @@ bool has_common_char(const char* str1, const char* str2)
   return false;
 }
 
-inline bool is_alphanum(char c)
+inline bool is_num(char c)
 {
-  return (c >= 'a' && c<='z') || (c >= 'A' && c<='Z') || (c >= '0' && c<='9');
+  return (c >= '0' && c <= '9');
 }
 inline bool is_alpha(char c)
 {
-  return (c >= 'a' && c<='z') || (c >= 'A' && c<='Z');
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+inline bool is_alphanum(char c)
+{
+  return is_alpha(c) || is_num(c);
 }
 
 bool valid_name(std::string const& str)
@@ -217,7 +229,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
     if(unexpected != NULL && is_in(in[i], unexpected))
       throw PARSE_ERROR( strf("Unexpected token '%c'", in[i]) , i);
 
-    while(i<size && !is_in(in[i], end))
+    while(i<size && !(end != NULL && is_in(in[i], end)) )
     {
       if(i+1<size && is_in(in[i], "<>") && in[i+1]=='&') // special case for <& and >&
       {
@@ -375,14 +387,135 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
   return std::make_pair(ret, i);
 }
 
+std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uint32_t start)
+{
+  uint32_t i=start;
+
+  bool is_redirect=false;
+  bool needs_arg=false;
+  bool has_num_prefix=false;
+
+  if(in[i] > '0' && in[i] < '9')
+  {
+    i++;
+    has_num_prefix=true;
+  }
+
+  if( in[i] == '>' )
+  {
+    i++;
+    if(i>size)
+      PARSE_ERROR("Unexpected end of file", i);
+    is_redirect = true;
+    if(i+1<size && in[i] == '&' && is_num(in[i+1]) )
+    {
+      i+=2;
+      needs_arg=false;
+    }
+    else
+    {
+      if(in[i] == '>')
+        i++;
+      needs_arg=true;
+    }
+
+  }
+  else if( in[i] == '<' )
+  {
+    if(has_num_prefix)
+      PARSE_ERROR("Invalid input redirection", i-1);
+    i++;
+    if(i>size)
+      PARSE_ERROR("Unexpected end of file", i);
+    if(in[i] == '<')
+      i++;
+    is_redirect=true;
+    needs_arg=true;
+  }
+
+
+  if(is_redirect)
+  {
+    redirect* ret=nullptr;
+    try
+    {
+      ret = new redirect;
+      ret->op = std::string(in+start, i-start);
+      if(needs_arg)
+      {
+        i = skip_chars(in, size, i, SPACES);
+        if(ret->op == "<<")
+        {
+          auto pa = parse_arg(in, size, i);
+          std::string delimitor = pa.first->string();
+          delete pa.first;
+          pa.first = nullptr;
+
+          if(delimitor == "")
+            PARSE_ERROR("Non-static or empty text input delimitor", i);
+
+          if(delimitor.find('"') != std::string::npos || delimitor.find('\'') != std::string::npos || delimitor.find('\\') != std::string::npos)
+          {
+            delimitor = ztd::sh("echo "+delimitor); // shell resolve the delimitor
+            delimitor.pop_back(); // remove \n
+          }
+
+          i = skip_chars(in, size, pa.second, SPACES);  // skip spaces
+
+          if(in[i] == '#') // skip comment
+            i = skip_until(in, size, i, "\n"); //skip to endline
+          if(in[i] != '\n') // has another arg
+            throw PARSE_ERROR("Additionnal argument after text input delimitor", i);
+
+          i++;
+          uint32_t j=i;
+          char* tc=NULL;
+          tc = (char*) strstr(in+i, std::string("\n"+delimitor+"\n").c_str()); // find delimitor
+          if(tc!=NULL) // delimitor was found
+          {
+            i = (tc-in)+delimitor.size()+1;
+          }
+          else
+          {
+            i = size;
+            // maybe at end of file with no \n
+            // if(strstr(in+size-delimitor.size(), std::string("\n"+delimitor).c_str())!=NULL)
+            //   i = size-delimitor.size();
+            // else // not found: end of file
+          }
+          std::string tmpparse=std::string(in+j, i-j);
+          auto pval = parse_arg(tmpparse.c_str(), tmpparse.size(), 0, NULL);
+          ret->target = pval.first;
+          ret->target->sa.insert(ret->target->sa.begin(), new string_subarg(delimitor+"\n"));
+        }
+        else
+        {
+          auto pa = parse_arg(in, size, i);
+          ret->target = pa.first;
+          i=pa.second;
+        }
+      }
+    }
+    catch(ztd::format_error& e)
+    {
+      if(ret!=nullptr)
+        delete ret;
+      throw e;
+    }
+    return std::make_pair(ret, i);
+  }
+  else
+    return std::make_pair(nullptr, start);
+}
+
 // parse one list of arguments (a command for instance)
 // must start at a read char
 // first char has to be read
 // ends at either &|;\n#()
-std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint32_t start, bool hard_error=false)
+std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint32_t start, bool hard_error=false, std::vector<redirect*>* redirs=nullptr)
 {
   uint32_t i=start;
-  arglist* ret = new arglist;
+  arglist* ret = nullptr;
 
   try
   {
@@ -395,9 +528,27 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
     }
     while(i<size)
     {
-      auto pp=parse_arg(in, size, i);
-      ret->args.push_back(pp.first);
-      i = skip_chars(in, size, pp.second, SPACES);
+      if(redirs!=nullptr)
+      {
+        auto pr = parse_redirect(in, size, i);
+        if(pr.first != nullptr)
+        {
+          redirs->push_back(pr.first);
+          i=pr.second;
+        }
+        else
+          goto argparse;
+      }
+      else
+      {
+argparse:
+        if(ret == nullptr)
+          ret = new arglist;
+        auto pp=parse_arg(in, size, i);
+        ret->args.push_back(pp.first);
+        i = pp.second;
+      }
+      i = skip_chars(in, size, i, SPACES);
       if(i>=size)
         return std::make_pair(ret, i);
       if( is_in(in[i], SPECIAL_TOKENS) )
@@ -406,7 +557,8 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
   }
   catch(ztd::format_error& e)
   {
-    delete ret;
+    if(ret != nullptr)
+      delete ret;
     throw e;
   }
   return std::make_pair(ret, i);
@@ -730,7 +882,7 @@ std::pair<function*, uint32_t> parse_function(const char* in, uint32_t size, uin
 
     auto pp=parse_list_until(in, size, i, '}');
     if(pp.first->size()<=0)
-      throw PARSE_ERROR("Condition is empty", i);
+      throw PARSE_ERROR("Function is empty", i);
 
     ret->lst=pp.first;
     i=pp.second;
@@ -769,7 +921,7 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
 
     if(!is_in(in[i], SPECIAL_TOKENS))
     {
-      auto pp=parse_arglist(in, size, i, true);
+      auto pp=parse_arglist(in, size, i, true, &ret->redirs);
       ret->args = pp.first;
       i = pp.second;
     }
@@ -1104,16 +1256,31 @@ std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t 
 
     if(ret->type != block::block_cmd)
     {
-      auto pp=parse_arglist(in, size, i, false); // in case of redirects
-      if(pp.first->args.size()>0)
-      {
-        i = pp.second;
-        ret->redirs=pp.first;
-      }
-      else
+      // while(true)
+      // {
+      //   auto pr=parse_redirect(in, size, i);
+      //   if(pr.first == nullptr)
+      //     break;
+      //   ret->redirs.push_back(pr.first);
+      //   i = pr.second;
+      // }
+      uint32_t j=skip_chars(in, size, i, SPACES);
+      auto pp=parse_arglist(in, size, j, false, &ret->redirs); // in case of redirects
+      if(pp.first != nullptr)
       {
         delete pp.first;
+        throw PARSE_ERROR("Extra argument after block", i);
       }
+      i=pp.second;
+      // if(pp.first->args.size()>0)
+      // {
+      //   i = pp.second;
+      //   ret->redirs=pp.first;
+      // }
+      // else
+      // {
+      //   delete pp.first;
+      // }
     }
   }
   catch(ztd::format_error& e)

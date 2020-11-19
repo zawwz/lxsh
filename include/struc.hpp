@@ -76,11 +76,13 @@ extern std::string g_origin;
 
 cmd* make_cmd(std::vector<std::string> args);
 
+// meta object type
 class _obj
 {
 public:
   enum _objtype {
     subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic, subarg_manipulation,
+    _redirect,
     _arg,
     _arglist,
     _pipeline,
@@ -100,7 +102,6 @@ public:
   virtual ~subarg() {;}
   virtual std::string generate(int ind)=0;
 };
-
 
 class arg : public _obj
 {
@@ -142,19 +143,31 @@ public:
   std::string generate(int ind);
 };
 
+class redirect : public _obj
+{
+public:
+  redirect(arg* in=nullptr) { type=_obj::_redirect; target=in; }
+  ~redirect() { if(target != nullptr) delete target; }
+
+  std::string generate(int ind);
+
+  std::string op;
+  arg* target;
+};
+
 // Meta block
 class block : public _obj
 {
 public:
-  block() { redirs=nullptr; }
-  virtual ~block() { if(redirs!=nullptr) delete redirs; }
+  block() { ; }
+  virtual ~block() { for(auto it: redirs) delete it; }
   // cmd
-  arglist* redirs;
+  std::vector<redirect*> redirs;
 
   // subshell: return the containing cmd, if it is a single command
   cmd* single_cmd();
 
-  std::string generate_redirs(int ind);
+  std::string generate_redirs(int ind, std::string const& _str);
 
   virtual std::string generate(int ind)=0;
 };
