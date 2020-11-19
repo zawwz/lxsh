@@ -6,6 +6,19 @@
 #include "options.hpp"
 #include "parse.hpp"
 
+inline bool is_num(char c)
+{
+  return (c >= '0' && c <= '9');
+}
+inline bool is_alpha(char c)
+{
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+inline bool is_alphanum(char c)
+{
+  return is_alpha(c) || is_num(c);
+}
+
 bool is_sub_special_cmd(std::string in)
 {
   return in == "%include_sub" || in == "%resolve_sub";

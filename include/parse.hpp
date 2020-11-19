@@ -23,10 +23,6 @@
 
 std::string import_file(std::string const& path);
 
-bool is_num(char c);
-bool is_alpha(char c);
-bool is_alphanum(char c);
-
 shmain* parse_text(const char* in, uint32_t size, std::string const& filename="");
 inline shmain* parse_text(std::string const& in, std::string const& filename="") { return parse_text(in.c_str(), in.size(), filename); }
 inline shmain* parse(std::string const& file) { return parse_text(import_file(file), file); }
