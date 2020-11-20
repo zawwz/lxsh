@@ -88,5 +88,4 @@ however not all bash syntax is supported yet,
 for example `&>` and `|&` will produce unexpected results
 
 Some specific features are missing:
-- `$(())` arithmetics cannot be minimized
-- redirects are not fully minimized
+- `$(())` arithmetics are not minimized
