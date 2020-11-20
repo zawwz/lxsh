@@ -38,7 +38,7 @@ Variable names can be minimized with `--minimize-var`,
 use `--exclude-var` to exclude variables from being minimized (for example environment config).
 
 Function names can be minimized with `--minimize-fct`,
-use `--exclude-var` to exclude functions from being minimized.
+use `--exclude-fct` to exclude functions from being minimized.
 
 Unused functions can be removed with `--remove-unused`.
 Removal of unused variables is a work in progress.
