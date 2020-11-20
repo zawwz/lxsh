@@ -44,19 +44,6 @@ bool has_common_char(const char* str1, const char* str2)
   return false;
 }
 
-inline bool is_num(char c)
-{
-  return (c >= '0' && c <= '9');
-}
-inline bool is_alpha(char c)
-{
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-}
-inline bool is_alphanum(char c)
-{
-  return is_alpha(c) || is_num(c);
-}
-
 bool valid_name(std::string const& str)
 {
   if(!is_alpha(str[0]) && str[0] != '_') return false;

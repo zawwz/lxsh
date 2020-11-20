@@ -11,6 +11,14 @@
 std::regex re_var_exclude;
 std::regex re_fct_exclude;
 
+const std::regex regex_null;
+
+countmap_t m_vars, m_vardefs, m_varcalls;
+countmap_t m_fcts, m_cmds;
+std::set<std::string> m_excluded_var, m_excluded_fct, m_excluded_cmd;
+
+bool b_gotvar=false, b_gotfct=false, b_gotcmd=false;
+
 std::vector<std::string> get_list(std::string const& in)
 {
   return split(in, ", \t\n");
@@ -43,6 +51,20 @@ std::regex fct_exclude_regex(std::string const& in)
   return gen_regex_from_list(get_list(in));
 }
 
+bool is_varname(std::string const& in)
+{
+  if(in.size() <= 0 || !(is_alpha(in[0]) || in[0]== '_') )
+    return false;
+  uint32_t i=1;
+  while(i<in.size() && (is_alphanum(in[i]) || in[i] == '_'))
+  {
+    i++;
+  }
+  if(i<in.size() && in[i]!='=')
+    return false;
+  return true;
+}
+
 std::vector<subarg*> cmd::arg_vars()
 {
   std::vector<subarg*> ret;
@@ -57,16 +79,8 @@ std::vector<subarg*> cmd::arg_vars()
       arg* ta = args->args[i];
       if(ta->sa.size() < 1 || ta->sa[0]->type != _obj::subarg_string)
         continue;
-      if(ta->sa.size() == 1)
-      {
-        if( std::regex_match(ta->sa[0]->generate(0), std::regex("[a-zA-Z_][0-9a-zA-Z_]*([=](.*)?)?") ) )
-          ret.push_back(ta->sa[0]);
-      }
-      else if(ta->sa.size() > 1)
-      {
-        if( std::regex_match(ta->sa[0]->generate(0), std::regex("[a-zA-Z_][0-9a-zA-Z_]*=.*") ) )
-          ret.push_back(ta->sa[0]);
-      }
+      if(ta->sa.size() >= 1 && is_varname(ta->sa[0]->generate(0)))
+        ret.push_back(ta->sa[0]);
     }
   }
 
@@ -87,37 +101,35 @@ std::string get_varname(subarg* in)
 
 /** VAR RECURSE **/
 
-bool get_map_varname(_obj* in, std::map<std::string,uint32_t>* variable_map)
+bool get_var(_obj* in, countmap_t* defmap, countmap_t* callmap)
 {
-  if(variable_map == nullptr)
-    return false;
   switch(in->type)
   {
     case _obj::subarg_variable: {
       variable_subarg* t = dynamic_cast<variable_subarg*>(in);
-      if(!variable_map->insert( std::make_pair(t->varname, 1) ).second)
-        (*variable_map)[t->varname]++;
+      if(!callmap->insert( std::make_pair(t->varname, 1) ).second)
+        (*callmap)[t->varname]++;
     }; break;
     case _obj::subarg_manipulation: {
       manipulation_subarg* t = dynamic_cast<manipulation_subarg*>(in);
-      if(!variable_map->insert( std::make_pair(t->varname, 1) ).second)
-        (*variable_map)[t->varname]++;
+      if(!callmap->insert( std::make_pair(t->varname, 1) ).second)
+        (*callmap)[t->varname]++;
     }; break;
     case _obj::block_for: {
       for_block* t = dynamic_cast<for_block*>(in);
-      if(!variable_map->insert( std::make_pair(t->varname, 1) ).second)
-        (*variable_map)[t->varname]++;
+      if(!defmap->insert( std::make_pair(t->varname, 1) ).second)
+        (*defmap)[t->varname]++;
     }; break;
     case _obj::block_cmd: {
       cmd* t = dynamic_cast<cmd*>(in);
       for(auto it: t->var_assigns)
-        if(!variable_map->insert( std::make_pair(it.first, 1) ).second)
-          (*variable_map)[it.first]++;
+        if(!defmap->insert( std::make_pair(it.first, 1) ).second)
+          (*defmap)[it.first]++;
       for(auto it: t->arg_vars())
       {
         std::string varname=get_varname(it);
-        if(!variable_map->insert( std::make_pair(varname, 1) ).second)
-          (*variable_map)[varname]++;
+        if(!defmap->insert( std::make_pair(varname, 1) ).second)
+          (*defmap)[varname]++;
       }
     }; break;
     default: break;
@@ -176,7 +188,7 @@ bool replace_varname(_obj* in, std::map<std::string,std::string>* varmap)
 
 /** FCT RECURSE **/
 
-bool get_map_cmd(_obj* in, std::map<std::string,uint32_t>* all_cmds)
+bool get_cmd(_obj* in, countmap_t* all_cmds)
 {
   switch(in->type)
   {
@@ -191,7 +203,7 @@ bool get_map_cmd(_obj* in, std::map<std::string,uint32_t>* all_cmds)
   return true;
 }
 
-bool get_map_fctname(_obj* in, std::map<std::string,uint32_t>* fct_map)
+bool get_fct(_obj* in, countmap_t* fct_map)
 {
   switch(in->type)
   {
@@ -296,7 +308,54 @@ std::string minimal_name(uint32_t n)
   }
 }
 
-std::map<std::string,std::string> gen_map(std::map<std::string,uint32_t> const& vars, std::set<std::string> excluded)
+countmap_t combine_maps(countmap_t const& a, countmap_t const& b)
+{
+  countmap_t ret;
+  for(auto it: a)
+  {
+    if(!ret.insert( it ).second)
+      ret[it.first] += it.second;
+  }
+  for(auto it: b)
+  {
+    if(!ret.insert( it ).second)
+      ret[it.first] += it.second;
+  }
+  return ret;
+}
+
+void varmap_get(_obj* in, std::regex const& exclude)
+{
+  if(!b_gotvar)
+  {
+    b_gotvar=true;
+    recurse(get_var, in, &m_vardefs, &m_varcalls);
+    m_vars = combine_maps(m_vardefs, m_varcalls);
+    m_excluded_var = prune_matching(m_vars, exclude);
+  }
+}
+
+void fctmap_get(_obj* in, std::regex const& exclude)
+{
+  if(!b_gotfct)
+  {
+    b_gotfct=true;
+    recurse(get_fct, in, &m_fcts);
+    m_excluded_fct = prune_matching(m_fcts, exclude);
+  }
+}
+
+void cmdmap_get(_obj* in, std::regex const& exclude)
+{
+  if(!b_gotcmd)
+  {
+    b_gotcmd=true;
+    recurse(get_cmd, in, &m_cmds);
+    m_excluded_fct = prune_matching(m_cmds, exclude);
+  }
+}
+
+std::map<std::string,std::string> gen_minimal_map(countmap_t const& vars, std::set<std::string> excluded)
 {
   std::map<std::string,std::string> ret;
   auto ordered = sort_by_value(vars);
@@ -313,65 +372,71 @@ std::map<std::string,std::string> gen_map(std::map<std::string,uint32_t> const& 
   return ret;
 }
 
-void minimize_var(_obj* in, std::regex exclude)
+void minimize_var(_obj* in, std::regex const& exclude)
 {
-  std::map<std::string,uint32_t> vars;
+  // countmap_t vars;
   std::set<std::string> excluded;
   std::map<std::string,std::string> varmap;
   // get vars
-  recurse(get_map_varname, in, &vars);
-  // remove excluded
-  excluded = prune_matching(vars, exclude);
+  varmap_get(in, exclude);
   // create mapping
-  varmap=gen_map(vars, excluded);
+  varmap=gen_minimal_map(m_vars, m_excluded_var);
   // perform replace
   recurse(replace_varname, in, &varmap);
 }
 
-void minimize_fct(_obj* in, std::regex exclude)
+void minimize_fct(_obj* in, std::regex const& exclude)
 {
-  std::map<std::string,uint32_t> fcts, cmdmap;
+  // countmap_t fcts, cmdmap;
   std::set<std::string> allcmds, excluded;
   std::map<std::string,std::string> fctmap;
-  // get fcts
-  recurse(get_map_fctname, in, &fcts);
-  // get cmds
-  recurse(get_map_cmd, in, &cmdmap);
-  allcmds=map_to_set(cmdmap);
-  // remove excluded
-  excluded = prune_matching(fcts, exclude);
-  // concatenate excluded to commands
-  concat_sets(allcmds, excluded);
+  // get fcts and cmds
+  fctmap_get(in, exclude);
+  cmdmap_get(in, regex_null);
+  // concatenate cmds and excluded commands
+  allcmds=map_to_set(m_cmds);
+  concat_sets(allcmds, m_excluded_fct);
   // create mapping
-  fctmap=gen_map(fcts, allcmds);
+  fctmap=gen_minimal_map(m_fcts, allcmds);
   // perform replace
   recurse(replace_fctname, in, &fctmap);
 }
 
-void delete_unused_fct(_obj* in, std::regex exclude)
+void delete_unused_fct(_obj* in, std::regex const& exclude)
 {
-  std::map<std::string,uint32_t> fctmap, cmdmap;
   std::set<std::string> unused;
-  // get fcts
-  recurse(get_map_fctname, in, &fctmap);
-  // get cmds
-  recurse(get_map_cmd, in, &cmdmap);
-  // remove excluded
-  prune_matching(fctmap, exclude);
-  for(auto it: fctmap)
+  // get fcts and cmds
+  fctmap_get(in, exclude);
+  cmdmap_get(in, regex_null);
+  // find unused fcts
+  for(auto it: m_fcts)
   {
-    if(cmdmap.find(it.first) == cmdmap.end())
+    if(m_cmds.find(it.first) == m_cmds.end())
       unused.insert(it.first);
   }
+  // perform deletion
   if(unused.size()>0)
     recurse(delete_fcts, in, &unused);
 }
 
-void list_stuff(_obj* in, std::regex exclude, bool (&fct)(_obj*,std::map<std::string,uint32_t>*) )
+void delete_unused_var(_obj* in, std::regex const& exclude)
 {
-  std::map<std::string,uint32_t> map;
-  recurse(fct, in, &map);
-  prune_matching(map, exclude);
+  std::set<std::string> unused;
+  // get fcts and cmds
+  varmap_get(in, exclude);
+  // find unused vars
+  for(auto it: m_vardefs)
+  {
+    if(m_varcalls.find(it.first) == m_varcalls.end())
+      unused.insert(it.first);
+  }
+  // perform deletion
+  if(unused.size()>0)
+    recurse(delete_fcts, in, &unused);
+}
+
+void list_map(countmap_t const& map)
+{
   uint32_t max=0;
   for(auto it: map)
     if(it.second > max)
@@ -380,17 +445,20 @@ void list_stuff(_obj* in, std::regex exclude, bool (&fct)(_obj*,std::map<std::st
     printf("%*d %s\n", (uint32_t)log10(max)+1, it.second, it.first.c_str());
 }
 
-void list_vars(_obj* in, std::regex exclude)
+void list_vars(_obj* in, std::regex const& exclude)
 {
-  list_stuff(in, exclude, get_map_varname);
+  varmap_get(in, exclude);
+  list_map(m_vars);
 }
 
-void list_fcts(_obj* in, std::regex exclude)
+void list_fcts(_obj* in, std::regex const& exclude)
 {
-  list_stuff(in, exclude, get_map_fctname);
+  fctmap_get(in, exclude);
+  list_map(m_fcts);
 }
 
-void list_cmds(_obj* in, std::regex exclude)
+void list_cmds(_obj* in, std::regex const& exclude)
 {
-  list_stuff(in, exclude, get_map_cmd);
+  cmdmap_get(in, exclude);
+  list_map(m_cmds);
 }

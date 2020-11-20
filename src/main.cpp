@@ -160,9 +160,9 @@ int main(int argc, char* argv[])
     if(options["list-var"])
       list_vars(sh, re_var_exclude);
     else if(options["list-fct"])
-      list_fcts(sh, re_var_exclude);
+      list_fcts(sh, re_fct_exclude);
     else if(options["list-cmd"])
-      list_cmds(sh, re_var_exclude);
+      list_cmds(sh, regex_null);
     else if(is_exec)
     {
       ret = execute(sh, args);

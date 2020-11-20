@@ -21,6 +21,10 @@
 
 #define SPECIAL_VARS "!#*@$?"
 
+inline bool is_num(char c) { return (c >= '0' && c <= '9'); }
+inline bool is_alpha(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+inline bool is_alphanum(char c) { return is_alpha(c) || is_num(c); }
+
 std::string import_file(std::string const& path);
 
 shmain* parse_text(const char* in, uint32_t size, std::string const& filename="");
