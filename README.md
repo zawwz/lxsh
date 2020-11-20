@@ -37,7 +37,11 @@ This can cause some change in execution behavior if you are not careful.
 Variable names can be minimized with `--minimize-var`,
 use `--exclude-var` to exclude variables from being minimized (for example environment config).
 
-Function names can be minimized with `--minimize`
+Function names can be minimized with `--minimize-fct`,
+use `--exclude-var` to exclude functions from being minimized.
+
+Unused functions can be removed with `--remove-unused`.
+Removal of unused variables is a work in progress.
 
 ## Other features
 
@@ -58,6 +62,10 @@ Directly execute an extended lxsh script with either
 > therefore it should be avoided outside of development use
 
 > There may be some issues with direct execution as of now
+
+### Variable/Function/command listing
+
+You can list all calls of variables, functions or commands with `--list-*` options
 
 # Build <a name="build"></a>
 
