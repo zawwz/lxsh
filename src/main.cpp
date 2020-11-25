@@ -150,15 +150,19 @@ int main(int argc, char* argv[])
     // processing before output
     if(options['m'])
       opt_minimize=true;
+    if(options["remove-unused"])
+      delete_unused( sh, re_var_exclude, re_fct_exclude );
     if(options["minimize-var"])
       minimize_var( sh, re_var_exclude );
     if(options["minimize-fct"])
       minimize_fct( sh, re_fct_exclude );
-    if(options["remove-unused"])
-      delete_unused_fct( sh, re_fct_exclude );
 
     if(options["list-var"])
       list_vars(sh, re_var_exclude);
+    else if(options["list-var-def"])
+      list_var_defs(sh, re_var_exclude);
+    else if(options["list-var-call"])
+      list_var_calls(sh, re_var_exclude);
     else if(options["list-fct"])
       list_fcts(sh, re_fct_exclude);
     else if(options["list-cmd"])

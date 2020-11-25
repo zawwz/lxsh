@@ -104,6 +104,14 @@ cmd* subshell::single_cmd()
   return nullptr;
 }
 
+size_t cmd::arglist_size()
+{
+  if(args==nullptr)
+    return 0;
+  else
+    return args->size();
+}
+
 cmd* brace::single_cmd()
 {
   if( lst->size() == 1 && // only one condlist

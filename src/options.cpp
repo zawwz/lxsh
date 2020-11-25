@@ -31,10 +31,13 @@ ztd::option_set gen_options()
       ztd::option("minimize-fct",       false, "Minimize function names"),
       ztd::option("exclude-var",        true,  "List of matching regex to ignore for variable processing", "list"),
       ztd::option("exclude-fct",        true,  "List of matching regex to ignore for function processing", "list"),
-      ztd::option("list-var",           false, "List all variables defined and invoked in the script"),
+      ztd::option("no-exclude-reserved",false, "Don't exclude reserved variables"),
+      ztd::option("list-var",           false, "List all variables set and invoked in the script"),
+      ztd::option("list-var-def",       false, "List all variables set in the script"),
+      ztd::option("list-var-call",      false, "List all variables invoked in the script"),
       ztd::option("list-fct",           false, "List all functions defined in the script"),
       ztd::option("list-cmd",           false, "List all commands invoked in the script"),
-      // ztd::option("unset-var",          false, "Add 'unset' to vars"),
+      // ztd::option("unset-var",          false, "Add 'unset' to all vars at the start of the script to avoid environment interference"),
       ztd::option("remove-unused",      false, "Remove unused functions")
   );
   return ret;
@@ -46,9 +49,9 @@ void get_opts()
   g_include=!options["no-include"].activated;
   g_resolve=!options["no-resolve"].activated;
   if(options["exclude-var"])
-    re_var_exclude=var_exclude_regex(options["exclude-var"]);
+    re_var_exclude=var_exclude_regex(options["exclude-var"], !options["no-exclude-reserved"]);
   else
-    re_var_exclude=var_exclude_regex("");
+    re_var_exclude=var_exclude_regex("", !options["no-exclude-reserved"]);
   if(options["exclude-fct"])
     re_fct_exclude=fct_exclude_regex(options["exclude-fct"]);
 }

@@ -254,11 +254,14 @@ public:
 
   std::string const& firstarg_string();
 
+  size_t arglist_size();
+
   // preceding var assigns
   std::vector<std::pair<std::string,arg*>> var_assigns;
 
   // get var assigns in special cmds (export, unset, read)
-  std::vector<subarg*> arg_vars();
+  bool is_argvar();
+  std::vector<subarg*> subarg_vars();
 
   arglist* args;
 

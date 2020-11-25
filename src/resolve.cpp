@@ -319,7 +319,7 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, shmain* parent, bool 
 
 // -- RECURSIVE CALL --
 
-bool resolve_recurse(_obj* o, shmain* parent)
+bool r_resolve(_obj* o, shmain* parent)
 {
   switch(o->type)
   {
@@ -409,10 +409,10 @@ bool resolve_recurse(_obj* o, shmain* parent)
 // recursive call of resolve
 void resolve(_obj* in, shmain* parent)
 {
-  recurse(resolve_recurse, in, parent);
+  recurse(r_resolve, in, parent);
 }
 
 void resolve(shmain* sh)
 {
-  recurse(resolve_recurse, sh, sh);
+  recurse(r_resolve, sh, sh);
 }
