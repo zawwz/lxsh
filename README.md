@@ -83,9 +83,23 @@ You can use environment variables to alter some aspects:
 
 # Work in progress
 
-The full POSIX syntax is supported,
-however not all bash syntax is supported yet,
-for example `&>` and `|&` will produce unexpected results
+The full POSIX syntax is supported and should produce a functioning result. <br>
+However not all bash syntax is supported yet.
 
-Some specific features are missing:
+## incomplete POSIX features
+
 - `$(())` arithmetics are not minimized
+
+## Known bash issues
+
+- `&>` and `>&` are not supported
+- `|&` is not supported
+- `<<<` is not supported
+- `<()` is not supported
+- `${!VAR}` does not register as a variable
+- Extended globs (`*()`) are not supported
+- `(())` creates two subshells instead of one object
+
+## Debashifying
+
+Work to debashify scripts is planned
