@@ -14,6 +14,7 @@
 #include "recursive.hpp"
 #include "minimize.hpp"
 #include "resolve.hpp"
+#include "processing.hpp"
 
 #include "version.h"
 #include "g_version.h"

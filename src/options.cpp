@@ -1,6 +1,6 @@
 #include "options.hpp"
 
-#include "minimize.hpp"
+#include "processing.hpp"
 
 ztd::option_set options = gen_options();
 bool opt_minimize=false;
@@ -37,8 +37,8 @@ ztd::option_set gen_options()
       ztd::option("list-var-call",      false, "List all variables invoked in the script"),
       ztd::option("list-fct",           false, "List all functions defined in the script"),
       ztd::option("list-cmd",           false, "List all commands invoked in the script"),
-      // ztd::option("unset-var",          false, "Add 'unset' to all vars at the start of the script to avoid environment interference"),
-      ztd::option("remove-unused",      false, "Remove unused functions")
+      ztd::option("remove-unused",      false, "Remove unused functions and variables")
+      // ztd::option("unset-var",          false, "Add 'unset' to all vars at the start of the script to avoid environment interference")
   );
   return ret;
 }

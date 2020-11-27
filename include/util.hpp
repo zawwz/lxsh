@@ -28,6 +28,10 @@ std::vector<std::string> split(std::string const& in, char c);
 
 std::string escape_str(std::string const& in);
 
+inline bool is_num(char c) { return (c >= '0' && c <= '9'); }
+inline bool is_alpha(char c) { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
+inline bool is_alphanum(char c) { return is_alpha(c) || is_num(c); }
+
 template<typename ... Args>
 std::string strf( const std::string& format, Args ... args )
 {
