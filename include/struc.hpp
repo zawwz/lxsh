@@ -116,7 +116,8 @@ public:
 
   // return if is a string and only one subarg
   std::string string();
-  bool equals(std::string const& in) { return this->string() == in; }
+
+  inline bool equals(std::string const& in) { return this->string() == in; }
 
   std::string generate(int ind);
 };
@@ -129,6 +130,7 @@ class arglist : public _obj
 {
 public:
   arglist() { type=_obj::_arglist; }
+  arglist(arg* in) { type=_obj::_arglist; this->add(in); }
   ~arglist() { for( auto it: args ) delete it; }
   inline void add(arg* in) { args.push_back(in); }
   inline void push_back(arg* in) { args.push_back(in); }
@@ -192,7 +194,9 @@ public:
 class condlist : public _obj
 {
 public:
-  condlist(pipeline* pl=nullptr) { type=_obj::_condlist; parallel=false; if(pl!=nullptr) this->add(pl); }
+  condlist() { type=_obj::_condlist; parallel=false; }
+  condlist(pipeline* pl);
+  condlist(block* bl);
   ~condlist() { for(auto it: pls) delete it; }
 
   bool parallel; // & at the end
@@ -255,6 +259,8 @@ public:
   std::string const& firstarg_string();
 
   size_t arglist_size();
+
+  void add_arg(arg* in);
 
   // preceding var assigns
   std::vector<std::pair<std::string,arg*>> var_assigns;

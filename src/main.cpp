@@ -149,6 +149,7 @@ int main(int argc, char* argv[])
     }
 
     // processing before output
+    // minimize
     if(options['m'])
       opt_minimize=true;
     if(options["remove-unused"])
@@ -157,6 +158,9 @@ int main(int argc, char* argv[])
       minimize_var( sh, re_var_exclude );
     if(options["minimize-fct"])
       minimize_fct( sh, re_fct_exclude );
+    // other processing
+    if(options["unset-var"])
+      add_unset_variables( sh, re_var_exclude );
 
     if(options["list-var"])
       list_vars(sh, re_var_exclude);

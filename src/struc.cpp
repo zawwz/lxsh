@@ -9,17 +9,6 @@ std::string g_origin="";
 
 const std::string cmd::empty_string="";
 
-cmd* make_cmd(std::vector<std::string> args)
-{
-  cmd* ret = new cmd();
-  ret->args = new arglist();
-  for(auto it: args)
-  {
-    ret->args->add(new arg(it));
-  }
-  return ret;
-}
-
 std::vector<std::string> arglist::strargs(uint32_t start)
 {
   std::vector<std::string> ret;
@@ -47,7 +36,6 @@ std::string arg::string()
     return "";
   return dynamic_cast<string_subarg*>(sa[0])->val;
 }
-
 
 void condlist::prune_first_cmd()
 {

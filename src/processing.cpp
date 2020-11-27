@@ -227,6 +227,22 @@ void list_cmds(_obj* in, std::regex const& exclude)
   list_map(m_cmds);
 }
 
+/** FUNCTIONS **/
+
+void add_unset_variables(shmain* sh, std::regex const& exclude)
+{
+  varmap_get(sh, exclude);
+  if(m_vars.size()>0)
+  {
+    cmd* unset_cmd = new cmd;
+    unset_cmd->add_arg(new arg("unset"));
+    for(auto it: m_vars)
+      unset_cmd->add_arg(new arg(it.first));
+    condlist* cl = new condlist(unset_cmd);
+    sh->lst->cls.insert(sh->lst->cls.begin(), cl);
+  }
+}
+
 /** RECURSIVES **/
 
 // GET //

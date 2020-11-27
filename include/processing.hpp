@@ -41,7 +41,7 @@ void varmap_get(_obj* in, std::regex const& exclude);
 void fctmap_get(_obj* in, std::regex const& exclude);
 void cmdmap_get(_obj* in, std::regex const& exclude);
 
-/** functions **/
+/** util functions **/
 
 // gen regexes
 std::regex var_exclude_regex(std::string const& in, bool include_reserved);
@@ -66,5 +66,9 @@ bool r_get_cmd(_obj* in, countmap_t* all_cmds);
 bool r_get_fct(_obj* in, countmap_t* fct_map);
 bool r_delete_fct(_obj* in, set_t* fcts);
 bool r_delete_var(_obj* in, set_t* vars);
+
+/** Processing **/
+
+void add_unset_variables(shmain* sh, std::regex const& exclude);
 
 #endif //PROCESSING_HPP
