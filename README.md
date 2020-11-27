@@ -6,8 +6,8 @@ Extended shell linker for linking, generating and minimizing shell code
 
 ## linux-amd64
 
-Download the `lxsh-linux-amd64.tar.gz` archive and move `lxsh` binary in a PATH folder,
-`/usr/local/bin` is the recommended.
+Download the `lxsh-linux-amd64.tar.gz` archive, extract it,
+and move `lxsh` binary in a PATH folder (`/usr/local/bin` is the recommended).
 
 ## Other
 
