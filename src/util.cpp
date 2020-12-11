@@ -114,14 +114,6 @@ std::string concatargs(std::vector<std::string> const& args)
   return ret;
 }
 
-void concat_sets(std::set<std::string>& a, std::set<std::string> const& b)
-{
-  for(auto it: b)
-  {
-    a.insert( it );
-  }
-}
-
 std::set<std::string> prune_matching(std::set<std::string>& in, std::regex re)
 {
   std::set<std::string> ret;

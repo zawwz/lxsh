@@ -161,6 +161,11 @@ bool cmd::is_argvar()
   return cmd_is_argvar(this->firstarg_string());
 }
 
+bool cmd::is(std::string const& in)
+{
+  return in == this->firstarg_string();
+}
+
 /** GETTERS **/
 
 void varmap_get(_obj* in, std::regex const& exclude)
@@ -195,7 +200,6 @@ void cmdmap_get(_obj* in, std::regex const& exclude)
 }
 
 /** OUTPUT **/
-
 
 void list_vars(_obj* in, std::regex const& exclude)
 {
@@ -278,6 +282,25 @@ bool r_get_var(_obj* in, countmap_t* defmap, countmap_t* callmap)
           std::string varname=get_varname(t->args->args[i]);
           if( varname != "" && !defmap->insert( std::make_pair(varname, 1) ).second )
             (*defmap)[varname]++;
+        }
+      }
+    }; break;
+    default: break;
+  }
+  return true;
+}
+
+bool r_get_unsets(_obj* in, set_t* unsets)
+{
+  switch(in->type)
+  {
+    case _obj::block_cmd: {
+      cmd* t = dynamic_cast<cmd*>(in);
+      if(t->is("unset"))
+      {
+        for(uint32_t i=1; i<t->args->size(); i++)
+        {
+          unsets->insert(t->args->args[i]->string());
         }
       }
     }; break;

@@ -61,6 +61,7 @@ void list_fcts(_obj* in, std::regex const& exclude);
 void list_cmds(_obj* in, std::regex const& exclude);
 
 // recursives
+bool r_get_unsets(_obj* in, set_t* unsets);
 bool r_get_var(_obj* in, countmap_t* defmap, countmap_t* callmap);
 bool r_get_cmd(_obj* in, countmap_t* all_cmds);
 bool r_get_fct(_obj* in, countmap_t* fct_map);

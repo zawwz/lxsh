@@ -262,10 +262,13 @@ public:
 
   void add_arg(arg* in);
 
+
   // preceding var assigns
   std::vector<std::pair<std::string,arg*>> var_assigns;
 
-  // get var assigns in special cmds (export, unset, read)
+  // check if cmd is this (ex: unset)
+  bool is(std::string const& in);
+  // for var assigns in special cmds (export, unset, read, local)
   bool is_argvar();
   std::vector<subarg*> subarg_vars();
 

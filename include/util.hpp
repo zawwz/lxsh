@@ -111,7 +111,14 @@ std::set<T> map_to_set(std::map<T,T2> in)
   return ret;
 }
 
-void concat_sets(std::set<std::string>& a, std::set<std::string> const& b);
+template <class T>
+void concat_sets(std::set<T>& a, std::set<T> const& b)
+{
+  for(auto it: b)
+  {
+    a.insert( it );
+  }
+}
 
 std::set<std::string> prune_matching(std::set<std::string>& in, std::regex re);
 

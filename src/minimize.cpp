@@ -179,14 +179,16 @@ void minimize_var(_obj* in, std::regex const& exclude)
 void minimize_fct(_obj* in, std::regex const& exclude)
 {
   // countmap_t fcts, cmdmap;
-  set_t allcmds, excluded;
+  set_t allcmds, excluded, unsets;
   strmap_t fctmap;
   // get fcts and cmds
   fctmap_get(in, exclude);
   cmdmap_get(in, regex_null);
+  recurse(r_get_unsets, in, &unsets);
   // concatenate cmds and excluded commands
   allcmds=map_to_set(m_cmds);
   concat_sets(allcmds, m_excluded_fct);
+  concat_sets(allcmds, unsets);
   // create mapping
   fctmap=gen_minimal_map(m_fcts, allcmds);
   // perform replace
