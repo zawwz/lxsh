@@ -1,6 +1,6 @@
 # lxsh
 
-Extended shell linker for linking, generating and minimizing shell code
+Extended shell linker for linking, processing and minimizing shell code
 
 # Installing
 
@@ -40,8 +40,7 @@ use `--exclude-var` to exclude variables from being minimized (for example envir
 Function names can be minimized with `--minimize-fct`,
 use `--exclude-fct` to exclude functions from being minimized.
 
-Unused functions can be removed with `--remove-unused`.
-Removal of unused variables is a work in progress.
+Unused functions and variables can be removed with `--remove-unused`.
 
 ## Other features
 
@@ -99,6 +98,7 @@ However not all bash syntax is supported yet.
 - `${!VAR}` does not register as a variable
 - Extended globs (`*()`) are not supported
 - `(())` creates two subshells instead of one object
+- Unsetting functions will not work properly when minimizing variables or functions
 
 ## Debashifying
 
