@@ -1,6 +1,7 @@
 #include "debashify.hpp"
 
 #include "recursive.hpp"
+#include "util.hpp"
 
 bool debashify_replace_bashtest(cmd* in)
 {
@@ -87,5 +88,6 @@ bool r_debashify(_obj* o)
 
 void debashify(shmain* sh)
 {
+  sh->shebang = dirname(sh->shebang)+"/sh";
   recurse(r_debashify, sh);
 }
