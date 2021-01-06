@@ -330,6 +330,11 @@ std::string cmd::generate(int ind)
       ret.pop_back();
     return ret;
   }
+  else // empty command: remove trailing space
+  {
+    if(ret.size()>0)
+      ret.pop_back();
+  }
 
   ret += generate_redirs(ind, ret);
   return ret;
