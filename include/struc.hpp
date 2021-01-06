@@ -78,8 +78,6 @@ typedef std::vector<arg*> arglist_t;
 
 extern std::string g_origin;
 
-cmd* make_cmd(std::vector<std::string> args);
-
 // meta object type
 class _obj
 {
@@ -111,11 +109,11 @@ class arg : public _obj
 {
 public:
   arg() { type=_obj::_arg; }
-  arg(std::string const& str) { type=_obj::_arg; this->setstring(str);}
+  arg(std::string const& str) { type=_obj::_arg; this->set(str);}
   arg(subarg* in) { type=_obj::_arg; sa.push_back(in); }
   ~arg() { for(auto it: sa) delete it; }
 
-  void setstring(std::string const& str);
+  void set(std::string const& str);
 
   std::vector<subarg*> sa;
 
@@ -126,8 +124,6 @@ public:
 
   std::string generate(int ind);
 };
-
-inline bool operator==(arg a, std::string const& b) { return a.equals(b); }
 
 // arglist
 
@@ -202,7 +198,7 @@ class condlist : public _obj
 {
 public:
   condlist() { type=_obj::_condlist; parallel=false; }
-  condlist(pipeline* pl);
+  condlist(pipeline* pl) { type=_obj::_condlist; parallel=false; this->add(pl); }
   condlist(block* bl);
   ~condlist() { for(auto it: pls) delete it; }
 
@@ -231,6 +227,7 @@ public:
   ~list() { for(auto it: cls) delete it; }
 
   std::vector<condlist*> cls;
+  void add(condlist* in) { cls.push_back(in); }
 
   condlist* last_cond() { return cls[cls.size()-1]; }
 
@@ -267,7 +264,7 @@ public:
 
   size_t arglist_size();
 
-  void add_arg(arg* in);
+  void add(arg* in);
 
 
   // preceding var assigns

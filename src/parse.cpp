@@ -125,8 +125,6 @@ uint32_t skip_unread(const char* in, uint32_t size, uint32_t start)
 
 // parse fcts
 
-std::pair<subshell*, uint32_t> parse_subshell(const char* in, uint32_t size, uint32_t start);
-
 std::pair<std::string, uint32_t> parse_varname(const char* in, uint32_t size, uint32_t start)
 {
   uint32_t i=start;
@@ -177,8 +175,6 @@ std::pair<arithmetic_subarg*, uint32_t> parse_arithmetic(const char* in, uint32_
 
   return std::make_pair(ret, i);
 }
-
-std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start, const char* end=ARG_END, const char* unexpected=SPECIAL_TOKENS, bool doquote=true);
 
 std::pair<manipulation_subarg*, uint32_t> parse_manipulation(const char* in, uint32_t size, uint32_t start)
 {
@@ -526,7 +522,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
 // must start at a read char
 // first char has to be read
 // ends at either &|;\n#()
-std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint32_t start, bool hard_error=false, std::vector<redirect*>* redirs=nullptr)
+std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint32_t start, bool hard_error, std::vector<redirect*>* redirs)
 {
   uint32_t i=start;
   arglist* ret = nullptr;
@@ -591,8 +587,6 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
   }
   return std::make_pair(ret, i);
 }
-
-std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t start);
 
 // parse a pipeline
 // must start at a read char
@@ -680,7 +674,7 @@ std::pair<condlist*, uint32_t> parse_condlist(const char* in, uint32_t size, uin
   return std::make_pair(ret, i);
 }
 
-std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint32_t start, char end_c, const char* expecting=NULL)
+std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint32_t start, char end_c, const char* expecting)
 {
   list* ret = new list;
   uint32_t i=skip_unread(in, size, start);
@@ -778,7 +772,7 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
 }
 
 
-std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32_t size, uint32_t start, std::vector<std::string> const& end_words, const char* expecting=NULL)
+std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32_t size, uint32_t start, std::vector<std::string> const& end_words, const char* expecting)
 {
   list* ret = new list;
   uint32_t i=skip_unread(in, size, start);;
@@ -896,7 +890,7 @@ std::pair<brace*, uint32_t> parse_brace(const char* in, uint32_t size, uint32_t 
 // parse a function
 // must start right after the ()
 // then parses a brace block
-std::pair<function*, uint32_t> parse_function(const char* in, uint32_t size, uint32_t start, const char* after="()")
+std::pair<function*, uint32_t> parse_function(const char* in, uint32_t size, uint32_t start, const char* after)
 {
   uint32_t i=start;
   function* ret = new function;
