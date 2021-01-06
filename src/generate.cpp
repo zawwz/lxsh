@@ -316,17 +316,20 @@ std::string cmd::generate(int ind)
   for(auto it: var_assigns)
     ret += it.first + '=' + it.second->generate(ind) + ' ';
 
-  if(args==nullptr || args->size()<=0)
+  if(args!=nullptr && args->size()>0)
   {
-    ret.pop_back();
+    // command
+    ret += args->generate(ind);
+    // delete potential trailing space
+    if(ret[ret.size()-1] == ' ')
+      ret.pop_back();
+  }
+  else if(opt_minimize) // minimize: empty command: don't put redirects
+  {
+    if(ret.size()>0)
+      ret.pop_back();
     return ret;
   }
-
-  // command
-  ret += args->generate(ind);
-  // delete potential trailing space
-  if(ret[ret.size()-1] == ' ')
-    ret.pop_back();
 
   ret += generate_redirs(ind, ret);
   return ret;
