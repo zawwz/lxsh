@@ -98,21 +98,16 @@ int main(int argc, char* argv[])
     // do parsing
     for(uint32_t i=0 ; i<args.size() ; i++)
     {
+      bool shebang_is_bin=false;
       std::string file = args[i];
       std::string filecontents=import_file(file);
-      // parse
-      g_origin=file;
-      if(!add_include(file))
-        continue;
-      tsh = parse_text(filecontents, file);
-      // resolve shebang
+      std::string shebang=filecontents.substr(0,filecontents.find('\n'));
+      // resolve shebang and parse leftover options
       if(first_run)
       {
         first_run=false;
         // resolve shebang
-        bool shebang_is_bin = ( basename(argv[0]) == basename(tsh->shebang) );
-        if(shebang_is_bin)
-          tsh->shebang="#!/bin/sh";
+        shebang_is_bin = ( basename(argv[0]) == basename(shebang) );
 
         // detect if need execution
         if(options['e'])
@@ -130,6 +125,13 @@ int main(int argc, char* argv[])
         oneshot_opt_process(argv[0]);
         get_opts();
       }
+      // parse
+      g_origin=file;
+      if(!add_include(file))
+        continue;
+      tsh = parse_text(filecontents, file);
+      if(shebang_is_bin) // resolve lxsh shebang to sh
+        tsh->shebang="#!/bin/sh";
 
       /* mid processing */
       // resolve/include
@@ -146,7 +148,7 @@ int main(int argc, char* argv[])
       // is exec: break and exec
       if(is_exec)
         break;
-    }
+    } // end of argument parse
 
     // processing before output
     // minimize
@@ -162,6 +164,7 @@ int main(int argc, char* argv[])
     if(options["unset-var"])
       add_unset_variables( sh, re_var_exclude );
 
+    // list outputs
     if(options["list-var"])
       list_vars(sh, re_var_exclude);
     else if(options["list-var-def"])
@@ -172,10 +175,12 @@ int main(int argc, char* argv[])
       list_fcts(sh, re_fct_exclude);
     else if(options["list-cmd"])
       list_cmds(sh, regex_null);
+    // execute
     else if(is_exec)
     {
       ret = execute(sh, args);
     }
+    // output
     else if(options['o']) // file output
     {
       std::string destfile=options['o'];
