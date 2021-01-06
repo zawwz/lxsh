@@ -9,6 +9,7 @@ extern bool opt_minimize;
 extern bool g_cd;
 extern bool g_include;
 extern bool g_resolve;
+extern bool g_shebang;
 
 void get_opts();
 

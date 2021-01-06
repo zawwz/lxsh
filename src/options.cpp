@@ -8,6 +8,7 @@ bool opt_minimize=false;
 bool g_cd=false;
 bool g_include=true;
 bool g_resolve=true;
+bool g_shebang=true;
 
 ztd::option_set gen_options()
 {
@@ -21,6 +22,7 @@ ztd::option_set gen_options()
       ztd::option('o', "output",        true , "Output result script to file", "file"),
       ztd::option('c', "stdout",        false, "Output result script to stdout"),
       ztd::option('e', "exec",          false, "Directly execute script"),
+      ztd::option("no-shebang",         false, "Don't output shebang"),
       ztd::option("\r  [Processing]"),
       ztd::option('C', "no-cd",         false, "Don't cd when doing %include and %resolve"),
       ztd::option('m', "minimize",      false, "Minimize code without changing functionality"),
@@ -49,6 +51,7 @@ void get_opts()
   g_cd=!options['C'].activated;
   g_include=!options["no-include"].activated;
   g_resolve=!options["no-resolve"].activated;
+  g_shebang=!options["no-shebang"].activated;
   if(options["exclude-var"])
     re_var_exclude=var_exclude_regex(options["exclude-var"], !options["no-exclude-reserved"]);
   else

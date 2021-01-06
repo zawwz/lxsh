@@ -194,14 +194,14 @@ int main(int argc, char* argv[])
       if(destfile == "-")
         destfile = "/dev/stdout";
       // output
-      std::ofstream(destfile) << sh->generate();
+      std::ofstream(destfile) << sh->generate(g_shebang, 0);
       // don't chmod on /dev/
       if(destfile.substr(0,5) != "/dev/")
-      ztd::exec("chmod", "+x", destfile);
+        ztd::exec("chmod", "+x", destfile);
     }
     else // to console
     {
-      std::cout << sh->generate();
+      std::cout << sh->generate(g_shebang, 0);
     }
   }
   catch(ztd::format_error& e)
