@@ -15,6 +15,7 @@
 #include "minimize.hpp"
 #include "resolve.hpp"
 #include "processing.hpp"
+#include "debashify.hpp"
 
 #include "version.h"
 #include "g_version.h"
@@ -149,6 +150,11 @@ int main(int argc, char* argv[])
       if(is_exec)
         break;
     } // end of argument parse
+
+    if(options["debashify"])
+    {
+      debashify(sh);
+    }
 
     // processing before output
     // minimize

@@ -148,7 +148,9 @@ public:
 class redirect : public _obj
 {
 public:
-  redirect(arg* in=nullptr) { type=_obj::_redirect; target=in; }
+  redirect(std::string strop="") { type=_obj::_redirect; op=strop; target=nullptr; }
+  redirect(arg* in) { type=_obj::_redirect; target=in; }
+  redirect(std::string strop, arg* in) { type=_obj::_redirect; op=strop; target=in; }
   ~redirect() { if(target != nullptr) delete target; }
 
   std::string generate(int ind);

@@ -88,6 +88,7 @@ However not all bash syntax is supported yet.
 ## incomplete POSIX features
 
 - `$(())` arithmetics are not minimized
+- Variables in `$(())` arithmetics are not accounted for in variable processing
 
 ## Known bash issues
 

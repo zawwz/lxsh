@@ -441,6 +441,8 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
     if(!g_bash)
       throw PARSE_ERROR("bash specific: '&>'. Use --debashify to remove bashisms", i);
     i+=2;
+    if(i<size && in[i] == '>')
+      i++;
     is_redirect=true;
     needs_arg=true;
   }

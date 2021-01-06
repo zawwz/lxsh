@@ -65,7 +65,7 @@ test: $(BINDIR)/$(NAME)
 	$(BINDIR)/$(NAME)
 
 clean:
-	rm $(ODIR)/*.o
+	rm $(ODIR)/*.o gmon.out
 
 clear:
 	rm $(BINDIR)/$(NAME)
