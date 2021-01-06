@@ -7,8 +7,11 @@
 #include <ztd/shell.hpp>
 
 #include "util.hpp"
+#include "options.hpp"
 
 #define ORIGIN_NONE ""
+
+bool g_bash=false;
 
 // macro
 
@@ -382,7 +385,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
   bool needs_arg=false;
   bool has_num_prefix=false;
 
-  if(in[i] > '0' && in[i] < '9')
+  if(is_num(in[i]))
   {
     i++;
     has_num_prefix=true;
@@ -392,12 +395,19 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
   {
     i++;
     if(i>size)
-      PARSE_ERROR("Unexpected end of file", i);
+      throw PARSE_ERROR("Unexpected end of file", i);
     is_redirect = true;
     if(i+1<size && in[i] == '&' && is_num(in[i+1]) )
     {
       i+=2;
       needs_arg=false;
+    }
+    else if(in[i] == '&') // >& bash operator
+    {
+      if(!g_bash)
+        throw PARSE_ERROR("bash specific: '>&'. Use --debashify to remove bashisms", i);
+      i++;
+      needs_arg=true;
     }
     else
     {
@@ -405,17 +415,32 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
         i++;
       needs_arg=true;
     }
-
   }
   else if( in[i] == '<' )
   {
     if(has_num_prefix)
-      PARSE_ERROR("Invalid input redirection", i-1);
+      throw PARSE_ERROR("Invalid input redirection", i-1);
     i++;
     if(i>size)
-      PARSE_ERROR("Unexpected end of file", i);
+      throw PARSE_ERROR("Unexpected end of file", i);
     if(in[i] == '<')
+    {
       i++;
+      if(i<size && in[i] == '<')
+      {
+        if(!g_bash)
+          throw PARSE_ERROR("bash specific: '<<<'. Use --debashify to remove bashisms", i);
+        i++;
+      }
+    }
+    is_redirect=true;
+    needs_arg=true;
+  }
+  else if( word_eq("&>", in, size, i) ) // &> bash operator
+  {
+    if(!g_bash)
+      throw PARSE_ERROR("bash specific: '&>'. Use --debashify to remove bashisms", i);
+    i+=2;
     is_redirect=true;
     needs_arg=true;
   }
@@ -439,7 +464,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
           pa.first = nullptr;
 
           if(delimitor == "")
-            PARSE_ERROR("Non-static or empty text input delimitor", i);
+            throw PARSE_ERROR("Non-static or empty text input delimitor", i);
 
           if(delimitor.find('"') != std::string::npos || delimitor.find('\'') != std::string::npos || delimitor.find('\\') != std::string::npos)
           {
@@ -506,7 +531,7 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
 
   try
   {
-    if(is_in(in[i], SPECIAL_TOKENS))
+    if(is_in(in[i], SPECIAL_TOKENS) && !word_eq("&>", in, size, i))
     {
       if(hard_error)
         throw PARSE_ERROR( strf("Unexpected token '%c'", in[i]) , i);
@@ -536,6 +561,11 @@ argparse:
         i = pp.second;
       }
       i = skip_chars(in, size, i, SPACES);
+      if(word_eq("&>", in, size, i))
+        // throw PARSE_ERROR("Unsupported &>", i);
+        continue;
+      if(word_eq("|&", in, size, i))
+        throw PARSE_ERROR("Unsupported |&, use '2>&1 |' instead", i);
       if(i>=size)
         return std::make_pair(ret, i);
       if( is_in(in[i], SPECIAL_TOKENS) )
@@ -898,9 +928,19 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
       if(wp.second<size && in[wp.second] == '=' && valid_name(wp.first)) // is a var assign
       {
         i=wp.second+1;
-        auto pp=parse_arg(in, size, i);
-        ret->var_assigns.push_back(std::make_pair(wp.first, pp.first));
-        i=skip_chars(in, size, pp.second, " \t");
+        arg* ta;
+        if( is_in(in[i], ARG_END) ) // no value : give empty value
+        {
+          ta = new arg;
+        }
+        else
+        {
+          auto pp=parse_arg(in, size, i);
+          ta=pp.first;
+          i=pp.second;
+        }
+        ret->var_assigns.push_back(std::make_pair(wp.first, ta));
+        i=skip_chars(in, size, i, " \t");
       }
       else
         break;
@@ -1207,6 +1247,8 @@ std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t 
       // end reserved words
       else if( word == "function" ) // bash style function
       {
+        if(!g_bash)
+          throw PARSE_ERROR("bash specific: 'function'. Use --debashify to remove bashisms", i);
         auto wp2=get_word(in, size, skip_unread(in, size, wp.second), VARNAME_END);
         if(!valid_name(wp2.first))
           throw PARSE_ERROR( strf("Bad function name: '%s'", word.c_str()), start );
@@ -1243,14 +1285,6 @@ std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t 
 
     if(ret->type != block::block_cmd)
     {
-      // while(true)
-      // {
-      //   auto pr=parse_redirect(in, size, i);
-      //   if(pr.first == nullptr)
-      //     break;
-      //   ret->redirs.push_back(pr.first);
-      //   i = pr.second;
-      // }
       uint32_t j=skip_chars(in, size, i, SPACES);
       auto pp=parse_arglist(in, size, j, false, &ret->redirs); // in case of redirects
       if(pp.first != nullptr)
@@ -1259,15 +1293,6 @@ std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t 
         throw PARSE_ERROR("Extra argument after block", i);
       }
       i=pp.second;
-      // if(pp.first->args.size()>0)
-      // {
-      //   i = pp.second;
-      //   ret->redirs=pp.first;
-      // }
-      // else
-      // {
-      //   delete pp.first;
-      // }
     }
   }
   catch(ztd::format_error& e)
@@ -1294,6 +1319,9 @@ shmain* parse_text(const char* in, uint32_t size, std::string const& filename)
       ret->shebang=std::string(in, i);
     }
     i = skip_unread(in, size, i);
+    // do bash reading
+    std::string binshebang = basename(ret->shebang);
+    g_bash = binshebang == "bash" || binshebang == "lxsh" || options["debashify"];
     // parse all commands
     auto pp=parse_list_until(in, size, i, 0);
     ret->lst=pp.first;

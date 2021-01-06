@@ -26,6 +26,7 @@ ztd::option_set gen_options()
       ztd::option('m', "minimize",      false, "Minimize code without changing functionality"),
       ztd::option('I', "no-include",    false, "Don't resolve %include commands"),
       ztd::option('R', "no-resolve",    false, "Don't resolve %resolve commands"),
+      ztd::option("debashify",          false, "Attempt to turn a bash-specific script into a POSIX shell script"),
       ztd::option("\r  [var/fct processing]"),
       ztd::option("minimize-var",       false, "Minimize variable names"),
       ztd::option("minimize-fct",       false, "Minimize function names"),
