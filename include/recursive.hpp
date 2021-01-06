@@ -193,6 +193,12 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
       recurse(fct, t->sbsh, args...);
       break;
     }
+    case _obj::subarg_procsub :
+    {
+      procsub_subarg* t = dynamic_cast<procsub_subarg*>(o);
+      recurse(fct, t->sbsh, args...);
+      break;
+    }
 
     default: break; //do nothing
   }

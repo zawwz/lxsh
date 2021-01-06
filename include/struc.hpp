@@ -54,8 +54,12 @@ arg:
 
 subarg: can be one of
 - string
-- block: subshell (substitution)
+- subshell (command substitution)
 - arithmetic
+- variable
+- variable manipulation
+- procsub (bash specific process substitution)
+  > NOTE: MUST be the only subarg in the arg
 
 */
 
@@ -81,9 +85,9 @@ class _obj
 {
 public:
   enum _objtype {
-    subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic, subarg_manipulation,
+    subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic, subarg_manipulation, subarg_procsub,
     _redirect,
-    _arg,
+    _arg, arg_procsub,
     _arglist,
     _pipeline,
     _condlist,
@@ -108,6 +112,7 @@ class arg : public _obj
 public:
   arg() { type=_obj::_arg; }
   arg(std::string const& str) { type=_obj::_arg; this->setstring(str);}
+  arg(subarg* in) { type=_obj::_arg; sa.push_back(in); }
   ~arg() { for(auto it: sa) delete it; }
 
   void setstring(std::string const& str);
@@ -473,6 +478,19 @@ public:
   bool size;
   std::string varname;
   arg* manip;
+
+  std::string generate(int ind);
+};
+
+class procsub_subarg : public subarg
+{
+public:
+  procsub_subarg() { type=_obj::subarg_procsub; sbsh=nullptr; is_output=false; }
+  procsub_subarg(bool output, subshell* in) { type=_obj::subarg_procsub; sbsh=in; is_output=output; }
+  ~procsub_subarg() { if(sbsh!=nullptr) delete sbsh; }
+
+  bool is_output;
+  subshell* sbsh;
 
   std::string generate(int ind);
 };

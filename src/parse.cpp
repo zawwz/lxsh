@@ -542,7 +542,17 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
     }
     while(i<size)
     {
-      if(redirs!=nullptr)
+      if(i+1 < size && (in[i] == '<' || in[i] == '>') && in[i+1] == '(' ) // bash specific <()
+      {
+        bool is_output = in[i] == '>';
+        i+=2;
+        if(ret == nullptr)
+          ret = new arglist;
+        auto ps = parse_subshell(in, size, i);
+        ret->args.push_back(new arg(new procsub_subarg(is_output, ps.first)));
+        i=ps.second+1;
+      }
+      else if(redirs!=nullptr)
       {
         auto pr = parse_redirect(in, size, i);
         if(pr.first != nullptr)
@@ -555,7 +565,7 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
       }
       else
       {
-argparse:
+      argparse:
         if(ret == nullptr)
           ret = new arglist;
         auto pp=parse_arg(in, size, i);
@@ -564,10 +574,9 @@ argparse:
       }
       i = skip_chars(in, size, i, SPACES);
       if(word_eq("&>", in, size, i))
-        // throw PARSE_ERROR("Unsupported &>", i);
-        continue;
+        continue; // &> has to be managed in redirects
       if(word_eq("|&", in, size, i))
-        throw PARSE_ERROR("Unsupported |&, use '2>&1 |' instead", i);
+        throw PARSE_ERROR("Unsupported '|&', use '2>&1 |' instead", i);
       if(i>=size)
         return std::make_pair(ret, i);
       if( is_in(in[i], SPECIAL_TOKENS) )
@@ -1119,7 +1128,7 @@ std::pair<for_block*, uint32_t> parse_for(const char* in, uint32_t size, uint32_
     if(wp.first == "in")
     {
       i=skip_chars(in, size, wp.second, SPACES);
-      auto pp = parse_arglist(in, size, i);
+      auto pp = parse_arglist(in, size, i, false);
       ret->iter = pp.first;
       i = pp.second;
     }

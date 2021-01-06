@@ -5,7 +5,7 @@
 bool debashify_replace_bashtest(cmd* in)
 {
   if(in->firstarg_string() == "[[")
-    throw std::runtime_error("Debashify on '[[' not implemented yet");
+    throw std::runtime_error("Debashify on '[[ ]]' not implemented yet");
 
   return false;
 }
@@ -13,7 +13,6 @@ bool debashify_replace_bashtest(cmd* in)
 bool debashify_replace_combined_redirects(block* in)
 {
   bool has_replaced=false;
-
 
   for(uint32_t i=0; i<in->redirs.size() ; i++)
   {

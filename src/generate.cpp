@@ -350,6 +350,14 @@ std::string manipulation_subarg::generate(int ind)
     return "${" + varname + manip->generate(ind) + "}";
 }
 
+std::string procsub_subarg::generate(int ind)
+{
+  if(is_output)
+    return '>' + sbsh->generate(ind);
+  else
+    return '<' + sbsh->generate(ind);
+}
+
 // TEMPLATE
 
 // std::string thing::generate(int ind)
