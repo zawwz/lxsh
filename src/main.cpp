@@ -204,6 +204,7 @@ int main(int argc, char* argv[])
       std::cout << sh->generate(g_shebang, 0);
     }
   }
+#ifndef NO_PARSE_CATCH
   catch(ztd::format_error& e)
   {
     if(tsh != nullptr)
@@ -212,6 +213,7 @@ int main(int argc, char* argv[])
     printFormatError(e);
     return 100;
   }
+#endif
   catch(std::runtime_error& e)
   {
     if(tsh != nullptr)

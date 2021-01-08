@@ -155,8 +155,10 @@ std::pair<arithmetic_subarg*, uint32_t> parse_arithmetic(const char* in, uint32_
   arithmetic_subarg* ret = new arithmetic_subarg;
   uint32_t i=start;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     auto pp=parse_subshell(in, size, i);
     i=pp.second;
     delete pp.first;
@@ -166,12 +168,14 @@ std::pair<arithmetic_subarg*, uint32_t> parse_arithmetic(const char* in, uint32_
     }
     ret->val = std::string(in+start, i-start-1);
     i++;
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret, i);
 }
@@ -209,8 +213,10 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
   // j : start of subarg , q = start of quote
   uint32_t i=start,j=start,q=start;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
 
     if(unexpected != NULL && is_in(in[i], unexpected))
       throw PARSE_ERROR( strf("Unexpected token '%c'", in[i]) , i);
@@ -363,12 +369,14 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
     if(val != "")
       ret->sa.push_back(new string_subarg(val));
 
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret, i);
 }
@@ -447,8 +455,10 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
   if(is_redirect)
   {
     redirect* ret=nullptr;
+#ifndef NO_PARSE_CATCH
     try
     {
+#endif
       ret = new redirect;
       ret->op = std::string(in+start, i-start);
       if(needs_arg)
@@ -505,6 +515,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
           i=pa.second;
         }
       }
+#ifndef NO_PARSE_CATCH
     }
     catch(ztd::format_error& e)
     {
@@ -512,6 +523,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
         delete ret;
       throw e;
     }
+#endif
     return std::make_pair(ret, i);
   }
   else
@@ -527,8 +539,10 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
   uint32_t i=start;
   arglist* ret = nullptr;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     if(is_in(in[i], SPECIAL_TOKENS) && !word_eq("&>", in, size, i))
     {
       if(hard_error)
@@ -546,7 +560,7 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
           ret = new arglist;
         auto ps = parse_subshell(in, size, i);
         ret->args.push_back(new arg(new procsub_subarg(is_output, ps.first)));
-        i=ps.second+1;
+        i=ps.second;
       }
       else if(redirs!=nullptr)
       {
@@ -578,6 +592,7 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
       if( is_in(in[i], SPECIAL_TOKENS) )
         return std::make_pair(ret, i);
     }
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
@@ -585,6 +600,7 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
       delete ret;
     throw e;
   }
+#endif
   return std::make_pair(ret, i);
 }
 
@@ -596,8 +612,11 @@ std::pair<pipeline*, uint32_t> parse_pipeline(const char* in, uint32_t size, uin
 {
   uint32_t i=start;
   pipeline* ret = new pipeline;
+
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     if(in[i] == '!' && i+1<size && is_in(in[i+1], SPACES))
     {
       ret->negated = true;
@@ -614,12 +633,14 @@ std::pair<pipeline*, uint32_t> parse_pipeline(const char* in, uint32_t size, uin
         throw PARSE_ERROR( strf("Unexpected token: '%c'", in[i] ), i);
       i++;
     }
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
   return std::make_pair(ret, i);
 }
 
@@ -631,8 +652,11 @@ std::pair<condlist*, uint32_t> parse_condlist(const char* in, uint32_t size, uin
 {
   uint32_t i = skip_unread(in, size, start);
   condlist* ret = new condlist;
+
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     bool optype=AND_OP;
     while(i<size)
     {
@@ -665,12 +689,14 @@ std::pair<condlist*, uint32_t> parse_condlist(const char* in, uint32_t size, uin
       if(i>=size)
         throw PARSE_ERROR( "Unexpected end of file", i );
     }
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
   return std::make_pair(ret, i);
 }
 
@@ -678,8 +704,11 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
 {
   list* ret = new list;
   uint32_t i=skip_unread(in, size, start);
+
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     while(in[i] != end_c)
     {
       auto pp=parse_condlist(in, size, i);
@@ -713,12 +742,14 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
           break;
       }
     }
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
   return std::make_pair(ret, i);
 }
 
@@ -726,8 +757,11 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
 {
   list* ret = new list;
   uint32_t i=skip_unread(in, size, start);
+
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     std::string old_expect=g_expecting;
     g_expecting=end_word;
     while(true)
@@ -762,12 +796,14 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
       }
     }
     g_expecting=old_expect;
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
   return std::make_pair(ret, i);
 }
 
@@ -777,8 +813,11 @@ std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32
   list* ret = new list;
   uint32_t i=skip_unread(in, size, start);;
   std::string found_end_word;
+
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     std::string old_expect=g_expecting;
     g_expecting=end_words[0];
     bool stop=false;
@@ -825,12 +864,14 @@ std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32
       }
     }
     g_expecting=old_expect;
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
   return std::make_tuple(ret, i, found_end_word);
 }
 
@@ -842,21 +883,24 @@ std::pair<subshell*, uint32_t> parse_subshell(const char* in, uint32_t size, uin
   uint32_t i = skip_unread(in, size, start);
   subshell* ret = new subshell;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     auto pp=parse_list_until(in, size, start, ')');
     ret->lst=pp.first;
     i=pp.second;
     if(ret->lst->size()<=0)
       throw PARSE_ERROR("Subshell is empty", start-1);
     i++;
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
-
+#endif
   return std::make_pair(ret,i);
 }
 
@@ -869,20 +913,24 @@ std::pair<brace*, uint32_t> parse_brace(const char* in, uint32_t size, uint32_t 
   uint32_t i = skip_unread(in, size, start);
   brace* ret = new brace;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     auto pp=parse_list_until(in, size, start, '}');
     ret->lst=pp.first;
     i=pp.second;
     if(ret->lst->size()<=0)
       throw PARSE_ERROR("Brace block is empty", start-1);
     i++;
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret,i);
 }
@@ -895,8 +943,10 @@ std::pair<function*, uint32_t> parse_function(const char* in, uint32_t size, uin
   uint32_t i=start;
   function* ret = new function;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     i=skip_unread(in, size, i);
     if(in[i] != '{')
       throw PARSE_ERROR( strf("Expecting { after %s", after) , i);
@@ -909,12 +959,14 @@ std::pair<function*, uint32_t> parse_function(const char* in, uint32_t size, uin
     ret->lst=pp.first;
     i=pp.second;
     i++;
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret, i);
 }
@@ -925,8 +977,10 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
   cmd* ret = new cmd;
   uint32_t i=start;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     while(true) // parse var assigns
     {
       auto wp=get_word(in, size, i, VARNAME_END);
@@ -960,12 +1014,14 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
     else if(ret->var_assigns.size() <= 0)
       throw PARSE_ERROR( strf("Unexpected token: '%c'", in[i]), i );
 
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret, i);
 }
@@ -978,8 +1034,10 @@ std::pair<case_block*, uint32_t> parse_case(const char* in, uint32_t size, uint3
   uint32_t i=skip_chars(in, size, start, SPACES);;
   case_block* ret = new case_block;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     // get the treated argument
     auto pa = parse_arg(in, size, i);
     ret->carg = pa.first;
@@ -1042,12 +1100,14 @@ std::pair<case_block*, uint32_t> parse_case(const char* in, uint32_t size, uint3
     if(i>=size)
       throw PARSE_ERROR("Expecting 'esac'", i);
     i+=4;
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     if(ret != nullptr) delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret, i);
 }
@@ -1057,8 +1117,10 @@ std::pair<if_block*, uint32_t> parse_if(const char* in, uint32_t size, uint32_t 
   if_block* ret = new if_block;
   uint32_t i=start;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     while(true)
     {
       std::string word;
@@ -1093,12 +1155,14 @@ std::pair<if_block*, uint32_t> parse_if(const char* in, uint32_t size, uint32_t 
 
     }
 
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret, i);
 }
@@ -1108,8 +1172,10 @@ std::pair<for_block*, uint32_t> parse_for(const char* in, uint32_t size, uint32_
   for_block* ret = new for_block;
   uint32_t i=skip_chars(in, size, start, SPACES);
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     auto wp = get_word(in, size, i, ARG_END);
 
     if(!valid_name(wp.first))
@@ -1146,12 +1212,14 @@ std::pair<for_block*, uint32_t> parse_for(const char* in, uint32_t size, uint32_
     auto lp = parse_list_until(in, size, i, "done");
     ret->ops=lp.first;
     i=lp.second;
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret, i);
 }
@@ -1161,8 +1229,10 @@ std::pair<while_block*, uint32_t> parse_while(const char* in, uint32_t size, uin
   while_block* ret = new while_block;
   uint32_t i=start;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     // cond
     auto pp=parse_list_until(in, size, i, "do");
     ret->cond = pp.first;
@@ -1177,12 +1247,14 @@ std::pair<while_block*, uint32_t> parse_while(const char* in, uint32_t size, uin
     i = lp.second;
     if(ret->ops->size() <= 0)
       throw PARSE_ERROR("while is empty", i);
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret, i);
 }
@@ -1193,8 +1265,10 @@ std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t 
   uint32_t i = skip_chars(in, size, start, SEPARATORS);
   block* ret = nullptr;
 
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     if(i>=size)
       throw PARSE_ERROR("Unexpected end of file", i);
     if( in[i] == '(' ) //subshell
@@ -1299,12 +1373,14 @@ std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t 
       }
       i=pp.second;
     }
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     if(ret != nullptr) delete ret;
     throw e;
   }
+#endif
 
   return std::make_pair(ret,i);
 }
@@ -1314,8 +1390,10 @@ shmain* parse_text(const char* in, uint32_t size, std::string const& filename)
 {
   shmain* ret = new shmain();
   uint32_t i=0;
+#ifndef NO_PARSE_CATCH
   try
   {
+#endif
     ret->filename=filename;
     // get shebang
     if(word_eq("#!", in, size, 0))
@@ -1331,12 +1409,14 @@ shmain* parse_text(const char* in, uint32_t size, std::string const& filename)
     auto pp=parse_list_until(in, size, i, 0);
     ret->lst=pp.first;
     i=pp.second;
+#ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
   {
     delete ret;
     throw ztd::format_error(e.what(), filename, e.data(), e.where());
   }
+#endif
   return ret;
 }
 

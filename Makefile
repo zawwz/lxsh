@@ -18,7 +18,7 @@ CXXFLAGS= -I$(IDIR) -Wall -pedantic -std=c++17
 ifeq	($(DEBUG),true)
   # debugging flags
   CC=clang++
-  CXXFLAGS += -g -pg
+  CXXFLAGS += -g -pg -D NO_PARSE_CATCH
 else
   # release flags
   CXXFLAGS += -Ofast
