@@ -208,10 +208,7 @@ bool r_debashify(_obj* o, bool* need_random_func)
 void debashify(shmain* sh)
 {
   bool need_random_func=false;
-  if(sh->shebang == "")
-    sh->shebang = "#!/bin/bash";
-  else
-    sh->shebang = dirname(sh->shebang)+"/sh";
+  sh->shebang = "#!/bin/sh";
   recurse(r_debashify, sh, &need_random_func);
   if(need_random_func)
   sh->lst->insert(0, new condlist(create_random_func()));
