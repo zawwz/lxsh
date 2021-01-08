@@ -88,7 +88,7 @@ bool debashify_replace_procsub(list* lst)
           {
             for(auto ait: t->args->args)
             {
-              if(ait->sa[0]->type == _obj::subarg_procsub)
+              if(ait->sa.size() == 1 && ait->sa[0]->type == _obj::subarg_procsub)
               {
                 procsub_subarg* st = dynamic_cast<procsub_subarg*>(ait->sa[0]);
                 affected_args.push_back( std::make_pair(ait, st->is_output) );
@@ -103,15 +103,15 @@ bool debashify_replace_procsub(list* lst)
     {
       has_replaced=true;
       list* lst_insert = new list;
-      std::vector<std::string> mkfifoargs = {"mkfifo"};
+      std::string mkfifocmd="mkfifo";
       for(uint32_t i=0; i<affected_args.size(); i++)
       {
         // fifoN=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random 10)
         lst_insert->add( make_condlist( strf("__lxshfifo%u=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random 10)", i) ) );
-        mkfifoargs.push_back( strf("\"$__lxshfifo%u\"", i) );
+        mkfifocmd += strf(" \"$__lxshfifo%u\"", i);
       }
       // mkfifo "$fifoN"
-      lst_insert->add( new condlist(make_cmd(mkfifoargs)) );
+      lst_insert->add( make_condlist(mkfifocmd) );
       for(uint32_t i=0; i<affected_args.size(); i++)
       {
         // create ( {PSUB;} > "$fifoN" ; rm "$fifoN") &
@@ -122,7 +122,7 @@ bool debashify_replace_procsub(list* lst)
         // deindex list
         st->sbsh->lst=nullptr;
         // {PSUB;} > "$__lxshfifoN"
-        cbr->redirs.push_back( new redirect( affected_args[i].second ? "<" : ">", new arg(strf("\"$__lxshfifo%u\"", i)) ) );
+        cbr->redirs.push_back( new redirect( affected_args[i].second ? "<" : ">", make_arg(strf("\"$__lxshfifo%u\"", i)) ) );
         // ( {PSUB;} > "$__lxshfifoN" )
         psub->lst->add( new condlist(cbr) );
         // ( {PSUB;} > "$__lxshfifoN" ; rm "$__lxshfifoN" )
@@ -134,7 +134,9 @@ bool debashify_replace_procsub(list* lst)
 
         // replace the arg
         delete affected_args[i].first->sa[0];
-        affected_args[i].first->sa[0] = new string_subarg(strf("\"$__lxshfifo%u\"", i));
+        affected_args[i].first->sa[0] = new string_subarg("\"");
+        affected_args[i].first->sa.push_back( new variable_subarg(strf("__lxshfifo%u", i)) );
+        affected_args[i].first->sa.push_back( new string_subarg("\"") );
       }
       lst->insert(li, *lst_insert );
       li+= lst_insert->size();
@@ -211,5 +213,5 @@ void debashify(shmain* sh)
   sh->shebang = "#!/bin/sh";
   recurse(r_debashify, sh, &need_random_func);
   if(need_random_func)
-  sh->lst->insert(0, new condlist(create_random_func()));
+    sh->lst->insert(0, new condlist(create_random_func()));
 }

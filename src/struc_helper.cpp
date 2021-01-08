@@ -5,6 +5,11 @@
 
 // ** FUNCTIONS ** //
 
+arg* make_arg(std::string const& in)
+{
+  return parse_arg(in.c_str(), in.size(), 0).first;
+}
+
 cmd* make_cmd(std::vector<std::string> const& args)
 {
   cmd* ret = new cmd();
