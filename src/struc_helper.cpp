@@ -154,10 +154,24 @@ void condlist::add(pipeline* pl, bool or_op)
   pls.push_back(pl);
 }
 
+void list::insert(uint32_t i, condlist* val)
+{
+  if(i<0)
+    cls.insert(cls.end(), val);
+  else
+    cls.insert(cls.begin()+i, val);
+}
+void list::insert(uint32_t i, list const& lst)
+{
+  if(i<0)
+    cls.insert(cls.end(), lst.cls.begin(), lst.cls.end());
+  else
+    cls.insert(cls.begin()+i, lst.cls.begin(), lst.cls.end());
+}
 
 void shmain::concat(shmain* in)
 {
-  this->lst->cls.insert(this->lst->cls.end(), in->lst->cls.begin(), in->lst->cls.end());
+  lst->insert(lst->size(), *in->lst);
   in->lst->cls.resize(0);
   if(this->shebang == "")
     this->shebang = in->shebang;

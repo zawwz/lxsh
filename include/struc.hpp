@@ -231,6 +231,9 @@ public:
 
   condlist* last_cond() { return cls[cls.size()-1]; }
 
+  void insert(uint32_t i, condlist* val);
+  void insert(uint32_t i, list const& lst);
+
   size_t size() { return cls.size(); }
   condlist* operator[](uint32_t i) { return cls[i]; }
 

@@ -2,6 +2,8 @@
 
 #include "recursive.hpp"
 #include "util.hpp"
+#include "parse.hpp"
+#include "struc_helper.hpp"
 
 bool debashify_replace_bashtest(cmd* in)
 {
@@ -11,6 +13,8 @@ bool debashify_replace_bashtest(cmd* in)
   return false;
 }
 
+// replace &>, &>> and >&:
+// add 2>&1 as redirect
 bool debashify_replace_combined_redirects(block* in)
 {
   bool has_replaced=false;
@@ -40,10 +44,125 @@ bool debashify_replace_combined_redirects(block* in)
   return has_replaced;
 }
 
-bool r_debashify(_obj* o)
+// replace <<< and
+// <<< : TODO
+bool debashify_replace_extended_redirects(pipeline* in)
+{
+  return false;
+}
+
+// replace <() and >()
+/*
+ <() replacer:
+REPLACE: CMD <(PSUB)
+TO:
+  fifoN=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random 10)
+  mkfifo "$fifoN"
+  ( {PSUB;} > "$fifoN" ; rm "$fifoN") &
+  CMD "$fifoN"
+
+REPLACE CMD >(PSUB)
+TO:
+  fifoN=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random 10)
+  mkfifo "$fifoN"
+  ( {PSUB;} < "$fifoN" ; rm "$fifoN") &
+  jobN
+  CMD "$fifoN"
+  wait "$jobN"
+*/
+bool debashify_replace_procsub(list* lst)
+{
+  bool has_replaced=false;
+  for(uint32_t li=0; li<lst->cls.size(); li++)
+  {
+    std::vector<std::pair<arg*,bool>> affected_args;
+    // iterate all applicable args of the cl
+    for(auto plit: lst->cls[li]->pls)
+    {
+      for(auto cmit: plit->cmds)
+      {
+        if(cmit->type == _obj::block_cmd)
+        {
+          cmd* t = dynamic_cast<cmd*>(cmit);
+          if(t->args != nullptr)
+          {
+            for(auto ait: t->args->args)
+            {
+              if(ait->sa[0]->type == _obj::subarg_procsub)
+              {
+                procsub_subarg* st = dynamic_cast<procsub_subarg*>(ait->sa[0]);
+                affected_args.push_back( std::make_pair(ait, st->is_output) );
+              }
+            }
+          }
+        }
+      }
+    }
+    // perform the replace
+    if(affected_args.size()>0)
+    {
+      has_replaced=true;
+      list* lst_insert = new list;
+      std::vector<std::string> mkfifoargs = {"mkfifo"};
+      for(uint32_t i=0; i<affected_args.size(); i++)
+      {
+        // fifoN=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random 10)
+        lst_insert->add( make_condlist( strf("__lxshfifo%u=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random 10)", i) ) );
+        mkfifoargs.push_back( strf("\"$__lxshfifo%u\"", i) );
+      }
+      // mkfifo "$fifoN"
+      lst_insert->add( new condlist(make_cmd(mkfifoargs)) );
+      for(uint32_t i=0; i<affected_args.size(); i++)
+      {
+        // create ( {PSUB;} > "$fifoN" ; rm "$fifoN") &
+        subshell* psub = new subshell(new list);
+        procsub_subarg* st = dynamic_cast<procsub_subarg*>(affected_args[i].first->sa[0]);
+        // {PSUB;}
+        brace* cbr = new brace(st->sbsh->lst);
+        // deindex list
+        st->sbsh->lst=nullptr;
+        // {PSUB;} > "$__lxshfifoN"
+        cbr->redirs.push_back( new redirect( affected_args[i].second ? "<" : ">", new arg(strf("\"$__lxshfifo%u\"", i)) ) );
+        // ( {PSUB;} > "$__lxshfifoN" )
+        psub->lst->add( new condlist(cbr) );
+        // ( {PSUB;} > "$__lxshfifoN" ; rm "$__lxshfifoN" )
+        psub->lst->add( make_condlist(strf("rm \"$__lxshfifo%u\"", i)) );
+        // ( {PSUB;} > "$__lxshfifoN" ; rm "$__lxshfifoN" ) &
+        condlist* pscl = new condlist(psub);
+        pscl->parallel=true;
+        lst_insert->add( pscl );
+
+        // replace the arg
+        delete affected_args[i].first->sa[0];
+        affected_args[i].first->sa[0] = new string_subarg(strf("\"$__lxshfifo%u\"", i));
+      }
+      lst->insert(li, *lst_insert );
+      li+= lst_insert->size();
+      //cleanup
+      lst_insert->cls.resize(0);
+      delete lst_insert;
+    }
+  }
+  return has_replaced;
+}
+
+function* create_random_func()
+{
+  std::string code="{ tr -cd '[:alnum:]' </dev/urandom | head -c $1; }";
+  function* fct=parse_function(code.c_str(), code.size(), 0).first;
+  fct->name="__lxsh_random";
+  return fct;
+}
+
+bool r_debashify(_obj* o, bool* need_random_func)
 {
   switch(o->type)
   {
+    case _obj::_list: {
+      list* t = dynamic_cast<list*>(o);
+      if(debashify_replace_procsub(t))
+        *need_random_func = true;
+    } break;
     case _obj::block_subshell: {
       subshell* t = dynamic_cast<subshell*>(o);
       debashify_replace_combined_redirects(t);
@@ -88,6 +207,12 @@ bool r_debashify(_obj* o)
 
 void debashify(shmain* sh)
 {
-  sh->shebang = dirname(sh->shebang)+"/sh";
-  recurse(r_debashify, sh);
+  bool need_random_func=false;
+  if(sh->shebang == "")
+    sh->shebang = "#!/bin/bash";
+  else
+    sh->shebang = dirname(sh->shebang)+"/sh";
+  recurse(r_debashify, sh, &need_random_func);
+  if(need_random_func)
+  sh->lst->insert(0, new condlist(create_random_func()));
 }
