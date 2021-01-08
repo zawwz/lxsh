@@ -32,6 +32,27 @@ bool debashify_array_def(cmd* in)
 
 bool debashify_herestring(pipeline* pl)
 {
+  if(pl->cmds.size()>0)
+  {
+    block* c=pl->cmds[0];
+    for(uint32_t i=0; i<c->redirs.size() ; i++)
+    {
+      if(c->redirs[i]->op == "<<<")
+      {
+        force_quotes(c->redirs[i]->target);
+        cmd* printcmd = make_cmd("printf '%s\\n'");
+        printcmd->add(c->redirs[i]->target);
+        pl->cmds.insert(pl->cmds.begin(), printcmd);
+
+        // cleanup
+        c->redirs[i]->target=nullptr;
+        delete c->redirs[i];
+        c->redirs.erase(pl->cmds[1]->redirs.begin()+i);
+
+        return true;
+      }
+    }
+  }
   return false;
 }
 
@@ -186,6 +207,10 @@ bool r_debashify(_obj* o, bool* need_random_func)
       list* t = dynamic_cast<list*>(o);
       if(debashify_procsub(t))
         *need_random_func = true;
+    } break;
+    case _obj::_pipeline: {
+      pipeline* t = dynamic_cast<pipeline*>(o);
+      debashify_herestring(t);
     } break;
     case _obj::block_cmd: {
       cmd* t = dynamic_cast<cmd*>(o);

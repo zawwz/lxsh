@@ -5,6 +5,8 @@
 
 // ** FUNCTIONS ** //
 
+// makers
+
 arg* make_arg(std::string const& in)
 {
   return parse_arg(in.c_str(), in.size(), 0).first;
@@ -29,6 +31,22 @@ cmd* make_cmd(std::string const& in)
 condlist* make_condlist(std::string const& in)
 {
   return parse_condlist(in.c_str(), in.size(), 0).first;
+}
+
+// modifiers
+
+void force_quotes(arg* in)
+{
+  for(uint32_t i=0; i < in->sa.size() ; i++)
+  {
+    if(!in->sa[i]->quoted && (in->sa[i]->type == _obj::subarg_variable || in->sa[i]->type == _obj::subarg_manipulation || in->sa[i]->type == _obj::subarg_subshell) )
+    {
+      in->sa[i]->quoted=true;
+      in->insert(i, new string_subarg("\""));
+      i+=2;
+      in->insert(i, new string_subarg("\""));
+    }
+  }
 }
 
 // ** CLASS EXTENSIONS ** //

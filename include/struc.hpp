@@ -103,6 +103,8 @@ class subarg : public _obj
 public:
   virtual ~subarg() {;}
   virtual std::string generate(int ind)=0;
+
+  bool quoted;
 };
 
 class arg : public _obj
@@ -445,7 +447,7 @@ public:
 class variable_subarg : public subarg
 {
 public:
-  variable_subarg(std::string const& in="") { type=_obj::subarg_variable; varname=in; }
+  variable_subarg(std::string const& in="", bool inq=false) { type=_obj::subarg_variable; varname=in; quoted=inq; }
   ~variable_subarg() {;}
 
   std::string varname;
@@ -471,7 +473,6 @@ public:
   ~subshell_subarg() { if(sbsh != nullptr) delete sbsh; }
 
   subshell* sbsh;
-  bool quoted;
 
   std::string generate(int ind);
 };
@@ -479,7 +480,7 @@ public:
 class manipulation_subarg : public subarg
 {
 public:
-  manipulation_subarg(arg* in=nullptr) { type=_obj::subarg_manipulation; size=false; manip=in; }
+  manipulation_subarg(std::string varname="", arg* in=nullptr, bool inq=false) { type=_obj::subarg_manipulation; size=false; manip=in; quoted=inq; }
   ~manipulation_subarg() { if(manip!=nullptr) delete manip; }
 
   bool size;

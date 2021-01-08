@@ -252,6 +252,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
               ret->add(new string_subarg(tmpstr));
             // get arithmetic
             auto r=parse_arithmetic(in, size, i+3);
+            r.first->quoted=true;
             ret->add(r.first);
             j = i = r.second;
           }
@@ -274,6 +275,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
               ret->add(new string_subarg(tmpstr));
             // get manipulation
             auto r=parse_manipulation(in, size, i+2);
+            r.first->quoted=true;
             ret->add(r.first);
             j = i = r.second;
           }
@@ -287,7 +289,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
               if(tmpstr!="")
                 ret->add(new string_subarg(tmpstr));
               // add varname
-              ret->add(new variable_subarg(r.first));
+              ret->add(new variable_subarg(r.first, true));
               j = i = r.second;
             }
             else
