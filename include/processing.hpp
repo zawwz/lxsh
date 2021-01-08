@@ -21,10 +21,14 @@ extern std::regex re_var_exclude;
 extern std::regex re_fct_exclude;
 extern const std::regex regex_null;
 
+// globals
+extern const std::vector<std::string> argvar_cmds;
+
 // Object maps (optimizations)
 extern countmap_t m_vars, m_vardefs, m_varcalls;
 extern countmap_t m_fcts, m_cmds;
 extern set_t m_excluded_var, m_excluded_fct, m_excluded_cmd;
+
 
 extern bool b_gotvar, b_gotfct, b_gotcmd;
 

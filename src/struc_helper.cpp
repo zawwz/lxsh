@@ -94,21 +94,21 @@ cmd* condlist::first_cmd()
 
 cmd* brace::single_cmd()
 {
-  if( lst->size() == 1 && // only one condlist
-      (*lst)[0]->pls.size() == 1 && // only one pipeline
-      (*lst)[0]->pls[0]->cmds.size() == 1 && // only one block
-      (*lst)[0]->pls[0]->cmds[0]->type == _obj::block_cmd) // block is a command
-    return dynamic_cast<cmd*>((*lst)[0]->pls[0]->cmds[0]); // return command
+  if( lst->cls.size() == 1 && // only one condlist
+      lst->cls[0]->pls.size() == 1 && // only one pipeline
+      lst->cls[0]->pls[0]->cmds.size() == 1 && // only one block
+      lst->cls[0]->pls[0]->cmds[0]->type == _obj::block_cmd) // block is a command
+    return dynamic_cast<cmd*>(lst->cls[0]->pls[0]->cmds[0]); // return command
   return nullptr;
 }
 
 cmd* subshell::single_cmd()
 {
-  if( lst->size() == 1 && // only one condlist
-      (*lst)[0]->pls.size() == 1 && // only one pipeline
-      (*lst)[0]->pls[0]->cmds.size() == 1 && // only one block
-      (*lst)[0]->pls[0]->cmds[0]->type == _obj::block_cmd) // block is a command
-    return dynamic_cast<cmd*>((*lst)[0]->pls[0]->cmds[0]); // return command
+  if( lst->cls.size() == 1 && // only one condlist
+      lst->cls[0]->pls.size() == 1 && // only one pipeline
+      lst->cls[0]->pls[0]->cmds.size() == 1 && // only one block
+      lst->cls[0]->pls[0]->cmds[0]->type == _obj::block_cmd) // block is a command
+    return dynamic_cast<cmd*>(lst->cls[0]->pls[0]->cmds[0]); // return command
   return nullptr;
 }
 
@@ -144,12 +144,30 @@ void condlist::prune_first_cmd()
 
 // add/extend
 
+void arg::insert(uint32_t i, subarg* val)
+{
+  sa.insert(sa.begin()+i, val);
+}
+void arg::insert(uint32_t i, arg const& a)
+{
+  sa.insert(sa.begin()+i, a.sa.begin(), a.sa.end());
+}
+
+void arglist::insert(uint32_t i, arg* val)
+{
+  args.insert(args.begin()+i, val);
+}
+void arglist::insert(uint32_t i, arglist const& lst)
+{
+  args.insert(args.begin()+i, lst.args.begin(), lst.args.end());
+}
+
 void cmd::add(arg* in)
 {
   if(args==nullptr)
     args = new arglist;
 
-  args->push_back(in);
+  args->add(in);
 }
 
 void condlist::add(pipeline* pl, bool or_op)

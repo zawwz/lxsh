@@ -5,17 +5,39 @@
 #include "parse.hpp"
 #include "struc_helper.hpp"
 
-bool debashify_replace_bashtest(cmd* in)
+bool debashify_bashtest(cmd* in)
 {
   if(in->firstarg_string() == "[[")
-    throw std::runtime_error("Debashify on '[[ ]]' not implemented yet");
+    throw std::runtime_error("Cannot debashify '[[ ]]'");
 
+  return false;
+}
+
+bool debashify_declare(cmd* in)
+{
+  if(in->firstarg_string() == "declare")
+    throw std::runtime_error("Cannot debashify 'declare'");
+  return false;
+}
+
+bool debashify_array_def(cmd* in)
+{
+  for(auto it: in->var_assigns)
+  {
+    if(it.second->size()>0 && it.second->sa[0]->type == _obj::subarg_string && it.second->sa[0]->generate(0) == "(")
+      throw std::runtime_error("Cannot debashify VAR=() variable arrays");
+  }
+  return false;
+}
+
+bool debashify_herestring(pipeline* pl)
+{
   return false;
 }
 
 // replace &>, &>> and >&:
 // add 2>&1 as redirect
-bool debashify_replace_combined_redirects(block* in)
+bool debashify_combined_redirects(block* in)
 {
   bool has_replaced=false;
 
@@ -46,7 +68,7 @@ bool debashify_replace_combined_redirects(block* in)
 
 // replace <<< and
 // <<< : TODO
-bool debashify_replace_extended_redirects(pipeline* in)
+bool debashify_extended_redirects(pipeline* in)
 {
   return false;
 }
@@ -70,7 +92,7 @@ TO:
   CMD "$fifoN"
   wait "$jobN"
 */
-bool debashify_replace_procsub(list* lst)
+bool debashify_procsub(list* lst)
 {
   bool has_replaced=false;
   for(uint32_t li=0; li<lst->cls.size(); li++)
@@ -88,7 +110,7 @@ bool debashify_replace_procsub(list* lst)
           {
             for(auto ait: t->args->args)
             {
-              if(ait->sa.size() == 1 && ait->sa[0]->type == _obj::subarg_procsub)
+              if(ait->size() == 1 && ait->sa[0]->type == _obj::subarg_procsub)
               {
                 procsub_subarg* st = dynamic_cast<procsub_subarg*>(ait->sa[0]);
                 affected_args.push_back( std::make_pair(ait, st->is_output) );
@@ -135,8 +157,8 @@ bool debashify_replace_procsub(list* lst)
         // replace the arg
         delete affected_args[i].first->sa[0];
         affected_args[i].first->sa[0] = new string_subarg("\"");
-        affected_args[i].first->sa.push_back( new variable_subarg(strf("__lxshfifo%u", i)) );
-        affected_args[i].first->sa.push_back( new string_subarg("\"") );
+        affected_args[i].first->add( new variable_subarg(strf("__lxshfifo%u", i)) );
+        affected_args[i].first->add( new string_subarg("\"") );
       }
       lst->insert(li, *lst_insert );
       li+= lst_insert->size();
@@ -162,45 +184,47 @@ bool r_debashify(_obj* o, bool* need_random_func)
   {
     case _obj::_list: {
       list* t = dynamic_cast<list*>(o);
-      if(debashify_replace_procsub(t))
+      if(debashify_procsub(t))
         *need_random_func = true;
-    } break;
-    case _obj::block_subshell: {
-      subshell* t = dynamic_cast<subshell*>(o);
-      debashify_replace_combined_redirects(t);
-    } break;
-    case _obj::block_brace: {
-      brace* t = dynamic_cast<brace*>(o);
-      debashify_replace_combined_redirects(t);
-    } break;
-    case _obj::block_main: {
-      shmain* t = dynamic_cast<shmain*>(o);
-      debashify_replace_combined_redirects(t);
     } break;
     case _obj::block_cmd: {
       cmd* t = dynamic_cast<cmd*>(o);
-      debashify_replace_combined_redirects(t);
-      debashify_replace_bashtest(t);
+      debashify_combined_redirects(t);
+      debashify_bashtest(t);
+      debashify_declare(t);
+      debashify_array_def(t);
+    } break;
+    case _obj::block_subshell: {
+      subshell* t = dynamic_cast<subshell*>(o);
+      debashify_combined_redirects(t);
+    } break;
+    case _obj::block_brace: {
+      brace* t = dynamic_cast<brace*>(o);
+      debashify_combined_redirects(t);
+    } break;
+    case _obj::block_main: {
+      shmain* t = dynamic_cast<shmain*>(o);
+      debashify_combined_redirects(t);
     } break;
     case _obj::block_function: {
       function* t = dynamic_cast<function*>(o);
-      debashify_replace_combined_redirects(t);
+      debashify_combined_redirects(t);
     } break;
     case _obj::block_case: {
       case_block* t = dynamic_cast<case_block*>(o);
-      debashify_replace_combined_redirects(t);
+      debashify_combined_redirects(t);
     } break;
     case _obj::block_if: {
       if_block* t = dynamic_cast<if_block*>(o);
-      debashify_replace_combined_redirects(t);
+      debashify_combined_redirects(t);
     } break;
     case _obj::block_while: {
       while_block* t = dynamic_cast<while_block*>(o);
-      debashify_replace_combined_redirects(t);
+      debashify_combined_redirects(t);
     } break;
     case _obj::block_for: {
       for_block* t = dynamic_cast<for_block*>(o);
-      debashify_replace_combined_redirects(t);
+      debashify_combined_redirects(t);
     } break;
     default: break;
   }

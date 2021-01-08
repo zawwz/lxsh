@@ -115,6 +115,12 @@ public:
 
   void set(std::string const& str);
 
+  void insert(uint32_t i, subarg* val);
+  void insert(uint32_t i, arg const& a);
+
+  inline void add(subarg* in) { sa.push_back(in); }
+  inline size_t size() { return sa.size(); }
+
   std::vector<subarg*> sa;
 
   // return if is a string and only one subarg
@@ -134,14 +140,15 @@ public:
   arglist(arg* in) { type=_obj::_arglist; this->add(in); }
   ~arglist() { for( auto it: args ) delete it; }
   inline void add(arg* in) { args.push_back(in); }
-  inline void push_back(arg* in) { args.push_back(in); }
 
   std::vector<arg*> args;
 
   std::vector<std::string> strargs(uint32_t start);
 
-  inline uint64_t size() { return args.size(); }
-  inline arg* operator[](uint32_t i) { return args[i]; }
+  void insert(uint32_t i, arg* val);
+  void insert(uint32_t i, arglist const& lst);
+
+  inline size_t size() { return args.size(); }
 
   std::string generate(int ind);
 };
@@ -205,6 +212,7 @@ public:
   bool parallel; // & at the end
 
   void add(pipeline* pl, bool or_op=false);
+
   // don't push_back here, use add() instead
   std::vector<pipeline*> pls;
   std::vector<bool> or_ops; // size of 1 less than pls, defines separator between pipelines
@@ -227,7 +235,7 @@ public:
   ~list() { for(auto it: cls) delete it; }
 
   std::vector<condlist*> cls;
-  void add(condlist* in) { cls.push_back(in); }
+  inline void add(condlist* in) { cls.push_back(in); }
 
   condlist* last_cond() { return cls[cls.size()-1]; }
 
@@ -235,7 +243,6 @@ public:
   void insert(uint32_t i, list const& lst);
 
   size_t size() { return cls.size(); }
-  condlist* operator[](uint32_t i) { return cls[i]; }
 
   std::string generate(int ind, bool first_indent);
   std::string generate(int ind) { return this->generate(ind, true); }

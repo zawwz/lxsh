@@ -229,7 +229,7 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, shmain* parent, bool 
   arg* ta=nullptr;
   bool has_resolved=false;
   uint32_t j=0;
-  for(uint32_t i=0 ; i<in->sa.size() ; i++)
+  for(uint32_t i=0 ; i<in->size() ; i++)
   {
     if(in->sa[i]->type != _obj::subarg_subshell) // skip if not subshell
       continue;
@@ -289,14 +289,14 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, shmain* parent, bool 
         if(ta == nullptr)
           ta = new arg;
         ta->sa.insert(ta->sa.end(), in->sa.begin()+j, in->sa.begin()+i);
-        ta->sa.push_back(new string_subarg(strargs[i]));
+        ta->add(new string_subarg(strargs[i]));
         j=i+1;
         delete in->sa[i];
         for(uint32_t li=1 ; li<strargs.size() ; li++)
         {
           ret.push_back(ta);
           ta = new arg;
-          ta->sa.push_back(new string_subarg(strargs[li]));
+          ta->add(new string_subarg(strargs[li]));
         }
 
       } // end pack
@@ -353,7 +353,7 @@ bool r_resolve(_obj* o, shmain* parent)
     case _obj::_arglist :
     {
       auto t = dynamic_cast<arglist*>(o);
-      for(uint32_t i=0 ; i<t->args.size() ; i++)
+      for(uint32_t i=0 ; i<t->size() ; i++)
       {
         auto r=resolve_arg(t->args[i], parent);
         if(r.first.size()>0)

@@ -249,10 +249,10 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
             // add previous subarg
             std::string tmpstr=std::string(in+j, i-j);
             if(tmpstr!="")
-              ret->sa.push_back(new string_subarg(tmpstr));
+              ret->add(new string_subarg(tmpstr));
             // get arithmetic
             auto r=parse_arithmetic(in, size, i+3);
-            ret->sa.push_back(r.first);
+            ret->add(r.first);
             j = i = r.second;
           }
           else if( word_eq("$(", in, size, i) ) // substitution
@@ -260,10 +260,10 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
             // add previous subarg
             std::string tmpstr=std::string(in+j, i-j);
             if(tmpstr!="")
-              ret->sa.push_back(new string_subarg(tmpstr));
+              ret->add(new string_subarg(tmpstr));
             // get subshell
             auto r=parse_subshell(in, size, i+2);
-            ret->sa.push_back(new subshell_subarg(r.first, true));
+            ret->add(new subshell_subarg(r.first, true));
             j = i = r.second;
           }
           else if( word_eq("${", in, size, i) ) // variable manipulation
@@ -271,10 +271,10 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
             // add previous subarg
             std::string tmpstr=std::string(in+j, i-j);
             if(tmpstr!="")
-              ret->sa.push_back(new string_subarg(tmpstr));
+              ret->add(new string_subarg(tmpstr));
             // get manipulation
             auto r=parse_manipulation(in, size, i+2);
-            ret->sa.push_back(r.first);
+            ret->add(r.first);
             j = i = r.second;
           }
           else if( in[i] == '$' )
@@ -285,9 +285,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
               // add previous subarg
               std::string tmpstr=std::string(in+j, i-j);
               if(tmpstr!="")
-                ret->sa.push_back(new string_subarg(tmpstr));
+                ret->add(new string_subarg(tmpstr));
               // add varname
-              ret->sa.push_back(new variable_subarg(r.first));
+              ret->add(new variable_subarg(r.first));
               j = i = r.second;
             }
             else
@@ -316,10 +316,10 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         // add previous subarg
         std::string tmpstr=std::string(in+j, i-j);
         if(tmpstr!="")
-          ret->sa.push_back(new string_subarg(tmpstr));
+          ret->add(new string_subarg(tmpstr));
         // get arithmetic
         auto r=parse_arithmetic(in, size, i+3);
-        ret->sa.push_back(r.first);
+        ret->add(r.first);
         j = i = r.second;
       }
       else if( word_eq("$(", in, size, i) ) // substitution
@@ -327,10 +327,10 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         // add previous subarg
         std::string tmpstr=std::string(in+j, i-j);
         if(tmpstr!="")
-          ret->sa.push_back(new string_subarg(tmpstr));
+          ret->add(new string_subarg(tmpstr));
         // get subshell
         auto r=parse_subshell(in, size, i+2);
-        ret->sa.push_back(new subshell_subarg(r.first, false));
+        ret->add(new subshell_subarg(r.first, false));
         j = i = r.second;
       }
       else if( word_eq("${", in, size, i) ) // variable manipulation
@@ -338,10 +338,10 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         // add previous subarg
         std::string tmpstr=std::string(in+j, i-j);
         if(tmpstr!="")
-          ret->sa.push_back(new string_subarg(tmpstr));
+          ret->add(new string_subarg(tmpstr));
         // get manipulation
         auto r=parse_manipulation(in, size, i+2);
-        ret->sa.push_back(r.first);
+        ret->add(r.first);
         j = i = r.second;
       }
       else if( in[i] == '$' )
@@ -352,9 +352,9 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           // add previous subarg
           std::string tmpstr=std::string(in+j, i-j);
           if(tmpstr!="")
-            ret->sa.push_back(new string_subarg(tmpstr));
+            ret->add(new string_subarg(tmpstr));
           // add varname
-          ret->sa.push_back(new variable_subarg(r.first));
+          ret->add(new variable_subarg(r.first));
           j = i = r.second;
         }
         else
@@ -367,7 +367,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
     // add string subarg
     std::string val=std::string(in+j, i-j);
     if(val != "")
-      ret->sa.push_back(new string_subarg(val));
+      ret->add(new string_subarg(val));
 
 #ifndef NO_PARSE_CATCH
   }
@@ -498,15 +498,11 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
           else
           {
             i = size;
-            // maybe at end of file with no \n
-            // if(strstr(in+size-delimitor.size(), std::string("\n"+delimitor).c_str())!=NULL)
-            //   i = size-delimitor.size();
-            // else // not found: end of file
           }
           std::string tmpparse=std::string(in+j, i-j);
           auto pval = parse_arg(tmpparse.c_str(), tmpparse.size(), 0, NULL);
           ret->target = pval.first;
-          ret->target->sa.insert(ret->target->sa.begin(), new string_subarg(delimitor+"\n"));
+          ret->target->insert(0, new string_subarg(delimitor+"\n"));
         }
         else
         {
@@ -559,7 +555,7 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
         if(ret == nullptr)
           ret = new arglist;
         auto ps = parse_subshell(in, size, i);
-        ret->args.push_back(new arg(new procsub_subarg(is_output, ps.first)));
+        ret->add(new arg(new procsub_subarg(is_output, ps.first)));
         i=ps.second;
       }
       else if(redirs!=nullptr)
@@ -579,7 +575,7 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
         if(ret == nullptr)
           ret = new arglist;
         auto pp=parse_arg(in, size, i);
-        ret->args.push_back(pp.first);
+        ret->add(pp.first);
         i = pp.second;
       }
       i = skip_chars(in, size, i, SPACES);
@@ -712,7 +708,7 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
     while(in[i] != end_c)
     {
       auto pp=parse_condlist(in, size, i);
-      ret->cls.push_back(pp.first);
+      ret->add(pp.first);
       i=pp.second;
 
       if(i < size)
@@ -775,7 +771,7 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
       }
       // do a parse
       auto pp=parse_condlist(in, size, i);
-      ret->cls.push_back(pp.first);
+      ret->add(pp.first);
       i=pp.second;
       if(i<size)
       {
@@ -846,7 +842,7 @@ std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32
         break;
       // do a parse
       auto pp=parse_condlist(in, size, i);
-      ret->cls.push_back(pp.first);
+      ret->add(pp.first);
       i=pp.second;
       if(in[i] == '#')
         ; // skip here
@@ -1065,7 +1061,7 @@ std::pair<case_block*, uint32_t> parse_case(const char* in, uint32_t size, uint3
       {
         pa = parse_arg(in, size, i);
         cc->first.push_back(pa.first);
-        if(pa.first->sa.size() <= 0)
+        if(pa.first->size() <= 0)
           throw PARSE_ERROR("Empty case value", i);
         i=skip_unread(in, size, pa.second);
         if(i>=size)

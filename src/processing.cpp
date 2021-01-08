@@ -13,6 +13,10 @@ std::regex re_fct_exclude;
 
 const std::regex regex_null;
 
+// globals
+
+const std::vector<std::string> argvar_cmds = { "export", "unset", "local", "read", "readonly", "declare" };
+
 // Object maps
 
 countmap_t m_vars, m_vardefs, m_varcalls;
@@ -20,6 +24,7 @@ countmap_t m_fcts, m_cmds;
 set_t m_excluded_var, m_excluded_fct, m_excluded_cmd;
 
 bool b_gotvar=false, b_gotfct=false, b_gotcmd=false;
+
 
 // requires
 
@@ -153,7 +158,10 @@ std::string get_varname(arg* in)
 
 bool cmd_is_argvar(std::string const& in)
 {
-  return in == "export" || in == "unset" || in == "local" || in == "read";
+  for(auto it: argvar_cmds)
+    if(in == it)
+      return true;
+  return false;
 }
 
 bool cmd::is_argvar()
