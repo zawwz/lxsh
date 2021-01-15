@@ -363,6 +363,55 @@ std::string procsub_subarg::generate(int ind)
     return '<' + sbsh->generate(ind);
 }
 
+std::string arithmetic_subarg::generate(int ind)
+{
+  std::string ret;
+  ret += "$((";
+  if(!opt_minimize) ret += ' ';
+  ret += arith->generate(ind);
+  if(!opt_minimize) ret += ' ';
+  ret += "))";
+  return ret;
+}
+
+// ARITHMETIC
+
+std::string operation_arithmetic::generate(int ind)
+{
+  std::string ret;
+  if(precedence)
+  {
+    ret += oper;
+    if(!opt_minimize) ret += ' ';
+    ret += val1->generate(ind);
+  }
+  else
+  {
+    ret += val1->generate(ind);
+    if(!opt_minimize) ret += ' ';
+    ret += oper;
+    if(!opt_minimize) ret += ' ';
+    ret += val2->generate(ind);
+  }
+  return ret;
+}
+
+std::string parenthesis_arithmetic::generate(int ind)
+{
+  std::string ret;
+  ret += '(';
+  if(!opt_minimize) ret += ' ';
+  ret += val->generate(ind);
+  if(!opt_minimize) ret += ' ';
+  ret += ')';
+  return ret;
+}
+
+std::string subshell_arithmetic::generate(int ind)
+{
+  return '$' + sbsh->generate(ind);
+}
+
 // TEMPLATE
 
 // std::string thing::generate(int ind)

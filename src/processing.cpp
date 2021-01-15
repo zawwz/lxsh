@@ -268,6 +268,11 @@ bool r_get_var(_obj* in, countmap_t* defmap, countmap_t* callmap)
       if(!callmap->insert( std::make_pair(t->varname, 1) ).second)
         (*callmap)[t->varname]++;
     }; break;
+    case _obj::arithmetic_variable: {
+      variable_arithmetic* t = dynamic_cast<variable_arithmetic*>(in);
+      if(!callmap->insert( std::make_pair(t->varname, 1) ).second)
+        (*callmap)[t->varname]++;
+    }; break;
     case _obj::subarg_manipulation: {
       manipulation_subarg* t = dynamic_cast<manipulation_subarg*>(in);
       if(!callmap->insert( std::make_pair(t->varname, 1) ).second)

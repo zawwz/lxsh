@@ -37,10 +37,10 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
 std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint32_t start, std::string const& end_word);
 std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32_t size, uint32_t start, std::vector<std::string> const& end_words, const char* expecting=NULL);
 // name
-std::pair<std::string, uint32_t> parse_varname(const char* in, uint32_t size, uint32_t start);
+std::pair<std::string, uint32_t> parse_varname(const char* in, uint32_t size, uint32_t start, bool specialvars=true);
 
 // subarg parsers
-std::pair<arithmetic_subarg*, uint32_t> parse_arithmetic(const char* in, uint32_t size, uint32_t start);
+std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size, uint32_t start);
 std::pair<manipulation_subarg*, uint32_t> parse_manipulation(const char* in, uint32_t size, uint32_t start);
 // arg parser
 std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start, const char* end=ARG_END, const char* unexpected=SPECIAL_TOKENS, bool doquote=true);

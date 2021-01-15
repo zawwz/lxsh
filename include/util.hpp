@@ -23,6 +23,8 @@ std::string dirname(std::string const& in);
 
 std::string indent(int n);
 
+bool is_among(std::string const& in, std::vector<std::string> const& values);
+
 std::vector<std::string> split(std::string const& in, const char* splitters);
 std::vector<std::string> split(std::string const& in, char c);
 

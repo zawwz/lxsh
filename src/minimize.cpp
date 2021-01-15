@@ -56,6 +56,12 @@ bool r_replace_var(_obj* in, strmap_t* varmap)
 {
   switch(in->type)
   {
+    case _obj::arithmetic_variable: {
+      variable_arithmetic* t = dynamic_cast<variable_arithmetic*>(in);
+      auto el=varmap->find(t->varname);
+      if(el!=varmap->end())
+        t->varname = el->second;
+    }; break;
     case _obj::subarg_variable: {
       variable_subarg* t = dynamic_cast<variable_subarg*>(in);
       auto el=varmap->find(t->varname);

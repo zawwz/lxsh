@@ -205,6 +205,31 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
       recurse(fct, t->sbsh, args...);
       break;
     }
+    case _obj::subarg_arithmetic :
+    {
+      arithmetic_subarg* t = dynamic_cast<arithmetic_subarg*>(o);
+      recurse(fct, t->arith, args...);
+      break;
+    }
+    case _obj::arithmetic_subshell :
+    {
+      subshell_arithmetic* t = dynamic_cast<subshell_arithmetic*>(o);
+      recurse(fct, t->sbsh, args...);
+      break;
+    }
+    case _obj::arithmetic_operation :
+    {
+      operation_arithmetic* t = dynamic_cast<operation_arithmetic*>(o);
+      recurse(fct, t->val1, args...);
+      recurse(fct, t->val2, args...);
+      break;
+    }
+    case _obj::arithmetic_parenthesis :
+    {
+      parenthesis_arithmetic* t = dynamic_cast<parenthesis_arithmetic*>(o);
+      recurse(fct, t->val, args...);
+      break;
+    }
 
     default: break; //do nothing
   }

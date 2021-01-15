@@ -18,6 +18,8 @@ bool g_bash=false;
 #define PARSE_ERROR(str, i) ztd::format_error(str, "", in, i)
 
 // constants
+const std::vector<std::string> arithmetic_precedence_operators = { "!", "~", "+", "-" };
+const std::vector<std::string> arithmetic_operators = { "+", "-", "*", "/", "=", "==", "!=", "&", "|", "^", "<<", ">>", "&&", "||" };
 
 const std::vector<std::string> all_reserved_words = { "if", "then", "else", "fi", "case", "esac", "for", "while", "do", "done", "{", "}" };
 const std::vector<std::string> out_reserved_words = { "then", "else", "fi", "esac", "do", "done", "}" };
@@ -125,13 +127,13 @@ uint32_t skip_unread(const char* in, uint32_t size, uint32_t start)
 
 // parse fcts
 
-std::pair<std::string, uint32_t> parse_varname(const char* in, uint32_t size, uint32_t start)
+std::pair<std::string, uint32_t> parse_varname(const char* in, uint32_t size, uint32_t start, bool specialvars)
 {
   uint32_t i=start;
   std::string ret;
 
   // special vars
-  if(is_in(in[i], SPECIAL_VARS) || (in[i]>='0' && in[i]<='1'))
+  if(specialvars && (is_in(in[i], SPECIAL_VARS) || (in[i]>='0' && in[i]<='1')) )
   {
     ret=in[i];
     i++;
@@ -146,28 +148,97 @@ std::pair<std::string, uint32_t> parse_varname(const char* in, uint32_t size, ui
   return std::make_pair(ret, i);
 }
 
+std::pair<std::string, uint32_t> get_operator(const char* in, uint32_t size, uint32_t start)
+{
+  uint32_t i=start;
+  std::string ret;
+
+  while(!is_alphanum(in[i]) && !is_in(in[i], SEPARATORS) && in[i]!=')' )
+    i++;
+
+  ret = std::string(in+start, i-start);
+
+  return std::make_pair(ret, i);
+}
+
 // parse an arithmetic
 // ends at ))
-// for now, uses subshell parsing then takes raw string value
 // temporary, to improve
-std::pair<arithmetic_subarg*, uint32_t> parse_arithmetic(const char* in, uint32_t size, uint32_t start)
+std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size, uint32_t start)
 {
-  arithmetic_subarg* ret = new arithmetic_subarg;
+  arithmetic* ret = nullptr;
   uint32_t i=start;
 
 #ifndef NO_PARSE_CATCH
   try
   {
 #endif
-    auto pp=parse_subshell(in, size, i);
-    i=pp.second;
-    delete pp.first;
-    if(i >= size || in[i]!=')')
+    i = skip_chars(in, size, i, SEPARATORS);
+    if(i>size || in[i] == ')')
+      throw PARSE_ERROR( "Unexpected end of arithmetic", i );
+
+    auto po = get_operator(in, size, i);
+    if(is_among(po.first, arithmetic_precedence_operators))
     {
-      throw PARSE_ERROR( "Unexpected token ')', expecting '))'", i );
+      auto pa = parse_arithmetic(in, size, po.second);
+      ret = new operation_arithmetic(po.first, pa.first, nullptr, true);
+      i=pa.second;
     }
-    ret->val = std::string(in+start, i-start-1);
-    i++;
+    else
+    {
+      if(in[i]=='-' || is_num(in[i]))
+      {
+        uint32_t j=i;
+        if(in[i]=='-')
+          i++;
+        while(is_num(in[i]))
+          i++;
+        ret = new number_arithmetic( std::string(in+j, i-j) );
+      }
+      else if(word_eq("$(", in, size, i))
+      {
+        auto ps = parse_subshell(in, size, i+2);
+        ret = new subshell_arithmetic(ps.first);
+        i=ps.second;
+      }
+      else if(in[i] == '(')
+      {
+        auto pa = parse_arithmetic(in, size, i+1);
+        ret = pa.first;
+        i = pa.second+1;
+      }
+      else
+      {
+        bool specialvars=false;
+        if(in[i] == '$')
+        {
+          specialvars=true;
+          i++;
+        }
+        auto pp = parse_varname(in, size, i, specialvars);
+        ret = new variable_arithmetic(pp.first);
+        i=pp.second;
+      }
+
+      i = skip_chars(in, size, i, SEPARATORS);
+      auto po = get_operator(in, size, i);
+      if(po.first != "")
+      {
+        if(!is_among(po.first, arithmetic_operators))
+          throw PARSE_ERROR( "Unknown arithmetic operator: "+po.first, i);
+        arithmetic* val1 = ret;
+        auto pa = parse_arithmetic(in, size, po.second);
+        arithmetic* val2 = pa.first;
+        i = pa.second;
+        ret = new operation_arithmetic(po.first, val1, val2);
+        i = skip_chars(in, size, i, SEPARATORS);
+      }
+
+      if(i >= size)
+        throw PARSE_ERROR( "Unexpected end of file, expecting '))'", i );
+      if(in[i] != ')')
+        throw PARSE_ERROR( "Unexpected token, expecting ')'", i);
+    }
 #ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
@@ -252,9 +323,14 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
               ret->add(new string_subarg(tmpstr));
             // get arithmetic
             auto r=parse_arithmetic(in, size, i+3);
-            r.first->quoted=true;
-            ret->add(r.first);
-            j = i = r.second;
+            arithmetic_subarg* tt = new arithmetic_subarg(r.first);
+            tt->quoted=true;
+            ret->add(tt);
+            i = r.second;
+            if(!word_eq("))", in, size, i))
+              throw PARSE_ERROR( "Unexpected token ')', expecting '))'", i);
+            i+=2;
+            j=i;
           }
           else if( word_eq("$(", in, size, i) ) // substitution
           {
@@ -321,8 +397,12 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           ret->add(new string_subarg(tmpstr));
         // get arithmetic
         auto r=parse_arithmetic(in, size, i+3);
-        ret->add(r.first);
-        j = i = r.second;
+        ret->add(new arithmetic_subarg(r.first));
+        i = r.second;
+        if(!word_eq("))", in, size, i))
+          throw PARSE_ERROR( "Unexpected token ')', expecting '))'", i);
+        i+=2;
+        j=i;
       }
       else if( word_eq("$(", in, size, i) ) // substitution
       {

@@ -90,10 +90,18 @@ public:
     _pipeline,
     _condlist,
     _list,
+    arithmetic_operation, arithmetic_number, arithmetic_variable, arithmetic_parenthesis, arithmetic_subshell,
     block_subshell, block_brace, block_main, block_cmd, block_function, block_case, block_if, block_for, block_while, block_until };
   _objtype type;
 
   virtual ~_obj() {;}
+  virtual std::string generate(int ind)=0;
+};
+
+// meta arithmetic type
+class arithmetic : public _obj
+{
+public:
   virtual std::string generate(int ind)=0;
 };
 
@@ -458,12 +466,14 @@ public:
 class arithmetic_subarg : public subarg
 {
 public:
-  arithmetic_subarg() { type=_obj::subarg_arithmetic; }
-  ~arithmetic_subarg() {;}
+  arithmetic_subarg(arithmetic* a=nullptr) { type=_obj::subarg_arithmetic; arith=a; }
+  ~arithmetic_subarg() {
+    if(arith!=nullptr) delete arith;
+  }
 
-  std::string val;
+  arithmetic* arith;
 
-  std::string generate(int ind) { return "$(("+val+"))"; }
+  std::string generate(int ind);
 };
 
 class subshell_subarg : public subarg
@@ -503,5 +513,67 @@ public:
   std::string generate(int ind);
 };
 
+// Arithmetic subtypes //
+
+class operation_arithmetic : public arithmetic
+{
+public:
+  operation_arithmetic(std::string op="", arithmetic* a=nullptr, arithmetic* b=nullptr, bool pre=false) { type=_obj::arithmetic_operation; oper=op; val1=a; val2=b; precedence=pre; }
+  ~operation_arithmetic() {
+    if(val1 != nullptr) delete val1;
+    if(val2 != nullptr) delete val2;
+  }
+
+  std::string oper;
+  bool precedence;
+  arithmetic *val1, *val2;
+  std::string generate(int ind);
+};
+
+class subshell_arithmetic : public arithmetic
+{
+public:
+  subshell_arithmetic(subshell* a=nullptr) { type=_obj::arithmetic_subshell; sbsh=a; }
+  ~subshell_arithmetic() {
+    if(sbsh!=nullptr) delete sbsh;
+  }
+
+  subshell* sbsh;
+
+  std::string generate(int ind);
+};
+
+class parenthesis_arithmetic : public arithmetic
+{
+public:
+  parenthesis_arithmetic(arithmetic* a=nullptr) { type=_obj::arithmetic_parenthesis; val=a; }
+  ~parenthesis_arithmetic() {
+    if(val!=nullptr) delete val;
+  }
+
+  arithmetic* val;
+
+  std::string generate(int ind);
+};
+
+class number_arithmetic : public arithmetic
+{
+public:
+  number_arithmetic(std::string const& a) { type=_obj::arithmetic_number; val=a; }
+
+  std::string val;
+
+  std::string generate(int ind) { return val; }
+};
+
+class variable_arithmetic : public arithmetic
+{
+public:
+  variable_arithmetic(std::string const& in) { type=_obj::arithmetic_variable; varname=in; }
+
+  std::string varname;
+
+  std::string generate(int ind) { return varname; }
+};
 
 #endif //STRUC_HPP

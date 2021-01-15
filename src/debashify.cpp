@@ -96,22 +96,11 @@ bool debashify_extended_redirects(pipeline* in)
 
 // replace <() and >()
 /*
- <() replacer:
-REPLACE: CMD <(PSUB)
-TO:
+REPLACE TO:
   fifoN=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random 10)
   mkfifo "$fifoN"
-  ( {PSUB;} > "$fifoN" ; rm "$fifoN") &
+  ( {PSUB;} [>|<] "$fifoN" ; rm "$fifoN") &
   CMD "$fifoN"
-
-REPLACE CMD >(PSUB)
-TO:
-  fifoN=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random 10)
-  mkfifo "$fifoN"
-  ( {PSUB;} < "$fifoN" ; rm "$fifoN") &
-  jobN
-  CMD "$fifoN"
-  wait "$jobN"
 */
 bool debashify_procsub(list* lst)
 {
