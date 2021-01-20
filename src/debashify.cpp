@@ -15,10 +15,10 @@ EXPRESSION : gen_bashtest_cmd
 // [[ $a = b ]] : quote vars
 // [[ a == b ]] : replace == with =
 // [[ a = b* ]] : case a in b*) true;; *) false;; esac
-// [[ a =~ b ]] : echo a | grep -q b
-pipeline* gen_bashtest_cmd(std::vector<arg*> args)
+// [[ a =~ b ]] : expr a : "b" >/dev/null
+block* gen_bashtest_cmd(std::vector<arg*> args)
 {
-  pipeline* ret = nullptr;
+  block* ret = nullptr;
 
   if(args.size() == 3 && args[1]->string() == "==")
   {
@@ -33,23 +33,22 @@ pipeline* gen_bashtest_cmd(std::vector<arg*> args)
     case_block* tc = new case_block(args[0]);
     tc->cases.push_back( std::make_pair(std::vector<arg*>({args[2]}), make_list("true")) );
     tc->cases.push_back( std::make_pair(std::vector<arg*>({new arg("*")}), make_list("false")) );
-    ret = new pipeline(tc);
+    ret = tc;
   }
   else if(args.size() == 3 && args[1]->string() == "=~")
   {
     delete args[1];
     args[1]=nullptr;
-    cmd* echo_arg1 = make_cmd( std::vector<arg*>({ new arg("echo"), args[0] }) );
-    cmd* grep_arg2 = make_cmd( std::vector<arg*>({ new arg("grep"), new arg("-q"), new arg("--"), args[2] }) );
     add_quotes(args[2]);
-    ret = make_pipeline( std::vector<block*>({echo_arg1, grep_arg2}) );
+    ret = make_cmd( std::vector<arg*>({ new arg("expr"), args[0], new arg(":"), args[2] }) );
+    ret->redirs.push_back(new redirect(">", new arg("/dev/null") ));
   }
   else // regular [ ]
   {
     cmd* t = make_cmd(args);
     t->args->insert(0, new arg("["));
     t->add(new arg("]"));
-    ret = new pipeline(t);
+    ret = t;
   }
   // arg oblivious replacements:
   // quote variables
@@ -73,7 +72,6 @@ bool debashify_bashtest(pipeline* pl)
 
   if(in->firstarg_string() == "[[")
   {
-    // throw std::runtime_error("Cannot debashify '[[ ]]'");
     brace* br = new brace(new list);
     condlist* cl = new condlist;
     br->lst->add(cl);
@@ -87,10 +85,11 @@ bool debashify_bashtest(pipeline* pl)
 
       if(i >= in->args->size()-1 || a->string() == "&&" || a->string() == "||")
       {
-        pipeline* tpl = gen_bashtest_cmd(std::vector<arg*>(in->args->args.begin()+j, in->args->args.begin()+i));
-        cl->add(tpl, or_op);
+        block* tbl = gen_bashtest_cmd(std::vector<arg*>(in->args->args.begin()+j, in->args->args.begin()+i));
+        cl->add(new pipeline(tbl), or_op);
         or_op = a->string() == "||";
         j=i+1;
+
       }
     }
 
