@@ -45,6 +45,11 @@ std::string strf( const std::string& format, Args ... args )
     return std::string( buf.get(), buf.get() + size - 1 ); // We don't want the '\0' inside
 }
 
+template<class T, typename ... Args>
+std::vector<T> make_vector(Args ... args)
+{
+  return std::vector<T>( { args... } );
+}
 
 template <class KEY, class VAL>
 std::vector<std::pair<KEY, VAL>> sort_by_value(std::map<KEY,VAL> const& in)

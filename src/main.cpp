@@ -20,12 +20,17 @@
 #include "version.h"
 #include "g_version.h"
 
+#define ERR_HELP    1001
+#define ERR_OPT     1002
+#define ERR_PARSE   1003
+#define ERR_RUNTIME 1004
+
 void oneshot_opt_process(const char* arg0)
 {
   if(options['h'])
   {
     print_help(arg0);
-    exit(0);
+    exit(ERR_HELP);
   }
   else if(options["version"])
   {
@@ -38,7 +43,7 @@ void oneshot_opt_process(const char* arg0)
     print_include_help();
     printf("\n\n");
     print_resolve_help();
-    exit(0);
+    exit(ERR_HELP);
   }
 }
 
@@ -55,7 +60,7 @@ int main(int argc, char* argv[])
   catch(std::exception& e)
   {
     std::cerr << e.what() << std::endl;
-    return 1;
+    return ERR_OPT;
   }
 
   oneshot_opt_process(argv[0]);
@@ -78,7 +83,7 @@ int main(int argc, char* argv[])
     if(isatty(fileno(stdin))) // stdin is interactive
     {
       print_help(argv[0]);
-      return 1;
+      return ERR_HELP;
     }
     else // is piped
     {
@@ -132,7 +137,10 @@ int main(int argc, char* argv[])
         continue;
       tsh = parse_text(filecontents, file);
       if(shebang_is_bin) // resolve lxsh shebang to sh
+      {
+        options["debashify"].activated=true;
         tsh->shebang="#!/bin/sh";
+      }
 
       /* mid processing */
       // resolve/include
@@ -211,7 +219,7 @@ int main(int argc, char* argv[])
       delete tsh;
     delete sh;
     printFormatError(e);
-    return 100;
+    return ERR_PARSE;
   }
 #endif
   catch(std::runtime_error& e)
@@ -220,7 +228,7 @@ int main(int argc, char* argv[])
       delete tsh;
     delete sh;
     std::cerr << e.what() << std::endl;
-    return 2;
+    return ERR_RUNTIME;
   }
 
   delete sh;

@@ -510,7 +510,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
     else if(in[i] == '&') // >& bash operator
     {
       if(!g_bash)
-        throw PARSE_ERROR("bash specific: '>&'. Use --debashify to remove bashisms", i);
+        throw PARSE_ERROR("bash specific: '>&'", i);
       i++;
       needs_arg=true;
     }
@@ -534,7 +534,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
       if(i<size && in[i] == '<')
       {
         if(!g_bash)
-          throw PARSE_ERROR("bash specific: '<<<'. Use --debashify to remove bashisms", i);
+          throw PARSE_ERROR("bash specific: '<<<'", i);
         i++;
       }
     }
@@ -544,7 +544,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
   else if( word_eq("&>", in, size, i) ) // &> bash operator
   {
     if(!g_bash)
-      throw PARSE_ERROR("bash specific: '&>'. Use --debashify to remove bashisms", i);
+      throw PARSE_ERROR("bash specific: '&>'", i);
     i+=2;
     if(i<size && in[i] == '>')
       i++;
@@ -640,55 +640,86 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
   try
   {
 #endif
-    if(is_in(in[i], SPECIAL_TOKENS) && !word_eq("&>", in, size, i))
+    ;
+    if(word_eq("[[", in, size, i, ARG_END) ) // [[ bash specific parsing
+    {
+      if(!g_bash)
+        throw PARSE_ERROR("bash specific: '[['", i);
+      while(true)
+      {
+        if(ret == nullptr)
+        ret = new arglist;
+        auto pp=parse_arg(in, size, i, SEPARATORS, NULL);
+        ret->add(pp.first);
+        i = pp.second;
+        i = skip_chars(in, size, i, SEPARATORS);
+        if(word_eq("]]", in, size, i, ARG_END))
+        {
+          ret->add(new arg("]]"));
+          i = skip_chars(in, size, i+2, SEPARATORS);
+          if( !is_in(in[i], ARGLIST_END) )
+            throw PARSE_ERROR("Unexpected argument after ']]'", i);
+          break;
+        }
+        if(i>=size)
+          throw PARSE_ERROR( "Expecting ']]'", i);
+      }
+    }
+    else if(is_in(in[i], SPECIAL_TOKENS) && !word_eq("&>", in, size, i))
     {
       if(hard_error)
         throw PARSE_ERROR( strf("Unexpected token '%c'", in[i]) , i);
       else
         return std::make_pair(ret, i);
     }
-    while(i<size)
+    else
     {
-      if(i+1 < size && (in[i] == '<' || in[i] == '>') && in[i+1] == '(' ) // bash specific <()
+      while(i<size)
       {
-        bool is_output = in[i] == '>';
-        i+=2;
-        if(ret == nullptr)
-          ret = new arglist;
-        auto ps = parse_subshell(in, size, i);
-        ret->add(new arg(new procsub_subarg(is_output, ps.first)));
-        i=ps.second;
-      }
-      else if(redirs!=nullptr)
-      {
-        auto pr = parse_redirect(in, size, i);
-        if(pr.first != nullptr)
+        if(i+1 < size && (in[i] == '<' || in[i] == '>') && in[i+1] == '(' ) // bash specific <()
         {
-          redirs->push_back(pr.first);
-          i=pr.second;
+          bool is_output = in[i] == '>';
+          i+=2;
+          if(ret == nullptr)
+            ret = new arglist;
+          auto ps = parse_subshell(in, size, i);
+          ret->add(new arg(new procsub_subarg(is_output, ps.first)));
+          i=ps.second;
+        }
+        else if(redirs!=nullptr)
+        {
+          auto pr = parse_redirect(in, size, i);
+          if(pr.first != nullptr)
+          {
+            redirs->push_back(pr.first);
+            i=pr.second;
+          }
+          else
+            goto argparse;
         }
         else
-          goto argparse;
+        {
+        argparse:
+          if(ret == nullptr)
+            ret = new arglist;
+          auto pp=parse_arg(in, size, i);
+          ret->add(pp.first);
+          i = pp.second;
+        }
+        i = skip_chars(in, size, i, SPACES);
+        if(word_eq("&>", in, size, i))
+          continue; // &> has to be managed in redirects
+        if(word_eq("|&", in, size, i))
+          throw PARSE_ERROR("Unsupported '|&', use '2>&1 |' instead", i);
+        if(i>=size)
+          return std::make_pair(ret, i);
+        if( is_in(in[i], SPECIAL_TOKENS) )
+          return std::make_pair(ret, i);
       }
-      else
-      {
-      argparse:
-        if(ret == nullptr)
-          ret = new arglist;
-        auto pp=parse_arg(in, size, i);
-        ret->add(pp.first);
-        i = pp.second;
-      }
-      i = skip_chars(in, size, i, SPACES);
-      if(word_eq("&>", in, size, i))
-        continue; // &> has to be managed in redirects
-      if(word_eq("|&", in, size, i))
-        throw PARSE_ERROR("Unsupported '|&', use '2>&1 |' instead", i);
-      if(i>=size)
-        return std::make_pair(ret, i);
-      if( is_in(in[i], SPECIAL_TOKENS) )
-        return std::make_pair(ret, i);
+
     }
+
+
 #ifndef NO_PARSE_CATCH
   }
   catch(ztd::format_error& e)
@@ -1437,7 +1468,7 @@ std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t 
       else if( word == "function" ) // bash style function
       {
         if(!g_bash)
-          throw PARSE_ERROR("bash specific: 'function'. Use --debashify to remove bashisms", i);
+          throw PARSE_ERROR("bash specific: 'function'", i);
         auto wp2=get_word(in, size, skip_unread(in, size, wp.second), VARNAME_END);
         if(!valid_name(wp2.first))
           throw PARSE_ERROR( strf("Bad function name: '%s'", word.c_str()), start );

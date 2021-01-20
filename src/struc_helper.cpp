@@ -14,12 +14,21 @@ arg* make_arg(std::string const& in)
 
 cmd* make_cmd(std::vector<std::string> const& args)
 {
-  cmd* ret = new cmd();
-  ret->args = new arglist();
+  cmd* ret = new cmd;
+  ret->args = new arglist;
   for(auto it: args)
-  {
     ret->args->add(new arg(it));
-  }
+
+  return ret;
+}
+
+cmd* make_cmd(std::vector<arg*> const& args)
+{
+  cmd* ret = new cmd;
+  ret->args = new arglist;
+  for(auto it: args)
+    ret->args->add(it);
+
   return ret;
 }
 
@@ -28,9 +37,28 @@ cmd* make_cmd(std::string const& in)
   return parse_cmd(in.c_str(), in.size(), 0).first;
 }
 
+pipeline* make_pipeline(std::vector<block*> const& bls)
+{
+  pipeline* ret = new pipeline;
+  for(auto it: bls)
+    ret->add(it);
+
+  return ret;
+}
+
+pipeline* make_pipeline(std::string const& in)
+{
+  return parse_pipeline(in.c_str(), in.size(), 0).first;
+}
+
 condlist* make_condlist(std::string const& in)
 {
   return parse_condlist(in.c_str(), in.size(), 0).first;
+}
+
+list* make_list(std::string const& in)
+{
+  return parse_list_until(in.c_str(), in.size(), 0, 0).first;
 }
 
 // modifiers
@@ -42,11 +70,36 @@ void force_quotes(arg* in)
     if(!in->sa[i]->quoted && (in->sa[i]->type == _obj::subarg_variable || in->sa[i]->type == _obj::subarg_manipulation || in->sa[i]->type == _obj::subarg_subshell) )
     {
       in->sa[i]->quoted=true;
+      in->insert(i+1, new string_subarg("\""));
       in->insert(i, new string_subarg("\""));
       i+=2;
-      in->insert(i, new string_subarg("\""));
     }
   }
+}
+
+void add_quotes(arg* in)
+{
+  for(uint32_t i=0; i < in->sa.size() ; i++)
+    in->sa[i]->quoted=true;
+
+  in->insert(0, new string_subarg("\""));
+  in->add(new string_subarg("\""));
+}
+
+// ** TESTERS ** //
+
+bool arg_has_char(char c, arg* in)
+{
+  for(auto it: in->sa)
+  {
+    if(it->type == _obj::subarg_string)
+    {
+      string_subarg* t = dynamic_cast<string_subarg*>(it);
+      if(t->val.find(c) != std::string::npos)
+        return true;
+    }
+  }
+  return false;
 }
 
 // ** CLASS EXTENSIONS ** //
