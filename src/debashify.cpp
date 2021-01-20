@@ -167,7 +167,7 @@ bool debashify_procsub(list* lst)
         // replace the arg
         delete affected_args[i].first->sa[0];
         affected_args[i].first->sa[0] = new string_subarg("\"");
-        affected_args[i].first->add( new variable_subarg(strf("__lxshfifo%u", i)) );
+        affected_args[i].first->add( new variable_subarg( new variable(strf("__lxshfifo%u", i)) ) );
         affected_args[i].first->add( new string_subarg("\"") );
       }
       lst->insert(li, *lst_insert );

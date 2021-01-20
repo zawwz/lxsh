@@ -23,6 +23,10 @@
 
 #define SPECIAL_VARS "!#*@$?"
 
+// bash specific
+#define ARRAY_ARG_END " \t\n;#()&|<>]"
+
+
 std::string import_file(std::string const& path);
 
 shmain* parse_text(const char* in, uint32_t size, std::string const& filename="");
@@ -37,7 +41,7 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
 std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint32_t start, std::string const& end_word);
 std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32_t size, uint32_t start, std::vector<std::string> const& end_words, const char* expecting=NULL);
 // name
-std::pair<std::string, uint32_t> parse_varname(const char* in, uint32_t size, uint32_t start, bool specialvars=true);
+std::pair<variable*, uint32_t> parse_var(const char* in, uint32_t size, uint32_t start, bool specialvars=true, bool array=false);
 
 // subarg parsers
 std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size, uint32_t start);

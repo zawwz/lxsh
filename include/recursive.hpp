@@ -19,6 +19,12 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
   // recursive calls
   switch(o->type)
   {
+    case _obj::_variable :
+    {
+      variable* t = dynamic_cast<variable*>(o);
+      recurse(fct, t->index, args...);
+      break;
+    }
     case _obj::_redirect :
     {
       redirect* t = dynamic_cast<redirect*>(o);
@@ -115,7 +121,10 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
       cmd* t = dynamic_cast<cmd*>(o);
       recurse(fct, t->args, args...);
       for(auto it: t->var_assigns)
+      {
+        recurse(fct, it.first, args...);
         recurse(fct, it.second, args...);
+      }
 
       for(auto it: t->redirs)
         recurse(fct, it, args...);
@@ -164,6 +173,8 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     case _obj::block_for :
     {
       for_block* t = dynamic_cast<for_block*>(o);
+      // variable
+      recurse(fct, t->var, args...);
       // iterations
       recurse(fct, t->iter, args...);
       // for block
@@ -187,6 +198,12 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
 
       break;
     }
+    case _obj::subarg_variable :
+    {
+      variable_subarg* t = dynamic_cast<variable_subarg*>(o);
+      recurse(fct, t->var, args...);
+      break;
+    }
     case _obj::subarg_subshell :
     {
       subshell_subarg* t = dynamic_cast<subshell_subarg*>(o);
@@ -196,6 +213,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     case _obj::subarg_manipulation :
     {
       manipulation_subarg* t = dynamic_cast<manipulation_subarg*>(o);
+      recurse(fct, t->var, args...);
       recurse(fct, t->manip, args...);
       break;
     }
@@ -209,6 +227,12 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     {
       arithmetic_subarg* t = dynamic_cast<arithmetic_subarg*>(o);
       recurse(fct, t->arith, args...);
+      break;
+    }
+    case _obj::arithmetic_variable :
+    {
+      variable_arithmetic* t = dynamic_cast<variable_arithmetic*>(o);
+      recurse(fct, t->var, args...);
       break;
     }
     case _obj::arithmetic_subshell :

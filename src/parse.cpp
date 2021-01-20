@@ -127,22 +127,36 @@ uint32_t skip_unread(const char* in, uint32_t size, uint32_t start)
 
 // parse fcts
 
-std::pair<std::string, uint32_t> parse_varname(const char* in, uint32_t size, uint32_t start, bool specialvars)
+std::pair<variable*, uint32_t> parse_var(const char* in, uint32_t size, uint32_t start, bool specialvars, bool array)
 {
   uint32_t i=start;
-  std::string ret;
+  variable* ret=nullptr;
+  std::string varname;
 
   // special vars
   if(specialvars && (is_in(in[i], SPECIAL_VARS) || (in[i]>='0' && in[i]<='1')) )
   {
-    ret=in[i];
+    varname=in[i];
     i++;
   }
   else // varname
   {
     while(i<size && (is_alphanum(in[i]) || in[i] == '_') )
       i++;
-    ret = std::string(in+start, i-start);
+    varname = std::string(in+start, i-start);
+  }
+  if(varname != "")
+  {
+    ret = new variable(varname);
+    if(g_bash && array && in[i]=='[')
+    {
+      auto pp=parse_arg(in, size, i+1, ARRAY_ARG_END);
+      ret->index=pp.first;
+      i = pp.second;
+      if(in[i] != ']')
+      throw PARSE_ERROR( "Expecting ']'", i );
+      i++;
+    }
   }
 
   return std::make_pair(ret, i);
@@ -186,6 +200,7 @@ std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size,
     }
     else
     {
+      variable_arithmetic* ttvar=nullptr; // for categorizing definitions
       if(in[i]=='-' || is_num(in[i]))
       {
         uint32_t j=i;
@@ -215,8 +230,9 @@ std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size,
           specialvars=true;
           i++;
         }
-        auto pp = parse_varname(in, size, i, specialvars);
-        ret = new variable_arithmetic(pp.first);
+        auto pp = parse_var(in, size, i, specialvars, true);
+        ttvar = new variable_arithmetic(pp.first);
+        ret = ttvar;
         i=pp.second;
       }
 
@@ -233,6 +249,9 @@ std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size,
         ret = new operation_arithmetic(po.first, val1, val2);
         i = skip_chars(in, size, i, SEPARATORS);
       }
+
+      if(po.first == "=" && ttvar!=nullptr) // categorize as var definition
+        ttvar->var->definition=true;
 
       if(i >= size)
         throw PARSE_ERROR( "Unexpected end of file, expecting '))'", i );
@@ -262,10 +281,10 @@ std::pair<manipulation_subarg*, uint32_t> parse_manipulation(const char* in, uin
     i++;
   }
 
-  auto p=parse_varname(in, size, i);
-  if(p.second == i)
+  auto p=parse_var(in, size, i, true, true);
+  if(p.first == nullptr)
     throw PARSE_ERROR( "Bad variable name", i );
-  ret->varname=p.first;
+  ret->var=p.first;
   i = p.second;
 
   auto pa = parse_arg(in, size, i, "}", NULL, false);
@@ -357,14 +376,14 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           }
           else if( in[i] == '$' )
           {
-            auto r=parse_varname(in, size, i+1);
-            if(r.second > i+1)
+            auto r=parse_var(in, size, i+1);
+            if(r.first !=nullptr)
             {
               // add previous subarg
               std::string tmpstr=std::string(in+j, i-j);
               if(tmpstr!="")
                 ret->add(new string_subarg(tmpstr));
-              // add varname
+              // add var
               ret->add(new variable_subarg(r.first, true));
               j = i = r.second;
             }
@@ -428,14 +447,14 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
       }
       else if( in[i] == '$' )
       {
-        auto r=parse_varname(in, size, i+1);
-        if(r.second > i+1)
+        auto r=parse_var(in, size, i+1);
+        if(r.first != nullptr)
         {
           // add previous subarg
           std::string tmpstr=std::string(in+j, i-j);
           if(tmpstr!="")
             ret->add(new string_subarg(tmpstr));
-          // add varname
+          // add var
           ret->add(new variable_subarg(r.first));
           j = i = r.second;
         }
@@ -1061,10 +1080,11 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
 #endif
     while(true) // parse var assigns
     {
-      auto wp=get_word(in, size, i, VARNAME_END);
-      if(wp.second<size && in[wp.second] == '=' && valid_name(wp.first)) // is a var assign
+      auto vp=parse_var(in, size, i, false, true);
+      if(vp.first != nullptr && vp.second<size && in[vp.second] == '=') // is a var assign
       {
-        i=wp.second+1;
+        vp.first->definition=true;
+        i=vp.second+1;
         arg* ta;
         if( is_in(in[i], ARG_END) ) // no value : give empty value
         {
@@ -1076,11 +1096,15 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
           ta=pp.first;
           i=pp.second;
         }
-        ret->var_assigns.push_back(std::make_pair(wp.first, ta));
+        ret->var_assigns.push_back(std::make_pair(vp.first, ta));
         i=skip_chars(in, size, i, " \t");
       }
       else
+      {
+        if(vp.first != nullptr)
+          delete vp.first;
         break;
+      }
     }
 
     if(!is_in(in[i], SPECIAL_TOKENS))
@@ -1258,7 +1282,7 @@ std::pair<for_block*, uint32_t> parse_for(const char* in, uint32_t size, uint32_
 
     if(!valid_name(wp.first))
       throw PARSE_ERROR( strf("Bad identifier in for clause: '%s'", wp.first.c_str()), i );
-    ret->varname = wp.first;
+    ret->var = new variable(wp.first, nullptr, true);
     i=skip_chars(in, size, wp.second, SPACES);
 
     // in
@@ -1482,7 +1506,7 @@ shmain* parse_text(const char* in, uint32_t size, std::string const& filename)
     i = skip_unread(in, size, i);
     // do bash reading
     std::string binshebang = basename(ret->shebang);
-    g_bash = binshebang == "bash" || binshebang == "lxsh" || options["debashify"];
+    g_bash = binshebang == "bash" || binshebang == "lxsh";
     // parse all commands
     auto pp=parse_list_until(in, size, i, 0);
     ret->lst=pp.first;

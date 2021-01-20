@@ -84,6 +84,7 @@ class _obj
 public:
   enum _objtype {
     subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic, subarg_manipulation, subarg_procsub,
+    _variable,
     _redirect,
     _arg, arg_procsub,
     _arglist,
@@ -137,6 +138,21 @@ public:
   std::string string();
 
   inline bool equals(std::string const& in) { return this->string() == in; }
+
+  std::string generate(int ind);
+};
+
+class variable : public _obj
+{
+public:
+  variable(std::string const& in="", arg* i=nullptr, bool def=false) { type=_obj::_variable; varname=in; index=i; definition=def; }
+  ~variable() {
+    if(index!=nullptr) delete index;
+  }
+
+  std::string varname;
+  bool definition;
+  arg* index; // for bash specific
 
   std::string generate(int ind);
 };
@@ -288,7 +304,7 @@ public:
 
 
   // preceding var assigns
-  std::vector<std::pair<std::string,arg*>> var_assigns;
+  std::vector<std::pair<variable*,arg*>> var_assigns;
 
   // check if cmd is this (ex: unset)
   bool is(std::string const& in);
@@ -408,13 +424,14 @@ public:
 class for_block : public block
 {
 public:
-  for_block(std::string const& name="", arglist* args=nullptr, list* lst=nullptr) { type=_obj::block_for; varname=name; iter=args; ops=lst; }
+  for_block(variable* in=nullptr, arglist* args=nullptr, list* lst=nullptr) { type=_obj::block_for; var=in; iter=args; ops=lst; }
   ~for_block() {
     if(iter!=nullptr) delete iter;
     if(ops!=nullptr) delete ops;
+    if(var!=nullptr) delete var;
   }
 
-  std::string varname;
+  variable* var;
 
   arglist* iter;
   list* ops;
@@ -455,12 +472,14 @@ public:
 class variable_subarg : public subarg
 {
 public:
-  variable_subarg(std::string const& in="", bool inq=false) { type=_obj::subarg_variable; varname=in; quoted=inq; }
-  ~variable_subarg() {;}
+  variable_subarg(variable* in=nullptr, bool inq=false) { type=_obj::subarg_variable; var=in; quoted=inq; }
+  ~variable_subarg() {
+    if(var!=nullptr) delete var;
+  }
 
-  std::string varname;
+  variable* var;
 
-  std::string generate(int ind) { return "$" + varname; }
+  std::string generate(int ind) { return "$" + var->generate(ind); }
 };
 
 class arithmetic_subarg : public subarg
@@ -490,11 +509,14 @@ public:
 class manipulation_subarg : public subarg
 {
 public:
-  manipulation_subarg(std::string varname="", arg* in=nullptr, bool inq=false) { type=_obj::subarg_manipulation; size=false; manip=in; quoted=inq; }
-  ~manipulation_subarg() { if(manip!=nullptr) delete manip; }
+  manipulation_subarg(variable* vr=nullptr, arg* mn=nullptr, bool inq=false) { type=_obj::subarg_manipulation; size=false; var=vr; manip=mn; quoted=inq; }
+  ~manipulation_subarg() {
+    if(manip!=nullptr) delete manip;
+    if(var!=nullptr) delete var;
+  }
 
   bool size;
-  std::string varname;
+  variable* var;
   arg* manip;
 
   std::string generate(int ind);
@@ -569,11 +591,14 @@ public:
 class variable_arithmetic : public arithmetic
 {
 public:
-  variable_arithmetic(std::string const& in) { type=_obj::arithmetic_variable; varname=in; }
+  variable_arithmetic(variable* in=nullptr) { type=_obj::arithmetic_variable; var=in; }
+  ~variable_arithmetic() {
+    if(var!=nullptr) delete var;
+  }
 
-  std::string varname;
+  variable* var;
 
-  std::string generate(int ind) { return varname; }
+  std::string generate(int ind) { return var->generate(ind); }
 };
 
 #endif //STRUC_HPP

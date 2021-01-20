@@ -56,49 +56,25 @@ bool r_replace_var(_obj* in, strmap_t* varmap)
 {
   switch(in->type)
   {
-    case _obj::arithmetic_variable: {
-      variable_arithmetic* t = dynamic_cast<variable_arithmetic*>(in);
+    case _obj::_variable: {
+      variable* t = dynamic_cast<variable*>(in);
       auto el=varmap->find(t->varname);
       if(el!=varmap->end())
         t->varname = el->second;
-    }; break;
-    case _obj::subarg_variable: {
-      variable_subarg* t = dynamic_cast<variable_subarg*>(in);
-      auto el=varmap->find(t->varname);
-      if(el!=varmap->end())
-        t->varname = el->second;
-    }; break;
-    case _obj::subarg_manipulation: {
-      manipulation_subarg* t = dynamic_cast<manipulation_subarg*>(in);
-      auto el=varmap->find(t->varname);
-      if(el!=varmap->end())
-        t->varname = el->second;
-    }; break;
-    case _obj::block_for: {
-      for_block* t = dynamic_cast<for_block*>(in);
-      auto it=varmap->find(t->varname);
-      if(it!=varmap->end())
-        t->varname = it->second;
     }; break;
     case _obj::block_cmd: {
       cmd* t = dynamic_cast<cmd*>(in);
-      for(auto it=t->var_assigns.begin() ; it!=t->var_assigns.end() ; it++)
-      {
-        auto el=varmap->find(it->first);
-        if(el!=varmap->end())
-          it->first = el->second;
-      }
       for(auto it: t->subarg_vars())
       {
-        string_subarg* t = dynamic_cast<string_subarg*>(it);
-        auto el=varmap->find(get_varname(t->val));
+        string_subarg* tss = dynamic_cast<string_subarg*>(it);
+        auto el=varmap->find(get_varname(tss->val));
         if(el!=varmap->end())
         {
-          size_t tpos=t->val.find('=');
+          size_t tpos=tss->val.find('=');
           if(tpos == std::string::npos)
-            t->val = el->second;
+            tss->val = el->second;
           else
-            t->val = el->second + t->val.substr(tpos);
+            tss->val = el->second + tss->val.substr(tpos);
         }
       }
     }; break;

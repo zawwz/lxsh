@@ -177,7 +177,7 @@ std::string for_block::generate(int ind)
 {
   std::string ret;
 
-  ret += "for "+varname;
+  ret += "for "+var->generate(ind);
   if(iter != nullptr)
     ret += " in " + iter->generate(ind);
   ret += '\n';
@@ -314,7 +314,7 @@ std::string cmd::generate(int ind)
   std::string ret;
   // var assigns
   for(auto it: var_assigns)
-    ret += it.first + '=' + it.second->generate(ind) + ' ';
+    ret += it.first->generate(ind) + '=' + it.second->generate(ind) + ' ';
 
   if(args!=nullptr && args->size()>0)
   {
@@ -350,9 +350,9 @@ std::string subshell_subarg::generate(int ind)
 std::string manipulation_subarg::generate(int ind)
 {
   if(size)
-    return "${#" + varname + "}";
+    return "${#" + var->generate(ind) + "}";
   else
-    return "${" + varname + manip->generate(ind) + "}";
+    return "${" + var->generate(ind) + manip->generate(ind) + "}";
 }
 
 std::string procsub_subarg::generate(int ind)
@@ -410,6 +410,16 @@ std::string parenthesis_arithmetic::generate(int ind)
 std::string subshell_arithmetic::generate(int ind)
 {
   return '$' + sbsh->generate(ind);
+}
+
+std::string variable::generate(int ind)
+{
+  if(index!=nullptr)
+  {
+    return varname + '[' + index->generate(ind) + ']';
+  }
+  else
+    return varname;
 }
 
 // TEMPLATE

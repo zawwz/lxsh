@@ -263,31 +263,21 @@ bool r_get_var(_obj* in, countmap_t* defmap, countmap_t* callmap)
 {
   switch(in->type)
   {
-    case _obj::subarg_variable: {
-      variable_subarg* t = dynamic_cast<variable_subarg*>(in);
-      if(!callmap->insert( std::make_pair(t->varname, 1) ).second)
-        (*callmap)[t->varname]++;
-    }; break;
-    case _obj::arithmetic_variable: {
-      variable_arithmetic* t = dynamic_cast<variable_arithmetic*>(in);
-      if(!callmap->insert( std::make_pair(t->varname, 1) ).second)
-        (*callmap)[t->varname]++;
-    }; break;
-    case _obj::subarg_manipulation: {
-      manipulation_subarg* t = dynamic_cast<manipulation_subarg*>(in);
-      if(!callmap->insert( std::make_pair(t->varname, 1) ).second)
-        (*callmap)[t->varname]++;
-    }; break;
-    case _obj::block_for: {
-      for_block* t = dynamic_cast<for_block*>(in);
-      if(!defmap->insert( std::make_pair(t->varname, 1) ).second)
-        (*defmap)[t->varname]++;
+    case _obj::_variable: {
+      variable* t = dynamic_cast<variable*>(in);
+      if(t->definition)
+      {
+        if(!defmap->insert( std::make_pair(t->varname, 1) ).second)
+          (*defmap)[t->varname]++;
+      }
+      else
+      {
+        if(!callmap->insert( std::make_pair(t->varname, 1) ).second)
+          (*callmap)[t->varname]++;
+      }
     }; break;
     case _obj::block_cmd: {
       cmd* t = dynamic_cast<cmd*>(in);
-      for(auto it: t->var_assigns)
-        if(!defmap->insert( std::make_pair(it.first, 1) ).second)
-          (*defmap)[it.first]++;
       if(t->is_argvar())
       {
         for(uint32_t i=1; i<t->args->size(); i++)
@@ -395,8 +385,9 @@ bool r_delete_var(_obj* in, set_t* vars)
 
           for(uint32_t j=0; j<c->var_assigns.size(); j++)
           {
-            if( vars->find(c->var_assigns[j].first) != vars->end() )
+            if( vars->find(c->var_assigns[j].first->varname) != vars->end() )
             {
+              delete c->var_assigns[j].first;
               delete c->var_assigns[j].second;
               c->var_assigns.erase(c->var_assigns.begin()+j);
               j--;
