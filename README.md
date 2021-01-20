@@ -7,7 +7,7 @@ Extended shell linker for linking, processing and minimizing shell code
 ## linux-amd64
 
 Download the `lxsh-linux-amd64.tar.gz` archive, extract it,
-and move `lxsh` binary in a PATH folder (`/usr/local/bin` is the recommended).
+and move the `lxsh` binary in a PATH folder (`/usr/local/bin` is the recommended).
 
 ## Other
 
@@ -42,6 +42,15 @@ use `--exclude-fct` to exclude functions from being minimized.
 
 Unused functions and variables can be removed with `--remove-unused`.
 
+## Debashify
+
+Bash specific features can be translated into POSIX code.
+
+This is a work in progress and for now only some are translated:
+- `<()` and `>()` process substitutions
+- `<<<` herestring
+- `>&`, `&>` and `&>>` output redirects
+
 ## Other features
 
 ### Output generated code
@@ -74,7 +83,7 @@ Depends on [ztd](https://github.com/zawwz/ztd)
 
 ## Building
 
-Use `make -j8` to build.<br>
+Use `make -j11` to build.<br>
 You can use environment variables to alter some aspects:
 - DEBUG: when set to `true` will generate a debug binary with profiling
 - RELEASE: when set to `true`, the version string will be generated for release format
@@ -85,22 +94,9 @@ You can use environment variables to alter some aspects:
 The full POSIX syntax is supported and should produce a functioning result. <br>
 However not all bash syntax is supported yet.
 
-## incomplete POSIX features
-
-- `$(())` arithmetics are not minimized
-- Variables in `$(())` arithmetics are not accounted for in variable processing
-
 ## Known bash issues
 
-- `&>` and `>&` are not supported
-- `|&` is not supported
-- `<<<` is not supported
-- `<()` is not supported
 - `${!VAR}` does not register as a variable
 - Extended globs (`*()`) are not supported
 - `(())` creates two subshells instead of one object
 - Unsetting functions will not work properly when minimizing variables or functions
-
-## Debashifying
-
-Work to debashify scripts is planned
