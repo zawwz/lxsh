@@ -25,8 +25,15 @@ bool debashify_array_def(cmd* in)
   for(auto it: in->var_assigns)
   {
     if(it.second->size()>0 && it.second->sa[0]->type == _obj::subarg_string && it.second->sa[0]->generate(0) == "(")
-      throw std::runtime_error("Cannot debashify VAR=() variable arrays");
+      throw std::runtime_error("Cannot debashify 'VAR=()' arrays");
   }
+  return false;
+}
+
+bool debashify_array_call(variable* in)
+{
+  if(in->index != nullptr)
+    throw std::runtime_error("Cannot debashify 'VAR[I]' arrays");
   return false;
 }
 
@@ -85,13 +92,6 @@ bool debashify_combined_redirects(block* in)
   }
 
   return has_replaced;
-}
-
-// replace <<< and
-// <<< : TODO
-bool debashify_extended_redirects(pipeline* in)
-{
-  return false;
 }
 
 // replace <() and >()
@@ -192,6 +192,10 @@ bool r_debashify(_obj* o, bool* need_random_func)
 {
   switch(o->type)
   {
+    case _obj::_variable: {
+      variable* t = dynamic_cast<variable*>(o);
+      debashify_array_call(t);
+    } break;
     case _obj::_list: {
       list* t = dynamic_cast<list*>(o);
       if(debashify_procsub(t))

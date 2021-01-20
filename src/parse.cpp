@@ -1086,7 +1086,15 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
         vp.first->definition=true;
         i=vp.second+1;
         arg* ta;
-        if( is_in(in[i], ARG_END) ) // no value : give empty value
+        if(g_bash && in[i] == '(')
+        {
+          auto pp=parse_arg(in, size, i+1, ")");
+          ta=pp.first;
+          ta->insert(0, new string_subarg("(") );
+          ta->add(new string_subarg(")") );
+          i=pp.second+1;
+        }
+        else if( is_in(in[i], ARG_END) ) // no value : give empty value
         {
           ta = new arg;
         }
