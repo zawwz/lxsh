@@ -291,7 +291,10 @@ public:
   cmd(arglist* in=nullptr) { type=_obj::block_cmd; args=in; }
   ~cmd() {
     if(args!=nullptr) delete args;
-    for(auto it: var_assigns) delete it.second;
+    for(auto it: var_assigns) {
+      delete it.first;
+      delete it.second;
+    }
   }
 
   static const std::string empty_string;
