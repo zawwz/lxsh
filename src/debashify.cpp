@@ -20,10 +20,24 @@ block* gen_bashtest_cmd(std::vector<arg*> args)
 {
   block* ret = nullptr;
 
-  if(args.size() == 3 && args[1]->string() == "==")
+  std::string arg1replace;
+  if(args.size() == 3)
   {
-    delete args[1]->sa[0];
-    args[1]->sa[0] = new string_subarg("=");
+    if(args[1]->string() == "==")
+      arg1replace="=";
+    else if(args[1]->string() == "<")
+      arg1replace="-lt";
+    else if(args[1]->string() == "<=")
+      arg1replace="-le";
+    else if(args[1]->string() == ">")
+      arg1replace="-gt";
+    else if(args[1]->string() == ">=")
+      arg1replace="-ge";
+  }
+  if(arg1replace != "")
+  {
+    delete args[1];
+    args[1] = new arg(arg1replace);
   }
 
   if(args.size() == 3 && args[1]->string() == "=" && arg_has_char('*', args[2]))
