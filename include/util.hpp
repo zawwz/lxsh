@@ -18,6 +18,7 @@
 
 extern std::string indenting_string;
 
+std::string cut_last(std::string const& in, char c);
 std::string basename(std::string const& in);
 std::string dirname(std::string const& in);
 

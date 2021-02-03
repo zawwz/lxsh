@@ -20,13 +20,18 @@ std::string indent(int n)
   return ret;
 }
 
-std::string basename(std::string const& in)
+std::string cut_last(std::string const& in, char c)
 {
-  size_t slr=in.rfind('/');
+  size_t slr=in.rfind(c);
   if(slr != std::string::npos)
     return in.substr(slr+1);
   else
     return in;
+}
+
+std::string basename(std::string const& in)
+{
+  return cut_last(cut_last(in, '/'), ' ');
 }
 
 std::string dirname(std::string const& in)
