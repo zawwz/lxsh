@@ -314,7 +314,7 @@ std::string cmd::generate(int ind)
   std::string ret;
   // var assigns
   for(auto it: var_assigns)
-    ret += it.first->generate(ind) + '=' + it.second->generate(ind) + ' ';
+    ret += it.first->generate(ind) + it.second->generate(ind) + ' ';
 
   if(args!=nullptr && args->size()>0)
   {

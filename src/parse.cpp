@@ -154,7 +154,7 @@ std::pair<variable*, uint32_t> parse_var(const char* in, uint32_t size, uint32_t
       ret->index=pp.first;
       i = pp.second;
       if(in[i] != ']')
-      throw PARSE_ERROR( "Expecting ']'", i );
+        throw PARSE_ERROR( "Expecting ']'", i );
       i++;
     }
   }
@@ -656,7 +656,7 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
         if(word_eq("]]", in, size, i, ARG_END))
         {
           ret->add(new arg("]]"));
-          i = skip_chars(in, size, i+2, SEPARATORS);
+          i = skip_chars(in, size, i+2, SPACES);
           if( !is_in(in[i], ARGLIST_END) )
             throw PARSE_ERROR("Unexpected argument after ']]'", i);
           break;
@@ -1109,6 +1109,7 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
   try
   {
 #endif
+;
     while(true) // parse var assigns
     {
       auto vp=parse_var(in, size, i, false, true);
@@ -1121,18 +1122,19 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
         {
           auto pp=parse_arg(in, size, i+1, ")");
           ta=pp.first;
-          ta->insert(0, new string_subarg("(") );
+          ta->insert(0, new string_subarg("=(") );
           ta->add(new string_subarg(")") );
           i=pp.second+1;
         }
         else if( is_in(in[i], ARG_END) ) // no value : give empty value
         {
-          ta = new arg;
+          ta = new arg("=");
         }
         else
         {
           auto pp=parse_arg(in, size, i);
           ta=pp.first;
+          ta->insert(0, new string_subarg("="));
           i=pp.second;
         }
         ret->var_assigns.push_back(std::make_pair(vp.first, ta));
