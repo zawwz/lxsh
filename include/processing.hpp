@@ -21,9 +21,6 @@ extern std::regex re_var_exclude;
 extern std::regex re_fct_exclude;
 extern const std::regex regex_null;
 
-// globals
-extern const std::vector<std::string> argvar_cmds;
-
 // Object maps (optimizations)
 extern countmap_t m_vars, m_vardefs, m_varcalls;
 extern countmap_t m_fcts, m_cmds;
@@ -46,6 +43,7 @@ void fctmap_get(_obj* in, std::regex const& exclude);
 void cmdmap_get(_obj* in, std::regex const& exclude);
 
 /** util functions **/
+std::string gen_json_struc(_obj* in);
 
 // gen regexes
 std::regex var_exclude_regex(std::string const& in, bool include_reserved);

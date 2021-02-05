@@ -62,22 +62,6 @@ bool r_replace_var(_obj* in, strmap_t* varmap)
       if(el!=varmap->end())
         t->varname = el->second;
     }; break;
-    case _obj::block_cmd: {
-      cmd* t = dynamic_cast<cmd*>(in);
-      for(auto it: t->subarg_vars())
-      {
-        string_subarg* tss = dynamic_cast<string_subarg*>(it);
-        auto el=varmap->find(get_varname(tss->val));
-        if(el!=varmap->end())
-        {
-          size_t tpos=tss->val.find('=');
-          if(tpos == std::string::npos)
-            tss->val = el->second;
-          else
-            tss->val = el->second + tss->val.substr(tpos);
-        }
-      }
-    }; break;
     default: break;
   }
   return true;

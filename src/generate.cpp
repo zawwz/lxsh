@@ -313,8 +313,29 @@ std::string cmd::generate(int ind)
 {
   std::string ret;
   // var assigns
+  if(is_cmdvar)
+  {
+    ret += args->generate(ind) + ' ';
+    for(auto it: var_assigns)
+    {
+      if(it.first != nullptr)
+        ret += it.first->generate(ind);
+      if(it.second != nullptr)
+        ret += it.second->generate(ind);
+      ret += ' ';
+    }
+    ret.pop_back();
+    return ret;
+  }
+
   for(auto it: var_assigns)
-    ret += it.first->generate(ind) + it.second->generate(ind) + ' ';
+  {
+    if(it.first != nullptr)
+      ret += it.first->generate(ind);
+    if(it.second != nullptr)
+      ret += it.second->generate(ind);
+    ret += ' ';
+  }
 
   if(args!=nullptr && args->size()>0)
   {

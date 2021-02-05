@@ -215,6 +215,15 @@ void condlist::prune_first_cmd()
 
 // add/extend
 
+void arg::insert(uint32_t i, std::string const& in)
+{
+  this->insert(i, new string_subarg(in));
+}
+void arg::add(std::string const& in)
+{
+  this->add(new string_subarg(in));
+}
+
 void arg::insert(uint32_t i, subarg* val)
 {
   sa.insert(sa.begin()+i, val);

@@ -18,6 +18,9 @@ bool g_bash=false;
 #define PARSE_ERROR(str, i) ztd::format_error(str, "", in, i)
 
 // constants
+const std::vector<std::string> posix_cmdvar = { "export", "unset", "local", "read" };
+const std::vector<std::string> bash_cmdvar  = { "readonly", "declare", "typeset" };
+
 const std::vector<std::string> arithmetic_precedence_operators = { "!", "~", "+", "-" };
 const std::vector<std::string> arithmetic_operators = { "+", "-", "*", "/", "=", "==", "!=", "&", "|", "^", "<<", ">>", "&&", "||" };
 
@@ -339,7 +342,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
             // add previous subarg
             std::string tmpstr=std::string(in+j, i-j);
             if(tmpstr!="")
-              ret->add(new string_subarg(tmpstr));
+              ret->add(tmpstr);
             // get arithmetic
             auto r=parse_arithmetic(in, size, i+3);
             arithmetic_subarg* tt = new arithmetic_subarg(r.first);
@@ -356,7 +359,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
             // add previous subarg
             std::string tmpstr=std::string(in+j, i-j);
             if(tmpstr!="")
-              ret->add(new string_subarg(tmpstr));
+              ret->add(tmpstr);
             // get subshell
             auto r=parse_subshell(in, size, i+2);
             ret->add(new subshell_subarg(r.first, true));
@@ -367,7 +370,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
             // add previous subarg
             std::string tmpstr=std::string(in+j, i-j);
             if(tmpstr!="")
-              ret->add(new string_subarg(tmpstr));
+              ret->add(tmpstr);
             // get manipulation
             auto r=parse_manipulation(in, size, i+2);
             r.first->quoted=true;
@@ -382,7 +385,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
               // add previous subarg
               std::string tmpstr=std::string(in+j, i-j);
               if(tmpstr!="")
-                ret->add(new string_subarg(tmpstr));
+                ret->add(tmpstr);
               // add var
               ret->add(new variable_subarg(r.first, true));
               j = i = r.second;
@@ -413,7 +416,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         // add previous subarg
         std::string tmpstr=std::string(in+j, i-j);
         if(tmpstr!="")
-          ret->add(new string_subarg(tmpstr));
+          ret->add(tmpstr);
         // get arithmetic
         auto r=parse_arithmetic(in, size, i+3);
         ret->add(new arithmetic_subarg(r.first));
@@ -428,7 +431,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         // add previous subarg
         std::string tmpstr=std::string(in+j, i-j);
         if(tmpstr!="")
-          ret->add(new string_subarg(tmpstr));
+          ret->add(tmpstr);
         // get subshell
         auto r=parse_subshell(in, size, i+2);
         ret->add(new subshell_subarg(r.first, false));
@@ -439,7 +442,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         // add previous subarg
         std::string tmpstr=std::string(in+j, i-j);
         if(tmpstr!="")
-          ret->add(new string_subarg(tmpstr));
+          ret->add(tmpstr);
         // get manipulation
         auto r=parse_manipulation(in, size, i+2);
         ret->add(r.first);
@@ -453,7 +456,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           // add previous subarg
           std::string tmpstr=std::string(in+j, i-j);
           if(tmpstr!="")
-            ret->add(new string_subarg(tmpstr));
+            ret->add(tmpstr);
           // add var
           ret->add(new variable_subarg(r.first));
           j = i = r.second;
@@ -468,7 +471,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
     // add string subarg
     std::string val=std::string(in+j, i-j);
     if(val != "")
-      ret->add(new string_subarg(val));
+      ret->add(val);
 
 #ifndef NO_PARSE_CATCH
   }
@@ -603,7 +606,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
           std::string tmpparse=std::string(in+j, i-j);
           auto pval = parse_arg(tmpparse.c_str(), tmpparse.size(), 0, NULL);
           ret->target = pval.first;
-          ret->target->insert(0, new string_subarg(delimitor+"\n"));
+          ret->target->insert(0, delimitor+"\n");
         }
         else
         {
@@ -1099,6 +1102,93 @@ std::pair<function*, uint32_t> parse_function(const char* in, uint32_t size, uin
   return std::make_pair(ret, i);
 }
 
+// parse only var assigns
+uint32_t parse_cmd_varassigns(cmd* ret, const char* in, uint32_t size, uint32_t start, bool cmdassign=false, std::string const& cmd="")
+{
+  uint32_t i=start;
+  bool forbid_assign=false;
+  bool forbid_special=false;
+  if(cmdassign && (cmd == "read" || cmd == "unset") )
+    forbid_assign=true;
+  if(cmdassign && (forbid_special || cmd == "export") )
+    forbid_special=true;
+
+  while(i<size && !is_in(in[i], PIPELINE_END))
+  {
+    auto vp=parse_var(in, size, i, false, true);
+    if(vp.first != nullptr)
+      vp.first->definition=true;
+    if(vp.first != nullptr && vp.second<size && (in[vp.second] == '=' || word_eq("+=", in, size, vp.second) )) // is a var assign
+    {
+      if(forbid_assign)
+        throw PARSE_ERROR("Unallowed assign", i);
+      std::string strop = "=";
+      i=vp.second+1;
+      if( word_eq("+=", in, size, vp.second) ) // bash var+=
+      {
+        if(!g_bash)
+          throw PARSE_ERROR("bash specific: var+=", i);
+        if(forbid_special)
+          throw PARSE_ERROR("Unallowed special assign", i);
+        strop = "+=";
+        i++;
+      }
+      arg* ta;
+      if(in[i] == '(') // bash var=()
+      {
+        if(!g_bash)
+          throw PARSE_ERROR("bash specific: var=()", i);
+        if(forbid_special)
+          throw PARSE_ERROR("Unallowed special assign", i);
+        auto pp=parse_arg(in, size, i+1, ")");
+        ta=pp.first;
+        ta->insert(0,"(");
+        ta->add(")");
+        i=pp.second+1;
+      }
+      else if( is_in(in[i], ARG_END) ) // no value : give empty value
+      {
+        ta = new arg;
+      }
+      else
+      {
+        auto pp=parse_arg(in, size, i);
+        ta=pp.first;
+        i=pp.second;
+      }
+      ta->insert(0, strop);
+      ret->var_assigns.push_back(std::make_pair(vp.first, ta));
+      i=skip_chars(in, size, i, SPACES);
+    }
+    else
+    {
+      if(cmdassign)
+      {
+        if(vp.first != nullptr && is_in(in[vp.second], ARG_END) )
+        {
+          ret->var_assigns.push_back(std::make_pair(vp.first, nullptr));
+          i=vp.second;
+        }
+        else
+        {
+          delete vp.first;
+          auto pp=parse_arg(in, size, i);
+          ret->var_assigns.push_back(std::make_pair(nullptr, pp.first));
+          i=pp.second;
+        }
+        i=skip_chars(in, size, i, SPACES);
+      }
+      else
+      {
+        if(vp.first != nullptr)
+          delete vp.first;
+        break;
+      }
+    }
+  }
+  return i;
+}
+
 // must start at read char
 std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t start)
 {
@@ -1110,42 +1200,22 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
   {
 #endif
 ;
-    while(true) // parse var assigns
+    i=parse_cmd_varassigns(ret, in, size, i);
+
+    auto wp=get_word(in, size, i, ARG_END);
+    if(is_in_vector(wp.first, posix_cmdvar) || is_in_vector(wp.first, bash_cmdvar))
     {
-      auto vp=parse_var(in, size, i, false, true);
-      if(vp.first != nullptr && vp.second<size && in[vp.second] == '=') // is a var assign
-      {
-        vp.first->definition=true;
-        i=vp.second+1;
-        arg* ta;
-        if(g_bash && in[i] == '(')
-        {
-          auto pp=parse_arg(in, size, i+1, ")");
-          ta=pp.first;
-          ta->insert(0, new string_subarg("=(") );
-          ta->add(new string_subarg(")") );
-          i=pp.second+1;
-        }
-        else if( is_in(in[i], ARG_END) ) // no value : give empty value
-        {
-          ta = new arg("=");
-        }
-        else
-        {
-          auto pp=parse_arg(in, size, i);
-          ta=pp.first;
-          ta->insert(0, new string_subarg("="));
-          i=pp.second;
-        }
-        ret->var_assigns.push_back(std::make_pair(vp.first, ta));
-        i=skip_chars(in, size, i, " \t");
-      }
-      else
-      {
-        if(vp.first != nullptr)
-          delete vp.first;
-        break;
-      }
+      if(!g_bash && is_in_vector(wp.first, bash_cmdvar))
+        throw PARSE_ERROR("bash specific: "+wp.first, i);
+      if(ret->var_assigns.size()>0)
+        throw PARSE_ERROR("Unallowed preceding variables on "+wp.first, start);
+
+      ret->args = new arglist;
+      ret->args->add(new arg(wp.first));
+      ret->is_cmdvar=true;
+      i=skip_chars(in, size, wp.second, SPACES);
+
+      i=parse_cmd_varassigns(ret, in, size, i, true, wp.first);
     }
 
     if(!is_in(in[i], SPECIAL_TOKENS))

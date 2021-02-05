@@ -226,6 +226,10 @@ std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, shmain
 std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, shmain* parent, bool forcequote=false)
 {
   std::vector<arg*> ret;
+  if(in == nullptr)
+  {
+    return std::make_pair(ret, false);
+  }
   arg* ta=nullptr;
   bool has_resolved=false;
   uint32_t j=0;

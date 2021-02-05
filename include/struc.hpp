@@ -86,13 +86,13 @@ public:
     subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic, subarg_manipulation, subarg_procsub,
     _variable,
     _redirect,
-    _arg, arg_procsub,
+    _arg,
     _arglist,
     _pipeline,
     _condlist,
     _list,
     arithmetic_operation, arithmetic_number, arithmetic_variable, arithmetic_parenthesis, arithmetic_subshell,
-    block_subshell, block_brace, block_main, block_cmd, block_function, block_case, block_if, block_for, block_while, block_until };
+    block_subshell, block_brace, block_main, block_cmd, block_function, block_case, block_if, block_for, block_while };
   _objtype type;
 
   virtual ~_obj() {;}
@@ -128,8 +128,10 @@ public:
 
   void insert(uint32_t i, subarg* val);
   void insert(uint32_t i, arg const& a);
+  void insert(uint32_t i, std::string const& in);
 
   inline void add(subarg* in) { sa.push_back(in); }
+  void add(std::string const& in);
   inline size_t size() { return sa.size(); }
 
   std::vector<subarg*> sa;
@@ -288,7 +290,7 @@ public:
 class cmd : public block
 {
 public:
-  cmd(arglist* in=nullptr) { type=_obj::block_cmd; args=in; }
+  cmd(arglist* in=nullptr) { type=_obj::block_cmd; args=in; is_cmdvar=false; }
   ~cmd() {
     if(args!=nullptr) delete args;
     for(auto it: var_assigns) {
@@ -308,6 +310,9 @@ public:
 
   // preceding var assigns
   std::vector<std::pair<variable*,arg*>> var_assigns;
+
+  // is a cmdvar type
+  bool is_cmdvar;
 
   // check if cmd is this (ex: unset)
   bool is(std::string const& in);

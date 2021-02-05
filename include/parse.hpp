@@ -26,6 +26,8 @@
 // bash specific
 #define ARRAY_ARG_END " \t\n;#()&|<>]"
 
+extern const std::vector<std::string> posix_cmdvar;
+extern const std::vector<std::string> bash_cmdvar;
 
 std::string import_file(std::string const& path);
 

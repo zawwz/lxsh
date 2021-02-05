@@ -128,6 +128,15 @@ void concat_sets(std::set<T>& a, std::set<T> const& b)
   }
 }
 
+template <class T>
+bool is_in_vector(T el, std::vector<T> vec)
+{
+  for(auto it: vec)
+    if(it == el)
+      return true;
+  return false;
+}
+
 std::set<std::string> prune_matching(std::set<std::string>& in, std::regex re);
 
 std::string delete_brackets(std::string const& in);
