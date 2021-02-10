@@ -345,12 +345,6 @@ std::string cmd::generate(int ind)
     if(ret[ret.size()-1] == ' ')
       ret.pop_back();
   }
-  else if(opt_minimize) // minimize: empty command: don't put redirects
-  {
-    if(ret.size()>0)
-      ret.pop_back();
-    return ret;
-  }
   else // empty command: remove trailing space
   {
     if(ret.size()>0)
