@@ -22,7 +22,7 @@ const std::vector<std::string> posix_cmdvar = { "export", "unset", "local", "rea
 const std::vector<std::string> bash_cmdvar  = { "readonly", "declare", "typeset" };
 
 const std::vector<std::string> arithmetic_precedence_operators = { "!", "~", "+", "-" };
-const std::vector<std::string> arithmetic_operators = { "+", "-", "*", "/", "=", "==", "!=", "&", "|", "^", "<<", ">>", "&&", "||" };
+const std::vector<std::string> arithmetic_operators = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "=", "==", "!=", "&", "|", "^", "<<", ">>", "&&", "||" };
 
 const std::vector<std::string> all_reserved_words = { "if", "then", "else", "fi", "case", "esac", "for", "while", "do", "done", "{", "}" };
 const std::vector<std::string> out_reserved_words = { "then", "else", "fi", "esac", "do", "done", "}" };
@@ -289,6 +289,84 @@ std::pair<manipulation_subarg*, uint32_t> parse_manipulation(const char* in, uin
   return std::make_pair(ret, i);
 }
 
+void do_one_subarg_step(arg* ret, const char* in, uint32_t size, uint32_t& i, uint32_t& j, bool is_quoted)
+{
+  if( in[i] == '`' )
+  {
+    // add previous subarg
+    std::string tmpstr=std::string(in+j, i-j);
+    if(tmpstr!="")
+      ret->add(tmpstr);
+
+    i++;
+    uint32_t k=skip_until(in, size, i, "`");
+    if(k>=size)
+      throw PARSE_ERROR("Expecting '`'", i-1);
+    // get subshell
+    auto r=parse_list_until(in, k, i, 0);
+    ret->add(new subshell_subarg(new subshell(r.first), is_quoted));
+    j = i = r.second+1;
+  }
+  else if( word_eq("$((", in, size, i) ) // arithmetic operation
+  {
+    // add previous subarg
+    std::string tmpstr=std::string(in+j, i-j);
+    if(tmpstr!="")
+      ret->add(tmpstr);
+    // get arithmetic
+    auto r=parse_arithmetic(in, size, i+3);
+    arithmetic_subarg* tt = new arithmetic_subarg(r.first);
+    tt->quoted=is_quoted;
+    ret->add(tt);
+    i = r.second;
+    if(!word_eq("))", in, size, i))
+      throw PARSE_ERROR( "Unexpected token ')', expecting '))'", i);
+    i+=2;
+    j=i;
+  }
+  else if( word_eq("$(", in, size, i) ) // substitution
+  {
+    // add previous subarg
+    std::string tmpstr=std::string(in+j, i-j);
+    if(tmpstr!="")
+      ret->add(tmpstr);
+    // get subshell
+    auto r=parse_subshell(in, size, i+2);
+    ret->add(new subshell_subarg(r.first, is_quoted));
+    j = i = r.second;
+  }
+  else if( word_eq("${", in, size, i) ) // variable manipulation
+  {
+    // add previous subarg
+    std::string tmpstr=std::string(in+j, i-j);
+    if(tmpstr!="")
+      ret->add(tmpstr);
+    // get manipulation
+    auto r=parse_manipulation(in, size, i+2);
+    r.first->quoted=is_quoted;
+    ret->add(r.first);
+    j = i = r.second;
+  }
+  else if( in[i] == '$' )
+  {
+    auto r=parse_var(in, size, i+1);
+    if(r.first !=nullptr)
+    {
+      // add previous subarg
+      std::string tmpstr=std::string(in+j, i-j);
+      if(tmpstr!="")
+        ret->add(tmpstr);
+      // add var
+      ret->add(new variable_subarg(r.first, is_quoted));
+      j = i = r.second;
+    }
+    else
+      i++;
+  }
+  else
+    i++;
+}
+
 // parse one argument
 // must start at a read char
 // ends at either " \t|&;\n()"
@@ -329,64 +407,8 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           {
             i+=2;
           }
-          else if( word_eq("$((", in, size, i) ) // arithmetic operation
-          {
-            // add previous subarg
-            std::string tmpstr=std::string(in+j, i-j);
-            if(tmpstr!="")
-              ret->add(tmpstr);
-            // get arithmetic
-            auto r=parse_arithmetic(in, size, i+3);
-            arithmetic_subarg* tt = new arithmetic_subarg(r.first);
-            tt->quoted=true;
-            ret->add(tt);
-            i = r.second;
-            if(!word_eq("))", in, size, i))
-              throw PARSE_ERROR( "Unexpected token ')', expecting '))'", i);
-            i+=2;
-            j=i;
-          }
-          else if( word_eq("$(", in, size, i) ) // substitution
-          {
-            // add previous subarg
-            std::string tmpstr=std::string(in+j, i-j);
-            if(tmpstr!="")
-              ret->add(tmpstr);
-            // get subshell
-            auto r=parse_subshell(in, size, i+2);
-            ret->add(new subshell_subarg(r.first, true));
-            j = i = r.second;
-          }
-          else if( word_eq("${", in, size, i) ) // variable manipulation
-          {
-            // add previous subarg
-            std::string tmpstr=std::string(in+j, i-j);
-            if(tmpstr!="")
-              ret->add(tmpstr);
-            // get manipulation
-            auto r=parse_manipulation(in, size, i+2);
-            r.first->quoted=true;
-            ret->add(r.first);
-            j = i = r.second;
-          }
-          else if( in[i] == '$' )
-          {
-            auto r=parse_var(in, size, i+1);
-            if(r.first !=nullptr)
-            {
-              // add previous subarg
-              std::string tmpstr=std::string(in+j, i-j);
-              if(tmpstr!="")
-                ret->add(tmpstr);
-              // add var
-              ret->add(new variable_subarg(r.first, true));
-              j = i = r.second;
-            }
-            else
-              i++;
-          }
           else
-            i++;
+            do_one_subarg_step(ret, in, size, i, j, true);
 
           if(i>=size)
             throw PARSE_ERROR("Unterminated double quote", q);
@@ -403,61 +425,8 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
           throw PARSE_ERROR("Unterminated single quote", q);
         i++;
       }
-      else if( word_eq("$((", in, size, i) ) // arithmetic operation
-      {
-        // add previous subarg
-        std::string tmpstr=std::string(in+j, i-j);
-        if(tmpstr!="")
-          ret->add(tmpstr);
-        // get arithmetic
-        auto r=parse_arithmetic(in, size, i+3);
-        ret->add(new arithmetic_subarg(r.first));
-        i = r.second;
-        if(!word_eq("))", in, size, i))
-          throw PARSE_ERROR( "Unexpected token ')', expecting '))'", i);
-        i+=2;
-        j=i;
-      }
-      else if( word_eq("$(", in, size, i) ) // substitution
-      {
-        // add previous subarg
-        std::string tmpstr=std::string(in+j, i-j);
-        if(tmpstr!="")
-          ret->add(tmpstr);
-        // get subshell
-        auto r=parse_subshell(in, size, i+2);
-        ret->add(new subshell_subarg(r.first, false));
-        j = i = r.second;
-      }
-      else if( word_eq("${", in, size, i) ) // variable manipulation
-      {
-        // add previous subarg
-        std::string tmpstr=std::string(in+j, i-j);
-        if(tmpstr!="")
-          ret->add(tmpstr);
-        // get manipulation
-        auto r=parse_manipulation(in, size, i+2);
-        ret->add(r.first);
-        j = i = r.second;
-      }
-      else if( in[i] == '$' )
-      {
-        auto r=parse_var(in, size, i+1);
-        if(r.first != nullptr)
-        {
-          // add previous subarg
-          std::string tmpstr=std::string(in+j, i-j);
-          if(tmpstr!="")
-            ret->add(tmpstr);
-          // add var
-          ret->add(new variable_subarg(r.first));
-          j = i = r.second;
-        }
-        else
-          i++;
-      }
       else
-        i++;
+        do_one_subarg_step(ret, in, size, i, j, false);
     }
 
     // add string subarg
