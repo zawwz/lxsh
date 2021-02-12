@@ -18,7 +18,7 @@ bool g_bash=false;
 #define PARSE_ERROR(str, i) ztd::format_error(str, "", in, i)
 
 // constants
-const std::vector<std::string> posix_cmdvar = { "export", "unset", "local", "read" };
+const std::vector<std::string> posix_cmdvar = { "export", "unset", "local", "read", "getopts" };
 const std::vector<std::string> bash_cmdvar  = { "readonly", "declare", "typeset" };
 
 const std::vector<std::string> arithmetic_precedence_operators = { "!", "~", "+", "-" };
@@ -64,14 +64,6 @@ bool valid_name(std::string const& str)
 }
 
 // string utils
-
-bool word_is_reserved_out(std::string const in)
-{
-  for(auto it: out_reserved_words)
-    if(in == it)
-      return true;
-  return false;
-}
 
 bool word_eq(const char* word, const char* in, uint32_t size, uint32_t start, const char* end_set=NULL)
 {
@@ -1532,7 +1524,7 @@ std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t 
         ret = pp.first;
         i = pp.second;
       }
-      else if(word_is_reserved_out(word))
+      else if(is_in_vector(word, out_reserved_words)) // is a reserved word
       {
         throw PARSE_ERROR( "Unexpected '"+word+"'" + expecting(g_expecting) , i);
       }
