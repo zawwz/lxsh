@@ -239,7 +239,7 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, shmain* parent, bool 
       continue;
 
     subshell_subarg* tsh = dynamic_cast<subshell_subarg*>(in->sa[i]);
-    if(tsh->sbsh->lst->cls.size() > 1) // skip if more than one cl
+    if(tsh->sbsh->lst->cls.size() != 1) // skip if not one cl
       continue;
     condlist* tc = tsh->sbsh->lst->cls[0];
     cmd* c = tc->first_cmd();
