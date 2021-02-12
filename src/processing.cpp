@@ -371,7 +371,7 @@ bool r_delete_var(_obj* in, set_t* vars)
 
           for(uint32_t j=0; j<c->var_assigns.size(); j++)
           {
-            if( c->var_assigns[j].first == nullptr || vars->find(c->var_assigns[j].first->varname) != vars->end() )
+            if( c->var_assigns[j].first != nullptr && vars->find(c->var_assigns[j].first->varname) != vars->end() )
             {
               if(c->var_assigns[j].first != nullptr)
                 delete c->var_assigns[j].first;
