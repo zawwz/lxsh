@@ -194,7 +194,7 @@ bool delete_unused_var(_obj* in, std::regex const& exclude)
   // find unused vars
   for(auto it: m_vardefs)
   {
-    if(m_varcalls.find(it.first) == m_varcalls.end())
+    if(it.first!="" && m_varcalls.find(it.first) == m_varcalls.end())
       unused.insert(it.first);
   }
   // perform deletion
