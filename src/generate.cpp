@@ -149,7 +149,7 @@ std::string if_block::generate(int ind)
     if(i==0)
       ret += "if";
     else
-      ret += "elif";
+      ret += indented("elif", ind);
 
     if(blocks[i].first->size()==1)
       ret += ' ' + blocks[i].first->generate(ind+1, false);
@@ -296,7 +296,7 @@ std::string case_block::generate(int ind)
   }
 
   // remove ;; from last case
-  if(opt_minimize)
+  if(this->cases.size()>0 && opt_minimize)
   {
     ret.erase(ret.size()-3, 2);
   }
