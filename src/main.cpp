@@ -207,6 +207,10 @@ int main(int argc, char* argv[])
       if(destfile.substr(0,5) != "/dev/")
         ztd::exec("chmod", "+x", destfile);
     }
+    else if(options['J'])
+    {
+      std::cout << gen_json_struc(sh) << std::endl;
+    }
     else // to console
     {
       std::cout << sh->generate(g_shebang, 0);

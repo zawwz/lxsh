@@ -23,6 +23,7 @@ ztd::option_set gen_options()
       ztd::option('c', "stdout",        false, "Output result script to stdout"),
       ztd::option('e', "exec",          false, "Directly execute script"),
       ztd::option("no-shebang",         false, "Don't output shebang"),
+      ztd::option('J', "json",          false, "Output the json structure"),
       ztd::option("\r  [Processing]"),
       ztd::option('C', "no-cd",         false, "Don't cd when doing %include and %resolve"),
       ztd::option('m', "minimize",      false, "Minimize code without changing functionality"),
