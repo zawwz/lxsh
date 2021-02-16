@@ -1074,7 +1074,7 @@ uint32_t parse_cmd_varassigns(cmd* ret, const char* in, uint32_t size, uint32_t 
   if(cmdassign && (forbid_special || cmd == "export") )
     forbid_special=true;
 
-  while(i<size && !is_in(in[i], PIPELINE_END))
+  while(i<size && !is_in(in[i], ARGLIST_END))
   {
     auto vp=parse_var(in, size, i, false, true);
     if(vp.first != nullptr)
