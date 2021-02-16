@@ -416,15 +416,23 @@ std::string parenthesis_arithmetic::generate(int ind)
   std::string ret;
   ret += '(';
   if(!opt_minimize) ret += ' ';
-  ret += val->generate(ind);
+    ret += val->generate(ind);
   if(!opt_minimize) ret += ' ';
-  ret += ')';
+    ret += ')';
   return ret;
 }
 
 std::string subshell_arithmetic::generate(int ind)
 {
   return '$' + sbsh->generate(ind);
+}
+
+std::string variable_arithmetic::generate(int ind)
+{
+  std::string ret=var->generate(ind);
+  if(is_num(ret[0]) || is_in(ret[0], SPECIAL_VARS))
+    return '$' + ret;
+  return ret;
 }
 
 std::string variable::generate(int ind)
@@ -436,6 +444,7 @@ std::string variable::generate(int ind)
   else
     return varname;
 }
+
 
 // TEMPLATE
 
