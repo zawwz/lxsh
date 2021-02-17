@@ -450,6 +450,9 @@ std::string gen_json_struc(_obj* o)
       vec.push_back(std::make_pair(quote_string("varname"), quote_string(t->varname)));
       vec.push_back(std::make_pair(quote_string("definition"), boolstring(t->definition)));
       vec.push_back(std::make_pair(quote_string("index"), gen_json_struc(t->index)));
+      vec.push_back(std::make_pair(quote_string("is_manip"), boolstring(t->is_manip) ) );
+      vec.push_back(std::make_pair(quote_string("precedence"), boolstring(t->precedence) ) );
+      vec.push_back(std::make_pair(quote_string("manip"), gen_json_struc(t->manip) ) );
       break;
     }
     case _obj::_redirect :
@@ -697,15 +700,6 @@ std::string gen_json_struc(_obj* o)
       subshell_subarg* t = dynamic_cast<subshell_subarg*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("subarg_subshell") ) );
       vec.push_back(std::make_pair(quote_string("sbsh"), gen_json_struc(t->sbsh) ) );
-      break;
-    }
-    case _obj::subarg_manipulation :
-    {
-      manipulation_subarg* t = dynamic_cast<manipulation_subarg*>(o);
-      vec.push_back(std::make_pair(quote_string("type"), quote_string("subarg_manipulation") ) );
-      vec.push_back(std::make_pair(quote_string("size"), boolstring(t->size) ) );
-      vec.push_back(std::make_pair(quote_string("var"), gen_json_struc(t->var) ) );
-      vec.push_back(std::make_pair(quote_string("manip"), gen_json_struc(t->manip) ) );
       break;
     }
     case _obj::subarg_procsub :

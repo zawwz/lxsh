@@ -211,6 +211,12 @@ std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size,
         ret = new subshell_arithmetic(ps.first);
         i=ps.second;
       }
+      else if(word_eq("${", in, size, i))
+      {
+        auto pm = parse_manipulation(in, size, i+2);
+        ret = new variable_arithmetic(pm.first);
+        i=pm.second;
+      }
       else if(in[i] == '(')
       {
         auto pa = parse_arithmetic(in, size, i+1);
@@ -265,26 +271,54 @@ std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size,
   return std::make_pair(ret, i);
 }
 
-std::pair<manipulation_subarg*, uint32_t> parse_manipulation(const char* in, uint32_t size, uint32_t start)
+std::pair<variable*, uint32_t> parse_manipulation(const char* in, uint32_t size, uint32_t start)
 {
-  manipulation_subarg* ret = new manipulation_subarg;
+  variable* ret = nullptr;
   uint32_t i=start;
+  arg* precede = nullptr;
 
-  if(in[i] == '#')
+#ifndef NO_PARSE_CATCH
+  try
   {
-    ret->size=true;
+#endif
+    ;
+    if(in[i] == '#')
+    {
+      precede = new arg("#");
+      i++;
+    }
+
+    auto p=parse_var(in, size, i, true, true);
+    if(p.first == nullptr)
+      throw PARSE_ERROR( "Bad variable name", i );
+    ret = p.first;
+    i = p.second;
+
+    ret->is_manip=true;
+    if(precede != nullptr)
+    {
+      if(in[i] != '}')
+        throw PARSE_ERROR( "Incompatible operations", start );
+      ret->manip = precede;
+      ret->precedence=true;
+      precede=nullptr;
+    }
+    else if(in[i] != '}')
+    {
+      auto pa = parse_arg(in, size, i, "}", NULL, false);
+      ret->manip=pa.first;
+      i = pa.second;
+    }
     i++;
+
+#ifndef NO_PARSE_CATCH
   }
-
-  auto p=parse_var(in, size, i, true, true);
-  if(p.first == nullptr)
-    throw PARSE_ERROR( "Bad variable name", i );
-  ret->var=p.first;
-  i = p.second;
-
-  auto pa = parse_arg(in, size, i, "}", NULL, false);
-  ret->manip=pa.first;
-  i = pa.second+1;
+  catch(ztd::format_error& e)
+  {
+    if(ret != nullptr) delete ret;
+    throw e;
+  }
+#endif
 
   return std::make_pair(ret, i);
 }
@@ -343,8 +377,7 @@ void do_one_subarg_step(arg* ret, const char* in, uint32_t size, uint32_t& i, ui
       ret->add(tmpstr);
     // get manipulation
     auto r=parse_manipulation(in, size, i+2);
-    r.first->quoted=is_quoted;
-    ret->add(r.first);
+    ret->add(new variable_subarg(r.first, is_quoted));
     j = i = r.second;
   }
   else if( in[i] == '$' )

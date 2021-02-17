@@ -23,6 +23,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     {
       variable* t = dynamic_cast<variable*>(o);
       recurse(fct, t->index, args...);
+      recurse(fct, t->manip, args...);
       break;
     }
     case _obj::_redirect :
@@ -208,13 +209,6 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     {
       subshell_subarg* t = dynamic_cast<subshell_subarg*>(o);
       recurse(fct, t->sbsh, args...);
-      break;
-    }
-    case _obj::subarg_manipulation :
-    {
-      manipulation_subarg* t = dynamic_cast<manipulation_subarg*>(o);
-      recurse(fct, t->var, args...);
-      recurse(fct, t->manip, args...);
       break;
     }
     case _obj::subarg_procsub :

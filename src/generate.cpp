@@ -362,14 +362,6 @@ std::string subshell_subarg::generate(int ind)
   return '$' + sbsh->generate(ind);
 }
 
-std::string manipulation_subarg::generate(int ind)
-{
-  if(size)
-    return "${#" + var->generate(ind) + "}";
-  else
-    return "${" + var->generate(ind) + manip->generate(ind) + "}";
-}
-
 std::string procsub_subarg::generate(int ind)
 {
   if(is_output)
@@ -430,19 +422,30 @@ std::string subshell_arithmetic::generate(int ind)
 std::string variable_arithmetic::generate(int ind)
 {
   std::string ret=var->generate(ind);
-  if(is_num(ret[0]) || is_in(ret[0], SPECIAL_VARS))
+  if(is_num(ret[0]) || is_in(ret[0], SPECIAL_VARS) || var->is_manip)
     return '$' + ret;
   return ret;
 }
 
 std::string variable::generate(int ind)
 {
-  if(index!=nullptr)
+  std::string ret;
+  if(is_manip)
   {
-    return varname + '[' + index->generate(ind) + ']';
+    ret += '{';
+    if(precedence && manip!=nullptr)
+      ret += manip->generate(ind);
   }
-  else
-    return varname;
+  ret += varname;
+  if(index!=nullptr)
+    ret += '[' + index->generate(ind) + ']';
+  if(is_manip)
+  {
+    if(!precedence && manip!=nullptr)
+      ret += manip->generate(ind);
+    ret += '}';
+  }
+  return ret;
 }
 
 

@@ -47,7 +47,7 @@ std::pair<variable*, uint32_t> parse_var(const char* in, uint32_t size, uint32_t
 
 // subarg parsers
 std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size, uint32_t start);
-std::pair<manipulation_subarg*, uint32_t> parse_manipulation(const char* in, uint32_t size, uint32_t start);
+std::pair<variable*, uint32_t> parse_manipulation(const char* in, uint32_t size, uint32_t start);
 // arg parser
 std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start, const char* end=ARG_END, const char* unexpected=SPECIAL_TOKENS, bool doquote=true);
 // redirect parser

@@ -61,13 +61,20 @@ list* make_list(std::string const& in)
   return parse_list_until(in.c_str(), in.size(), 0, 0).first;
 }
 
+// copy
+
+arg* copy(arg* in) {
+  std::string str = in->generate(0);
+  return parse_arg(str.c_str(), str.size(), 0).first;
+}
+
 // modifiers
 
 void force_quotes(arg* in)
 {
   for(uint32_t i=0; i < in->sa.size() ; i++)
   {
-    if(!in->sa[i]->quoted && (in->sa[i]->type == _obj::subarg_variable || in->sa[i]->type == _obj::subarg_manipulation || in->sa[i]->type == _obj::subarg_subshell) )
+    if(!in->sa[i]->quoted && (in->sa[i]->type == _obj::subarg_variable || in->sa[i]->type == _obj::subarg_subshell) )
     {
       in->sa[i]->quoted=true;
       in->insert(i+1, new string_subarg("\""));
@@ -121,6 +128,13 @@ size_t cmd::arglist_size()
 std::string arg::string()
 {
   if(sa.size() != 1 || sa[0]->type != subarg::subarg_string)
+    return "";
+  return dynamic_cast<string_subarg*>(sa[0])->val;
+}
+
+std::string arg::first_sa_string()
+{
+  if(sa.size() <=0 || sa[0]->type != subarg::subarg_string)
     return "";
   return dynamic_cast<string_subarg*>(sa[0])->val;
 }
@@ -217,16 +231,44 @@ void condlist::prune_first_cmd()
 
 void arg::insert(uint32_t i, std::string const& in)
 {
-  this->insert(i, new string_subarg(in));
+  if(i>0 && sa[i-1]->type == _obj::subarg_string)
+  {
+    string_subarg* t = dynamic_cast<string_subarg*>(sa[i-1]);
+    t->val += in;
+  }
+  else if(i<sa.size() && sa[i]->type == _obj::subarg_string)
+  {
+    string_subarg* t = dynamic_cast<string_subarg*>(sa[i]);
+    t->val = in + t->val;
+  }
+  else
+    sa.insert(sa.begin()+i, new string_subarg(in));
 }
 void arg::add(std::string const& in)
 {
-  this->add(new string_subarg(in));
+  this->insert(this->size(), in);
 }
 
 void arg::insert(uint32_t i, subarg* val)
 {
-  sa.insert(sa.begin()+i, val);
+  if(val->type == _obj::subarg_string)
+  {
+    string_subarg* tval = dynamic_cast<string_subarg*>(val);
+    if(i>0 && sa[i-1]->type == _obj::subarg_string)
+    {
+      string_subarg* t = dynamic_cast<string_subarg*>(sa[i-1]);
+      t->val += tval->val;
+    }
+    else if(i<sa.size() && sa[i]->type == _obj::subarg_string)
+    {
+      string_subarg* t = dynamic_cast<string_subarg*>(sa[i]);
+      t->val = tval->val + t->val;
+    }
+    else
+      sa.insert(sa.begin()+i, val);
+  }
+  else
+    sa.insert(sa.begin()+i, val);
 }
 void arg::insert(uint32_t i, arg const& a)
 {

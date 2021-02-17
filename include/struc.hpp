@@ -57,7 +57,6 @@ subarg: can be one of
 - subshell (command substitution)
 - arithmetic
 - variable
-- variable manipulation
 - procsub (bash specific process substitution)
   > NOTE: MUST be the only subarg in the arg
 
@@ -83,7 +82,7 @@ class _obj
 {
 public:
   enum _objtype {
-    subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic, subarg_manipulation, subarg_procsub,
+    subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic, subarg_procsub,
     _variable,
     _redirect,
     _arg,
@@ -138,6 +137,8 @@ public:
 
   // return if is a string and only one subarg
   std::string string();
+  // return if the first subarg is a string
+  std::string first_sa_string();
 
   inline bool equals(std::string const& in) { return this->string() == in; }
 
@@ -147,14 +148,19 @@ public:
 class variable : public _obj
 {
 public:
-  variable(std::string const& in="", arg* i=nullptr, bool def=false) { type=_obj::_variable; varname=in; index=i; definition=def; }
+  variable(std::string const& in="", arg* i=nullptr, bool def=false, bool ismanip=false, arg* m=nullptr) { type=_obj::_variable; varname=in; index=i; definition=def; is_manip=ismanip; precedence=false; manip=m; }
   ~variable() {
     if(index!=nullptr) delete index;
+    if(manip!=nullptr) delete manip;
   }
 
   std::string varname;
   bool definition;
   arg* index; // for bash specific
+
+  bool is_manip;
+  bool precedence;
+  arg* manip;
 
   std::string generate(int ind);
 };
@@ -260,6 +266,7 @@ class list : public _obj
 {
 public:
   list() { type=_obj::_list; }
+  list(condlist* in) { type=_obj::_list; this->add(in); }
   ~list() { for(auto it: cls) delete it; }
 
   std::vector<condlist*> cls;
@@ -349,6 +356,7 @@ class subshell : public block
 {
 public:
   subshell(list* in=nullptr) { type=_obj::block_subshell; lst=in; }
+  subshell(block* in) { type=_obj::block_subshell; lst=new list(new condlist(in)); }
   ~subshell() {
     if(lst!=nullptr) delete lst;
   }
@@ -514,22 +522,6 @@ public:
   std::string generate(int ind);
 };
 
-class manipulation_subarg : public subarg
-{
-public:
-  manipulation_subarg(variable* vr=nullptr, arg* mn=nullptr, bool inq=false) { type=_obj::subarg_manipulation; size=false; var=vr; manip=mn; quoted=inq; }
-  ~manipulation_subarg() {
-    if(manip!=nullptr) delete manip;
-    if(var!=nullptr) delete var;
-  }
-
-  bool size;
-  variable* var;
-  arg* manip;
-
-  std::string generate(int ind);
-};
-
 class procsub_subarg : public subarg
 {
 public:
@@ -606,7 +598,7 @@ public:
 
   variable* var;
 
-  std::string generate(int ind) { return var->generate(ind); }
+  std::string generate(int ind);
 };
 
 #endif //STRUC_HPP
