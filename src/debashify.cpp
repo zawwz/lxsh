@@ -1,5 +1,7 @@
 #include "debashify.hpp"
 
+#include "ztd/options.hpp"
+
 #include "processing.hpp"
 #include "recursive.hpp"
 #include "util.hpp"
@@ -155,6 +157,79 @@ std::string get_declare_opt(cmd* in)
   return "";
 }
 
+ztd::option_set gen_echo_opts()
+{
+  ztd::option_set ret;
+  ret.add(
+      ztd::option('e'),
+      ztd::option('E'),
+      ztd::option('n')
+  );
+  return ret;
+}
+
+bool debashify_echo(pipeline* pl)
+{
+  if(pl->cmds[0]->type != _obj::block_cmd)
+    return false;
+  cmd* in = dynamic_cast<cmd*>(pl->cmds[0]);
+
+  std::string const& cmdstr=in->arg_string(0);
+  if(cmdstr == "echo")
+  {
+    bool skip=false;
+    ztd::option_set opts=gen_echo_opts();
+    std::vector<std::string> args=in->args->strargs(1);
+    std::vector<std::string> postargs;
+    try
+    {
+      postargs=opts.process(args, true, true);
+    }
+    catch(ztd::option_error& e)
+    {
+      skip=true;
+    }
+    if(skip || postargs.size() == args.size()) // no options processed: skip
+      return false;
+
+    // delete the number of args that were processed
+    for(uint32_t i=0; i<args.size()-postargs.size(); i++)
+    {
+      delete in->args->args[1];
+      in->args->args.erase(in->args->args.begin()+1);
+    }
+
+    bool doprintf=false;
+    bool newline=true;
+    if(opts['E'])
+    {
+      doprintf=true;
+    }
+    else if(opts['n'])
+    {
+      doprintf=true;
+      newline=false;
+    }
+
+    if(doprintf)
+    {
+      delete in->args->args[0];
+      in->args->args[0] = new arg("printf");
+      in->args->insert(1, new arg("%s\\ "));
+      if(newline) // newline: add a newline command at the end
+      {
+        brace* br = new brace(new list);
+        br->lst->add(new condlist(in));
+        br->lst->add(make_condlist("echo"));
+        pl->cmds[0] = br;
+      }
+    }
+
+    return true;
+  }
+  return false;
+}
+
 bool debashify_readonly(list* in)
 {
   bool has_found=false;
@@ -212,23 +287,20 @@ bool debashify_declare(list* in, debashify_params* params)
     if(cmdstr == "declare" || cmdstr == "typeset")
     {
       std::string const& op = get_declare_opt(c1);
-      if( cmdstr != "readonly" )
+      if(op == "-a")
       {
-        if(op == "-a")
+        for(auto it: c1->var_assigns)
         {
-          for(auto it: c1->var_assigns)
-          {
-            if(it.first != nullptr)
-            params->arrays[it.first->varname] = false;
-          }
+          if(it.first != nullptr)
+          params->arrays[it.first->varname] = false;
         }
-        else if(op == "-A")
+      }
+      else if(op == "-A")
+      {
+        for(auto it: c1->var_assigns)
         {
-          for(auto it: c1->var_assigns)
-          {
-            if(it.first != nullptr)
-            params->arrays[it.first->varname] = true;
-          }
+          if(it.first != nullptr)
+          params->arrays[it.first->varname] = true;
         }
       }
       has_found=true;
@@ -699,6 +771,7 @@ bool r_debashify(_obj* o, debashify_params* params)
     } break;
     case _obj::_pipeline: {
       pipeline* t = dynamic_cast<pipeline*>(o);
+      debashify_echo(t);
       debashify_herestring(t);
       debashify_bashtest(t);
     } break;
