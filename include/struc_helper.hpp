@@ -23,8 +23,9 @@ arg* copy(arg* in);
 variable* copy(variable* in);
 
 // testers
-
 bool arg_has_char(char c, arg* in);
+bool possibly_expands(arg* in);
+bool possibly_expands(arglist* in);
 
 // modifiers
 void force_quotes(arg* in);

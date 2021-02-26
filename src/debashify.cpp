@@ -215,13 +215,26 @@ bool debashify_echo(pipeline* pl)
     {
       delete in->args->args[0];
       in->args->args[0] = new arg("printf");
-      in->args->insert(1, new arg("%s\\ "));
-      if(newline) // newline: add a newline command at the end
+      if(possibly_expands(in->args->args[2]) )
       {
-        brace* br = new brace(new list);
-        br->lst->add(new condlist(in));
-        br->lst->add(make_condlist("echo"));
-        pl->cmds[0] = br;
+        in->args->insert(1, new arg("%s\\ "));
+        if(newline) // newline: add a newline command at the end
+        {
+          brace* br = new brace(new list);
+          br->lst->add(new condlist(in));
+          br->lst->add(make_condlist("echo"));
+          pl->cmds[0] = br;
+        }
+      }
+      else
+      {
+        std::string printfarg="'%s";
+        for(uint32_t i=2; i<in->args->size(); i++)
+          printfarg+=" %s";
+        if(newline)
+          printfarg+="\\n";
+        printfarg+="'";
+        in->args->insert(1, new arg(printfarg));
       }
     }
 

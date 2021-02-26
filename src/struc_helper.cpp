@@ -115,6 +115,22 @@ bool arg_has_char(char c, arg* in)
   return false;
 }
 
+bool possibly_expands(arg* in)
+{
+  for(auto it: in->sa)
+    if( (it->type == _obj::subarg_subshell || it->type == _obj::subarg_variable ) && it->quoted == false)
+      return true;
+  return false;
+}
+
+bool possibly_expands(arglist* in)
+{
+  for(auto it: in->args)
+    if(possibly_expands(it))
+      return true;
+  return false;
+}
+
 // ** CLASS EXTENSIONS ** //
 
 /// GETTERS ///
