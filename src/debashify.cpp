@@ -155,6 +155,49 @@ std::string get_declare_opt(cmd* in)
   return "";
 }
 
+bool debashify_readonly(list* in)
+{
+  bool has_found=false;
+  for(uint32_t i=0; i<in->cls.size(); i++)
+  {
+    // not a cmd: go to next
+    if(in->cls[i]->pls[0]->cmds[0]->type != _obj::block_cmd)
+      continue;
+
+    cmd* c1 = dynamic_cast<cmd*>(in->cls[i]->pls[0]->cmds[0]);
+    std::string const& cmdstr=c1->arg_string(0);
+    if(cmdstr == "readonly")
+    {
+      has_found=true;
+      c1->is_cmdvar=false;
+      for(uint32_t i=0; i<c1->var_assigns.size(); i++)
+      {
+        if(c1->var_assigns[i].first == nullptr || c1->var_assigns[i].second == nullptr)
+        {
+          if(c1->var_assigns[i].first != nullptr)
+            delete c1->var_assigns[i].first;
+          if(c1->var_assigns[i].second != nullptr)
+            delete c1->var_assigns[i].second;
+          c1->var_assigns.erase(c1->var_assigns.begin()+i);
+          i--;
+        }
+      }
+      if(c1->var_assigns.size() == 0)
+      {
+        delete in->cls[i];
+        in->cls.erase(in->cls.begin()+i);
+        i--;
+      }
+      else
+      {
+        delete c1->args;
+        c1->args = new arglist;
+      }
+    }
+  }
+  return has_found;
+}
+
 bool debashify_declare(list* in, debashify_params* params)
 {
   bool has_found=false;
@@ -166,21 +209,17 @@ bool debashify_declare(list* in, debashify_params* params)
 
     cmd* c1 = dynamic_cast<cmd*>(in->cls[i]->pls[0]->cmds[0]);
     std::string const& cmdstr=c1->arg_string(0);
-    if(cmdstr == "declare" || cmdstr == "typeset" || cmdstr == "readonly")
+    if(cmdstr == "declare" || cmdstr == "typeset")
     {
-      if(cmdstr == "readonly")
+      std::string const& op = get_declare_opt(c1);
+      if( cmdstr != "readonly" )
       {
-        warn("removing 'readonly'");
-      }
-      else
-      {
-        std::string const& op = get_declare_opt(c1);
         if(op == "-a")
         {
           for(auto it: c1->var_assigns)
           {
             if(it.first != nullptr)
-              params->arrays[it.first->varname] = false;
+            params->arrays[it.first->varname] = false;
           }
         }
         else if(op == "-A")
@@ -188,15 +227,14 @@ bool debashify_declare(list* in, debashify_params* params)
           for(auto it: c1->var_assigns)
           {
             if(it.first != nullptr)
-              params->arrays[it.first->varname] = true;
+            params->arrays[it.first->varname] = true;
           }
         }
-        else
-        warn( strf("removing '%s' with argument '%s'", cmdstr.c_str(), op.c_str()) );
       }
       has_found=true;
       delete in->cls[i];
       in->cls.erase(in->cls.begin()+i);
+      i--;
     }
   }
   return has_found;
@@ -440,7 +478,7 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       it->second->add(sb);
       has_replaced=true;
     }
-    else if(it->first != nullptr &&  it->second->first_sa_string().substr(0,3) == "+=(")
+    else if(it->first != nullptr && it->second!=nullptr && it->second->first_sa_string().substr(0,3) == "+=(")
     {
       // array add: VAR+=()
       // can be done by creating a new array with old array + new
@@ -485,7 +523,7 @@ bool debashify_plusequal(cmd* in, debashify_params* params)
   bool has_replaced=false;
   for(auto it = in->var_assigns.begin() ; it != in->var_assigns.end() ; it++)
   {
-    if(it->first != nullptr &&  it->second->first_sa_string().substr(0,2) == "+=")
+    if(it->first != nullptr && it->second != nullptr && it->second->first_sa_string().substr(0,2) == "+=")
     {
       string_subarg* tt=dynamic_cast<string_subarg*>(it->second->sa[0]);
       variable* v = new variable(it->first->varname);
@@ -656,6 +694,7 @@ bool r_debashify(_obj* o, debashify_params* params)
     case _obj::_list: {
       list* t = dynamic_cast<list*>(o);
       debashify_declare(t, params);
+      debashify_readonly(t);
       debashify_procsub(t, params);
     } break;
     case _obj::_pipeline: {
