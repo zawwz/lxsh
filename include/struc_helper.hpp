@@ -16,6 +16,8 @@ pipeline* make_pipeline(std::string const& in);
 condlist* make_condlist(std::string const& in);
 list* make_list(std::string const& in);
 
+block* make_block(std::string const& in);
+
 // copy
 arg* copy(arg* in);
 variable* copy(variable* in);

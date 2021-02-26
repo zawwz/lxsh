@@ -6,6 +6,8 @@
 #include "parse.hpp"
 #include "struc_helper.hpp"
 
+#include "g_shellcode.h"
+
 
 typedef struct debashify_params {
   bool need_random_string=false;
@@ -13,7 +15,12 @@ typedef struct debashify_params {
   bool need_array_create=false;
   bool need_array_set=false;
   bool need_array_get=false;
-  std::vector<std::string> debashed_arrays;
+  bool need_map_create=false;
+  bool need_map_set=false;
+  bool need_map_get=false;
+  // map of detected arrays
+  // bool value: is associative
+  std::map<std::string,bool> arrays;
 } debashify_params;
 
 
@@ -99,7 +106,7 @@ bool debashify_bashtest(pipeline* pl)
     return false;
   cmd* in = dynamic_cast<cmd*>(pl->cmds[0]);
 
-  if(in->firstarg_string() == "[[")
+  if(in->arg_string(0) == "[[")
   {
     brace* br = new brace(new list);
     condlist* cl = new condlist;
@@ -134,27 +141,80 @@ bool debashify_bashtest(pipeline* pl)
   return false;
 }
 
-bool debashify_declare(cmd* in)
+void warn(std::string const& in)
 {
-  std::string cmd=in->firstarg_string();
-  if(cmd == "declare" || cmd == "typeset" || cmd == "readonly")
-    throw std::runtime_error(strf("Cannot debashify '%s'", cmd.c_str()));
-  return false;
+  std::cerr << "WARN: " << in << std::endl;
 }
 
-cmd* make_array_get_cmd(std::string const& varname, arg* index)
+std::string get_declare_opt(cmd* in)
+{
+  if(in->var_assigns[0].second!=nullptr)
+  {
+    return in->var_assigns[0].second->string();
+  }
+  return "";
+}
+
+bool debashify_declare(list* in, debashify_params* params)
+{
+  bool has_found=false;
+  for(uint32_t i=0; i<in->cls.size(); i++)
+  {
+    // not a cmd: go to next
+    if(in->cls[i]->pls[0]->cmds[0]->type != _obj::block_cmd)
+      continue;
+
+    cmd* c1 = dynamic_cast<cmd*>(in->cls[i]->pls[0]->cmds[0]);
+    std::string const& cmdstr=c1->arg_string(0);
+    if(cmdstr == "declare" || cmdstr == "typeset" || cmdstr == "readonly")
+    {
+      if(cmdstr == "readonly")
+      {
+        warn("removing 'readonly'");
+      }
+      else
+      {
+        std::string const& op = get_declare_opt(c1);
+        if(op == "-a")
+        {
+          for(auto it: c1->var_assigns)
+          {
+            if(it.first != nullptr)
+              params->arrays[it.first->varname] = false;
+          }
+        }
+        else if(op == "-A")
+        {
+          for(auto it: c1->var_assigns)
+          {
+            if(it.first != nullptr)
+              params->arrays[it.first->varname] = true;
+          }
+        }
+        else
+        warn( strf("removing '%s' with argument '%s'", cmdstr.c_str(), op.c_str()) );
+      }
+      has_found=true;
+      delete in->cls[i];
+      in->cls.erase(in->cls.begin()+i);
+    }
+  }
+  return has_found;
+}
+
+cmd* make_cmd_varindex(std::string const& strcmd, std::string const& varname, arg* index)
 {
   cmd* c = new cmd(new arglist);
-  // __lxsh_array_get
-  c->args->add( new arg("__lxsh_array_get") );
-  // __lxsh_array_get "$VAR"
+  // cmd
+  c->args->add( new arg(strcmd) );
+  // cmd "$VAR"
   c->args->add( make_arg("\"$"+varname+"\"") );
-  // __lxsh_array_get "$VAR" N
+  // cmd "$VAR" N
   c->args->add( index );
   return c;
 }
 
-subshell_arithmetic* do_debashify_arithmetic(arithmetic* in)
+subshell_arithmetic* do_debashify_arithmetic(arithmetic* in, debashify_params* params)
 {
   subshell_arithmetic* ret = nullptr;
   if(in->type == _obj::arithmetic_variable)
@@ -169,7 +229,18 @@ subshell_arithmetic* do_debashify_arithmetic(arithmetic* in)
       arg* index = t->var->index;
       t->var->index=nullptr;
 
-      cmd* c = make_array_get_cmd(varname, index);
+      cmd* c;
+      if(params->arrays[varname])
+      {
+        c = make_cmd_varindex("__lxsh_map_get", varname, index);
+        params->need_map_get=true;
+      }
+      else
+      {
+        c = make_cmd_varindex("__lxsh_array_get", varname, index);
+        params->need_array_get=true;
+      }
+
       ret = new subshell_arithmetic(new subshell(c));
     }
   }
@@ -183,7 +254,7 @@ bool debashify_array_arithmetic(_obj* o, debashify_params* params)
   {
     case _obj::subarg_arithmetic: {
       arithmetic_subarg* t = dynamic_cast<arithmetic_subarg*>(o);
-      arithmetic* r = do_debashify_arithmetic(t->arith);
+      arithmetic* r = do_debashify_arithmetic(t->arith, params);
       if(r!=nullptr)
       {
         ret=true;
@@ -193,14 +264,14 @@ bool debashify_array_arithmetic(_obj* o, debashify_params* params)
     } break;
     case _obj::arithmetic_operation: {
       operation_arithmetic* t = dynamic_cast<operation_arithmetic*>(o);
-      arithmetic* r = do_debashify_arithmetic(t->val1);
+      arithmetic* r = do_debashify_arithmetic(t->val1, params);
       if(r!=nullptr)
       {
         ret=true;
         delete t->val1;
         t->val1 = r;
       }
-      r = do_debashify_arithmetic(t->val2);
+      r = do_debashify_arithmetic(t->val2, params);
       if(r!=nullptr)
       {
         ret=true;
@@ -210,7 +281,7 @@ bool debashify_array_arithmetic(_obj* o, debashify_params* params)
     } break;
     case _obj::arithmetic_parenthesis: {
       parenthesis_arithmetic* t = dynamic_cast<parenthesis_arithmetic*>(o);
-      arithmetic* r = do_debashify_arithmetic(t->val);
+      arithmetic* r = do_debashify_arithmetic(t->val, params);
       if(r!=nullptr)
       {
         ret=true;
@@ -237,7 +308,6 @@ bool debashify_array_get(arg* in, debashify_params* params)
         if(t->var->manip != nullptr)
           throw std::runtime_error("Cannot debashify manipulations on ${VAR[]}");
 
-        params->need_array_get = true;
         std::string varname = t->var->varname;
         arg* index = t->var->index;
         t->var->index=nullptr;
@@ -248,7 +318,18 @@ bool debashify_array_get(arg* in, debashify_params* params)
           index = new arg("\\*");
         }
 
-        cmd* c = make_array_get_cmd(varname, index);
+        cmd* c;
+        if(params->arrays[varname])
+        {
+          c = make_cmd_varindex("__lxsh_map_get", varname, index);
+          params->need_map_get=true;
+        }
+        else
+        {
+          c = make_cmd_varindex("__lxsh_array_get", varname, index);
+          params->need_array_get=true;
+        }
+
         subshell_subarg* sb = new subshell_subarg(new subshell(c));
         sb->quoted=quoted;
         delete *it;
@@ -265,19 +346,28 @@ bool debashify_array_set(cmd* in, debashify_params* params)
   bool has_replaced=false;
   for(auto it = in->var_assigns.begin() ; it != in->var_assigns.end() ; it++)
   {
-    if(it->second != nullptr && it->second->size()>0 && it->second->first_sa_string().substr(0,2) == "=(")
+    if(it->first!=nullptr && it->second != nullptr && it->second->size()>0 && it->second->first_sa_string().substr(0,2) == "=(")
     {
       // array creation: VAR=()
-      params->need_array_create=true;
       // extract arguments from =(ARGS...)
       std::string gen=it->second->generate(0);
+      std::string varname=it->first->varname;
       gen=gen.substr(2);
       gen.pop_back();
       // create cmd out of arguments
       arglist* args = parse_arglist( gen.c_str(), gen.size(), 0 ).first;
       cmd* c = new cmd(args);
-      // cmd first argument is __lxsh_array_create
-      c->args->insert(0, new arg("__lxsh_array_create") );
+      // cmd first argument is __lxsh_X_create
+      if(params->arrays[varname])
+      {
+        c->args->insert(0, new arg("__lxsh_map_create") );
+        params->need_map_create=true;
+      }
+      else
+      {
+        c->args->insert(0, new arg("__lxsh_array_create") );
+        params->need_array_create=true;
+      }
       subshell_subarg* sb = new subshell_subarg(new subshell(c));
       // insert new value
       delete it->second;
@@ -303,19 +393,40 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       if(tt->val.substr(0,2) == "+=")
       {
         tt->val = tt->val.substr(2); // remove +=
+
         // create array get of value
-        cmd* c = make_array_get_cmd(varname, copy(index));
+        cmd* c;
+        if(params->arrays[varname])
+        {
+          c = make_cmd_varindex("__lxsh_map_get", varname, copy(index));
+          params->need_map_get=true;
+        }
+        else
+        {
+          c = make_cmd_varindex("__lxsh_array_get", varname, copy(index));
+          params->need_array_get=true;
+        }
         subshell_subarg* sb = new subshell_subarg(new subshell(c));
         sb->quoted=true;
         value->insert(0, "\"");
         value->insert(0, sb);
         value->insert(0, "\"");
+
       }
       else
         tt->val = tt->val.substr(1); // remove =
 
       cmd* c = new cmd(new arglist);
-      c->args->add( new arg("__lxsh_array_set") );
+      if(params->arrays[varname])
+      {
+        c->args->add(new arg("__lxsh_map_set") );
+        params->need_map_set=true;
+      }
+      else
+      {
+        c->args->add(new arg("__lxsh_array_set") );
+        params->need_array_set=true;
+      }
       // __lxsh_array_set "$VAR"
       c->args->add( make_arg("\"$"+varname+"\"") );
       // __lxsh_array_set "$VAR" N
@@ -345,7 +456,16 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       arglist* args = parse_arglist( gen.c_str(), gen.size(), 0 ).first;
       cmd* c = new cmd(args);
       // cmd first argument is __lxsh_array_create
-      c->args->insert(0, new arg("__lxsh_array_create") );
+      if(params->arrays[varname])
+      {
+        throw std::runtime_error("Cannot debashify VAR+=() on associative arrays");
+      }
+      else
+      {
+        c->args->insert(0, new arg("__lxsh_array_create") );
+        params->need_array_create=true;
+      }
+      // second arg is varname
       c->args->insert(1, make_arg("\"$"+varname+"\"") );
       subshell_subarg* sb = new subshell_subarg(new subshell(c));
       // insert new value
@@ -523,38 +643,6 @@ bool debashify_procsub(list* lst, debashify_params* params)
   return has_replaced;
 }
 
-// create the random string generator function
-//
-block* create_random_string_func()
-{
-  std::string code="__lxsh_random_string() { env LC_CTYPE=C tr -dc 'a-zA-Z0-9' </dev/urandom | head -c ${1-20}; }";
-  return parse_block(code.c_str(), code.size(), 0).first;
-}
-
-block* create_random_tmpfile_func()
-{
-  std::string code="__lxsh_random_tmpfile() { echo \"${TMPDIR-/tmp}/$1$(__lxsh_random_string 20)\"; }";
-  return parse_block(code.c_str(), code.size(), 0).first;
-}
-
-block* create_array_set_func()
-{
-  std::string code="__lxsh_array_set()\n{\n  {\n    printf \"%s\\n%s\" \"$3\" \"$1\"\n    printf '%*s' \"$(($2+1))\" | tr ' ' \"\\n\"\n  } | awk 'BEGIN{RS=\"\\n\"};{if(NR==1){ val=$0 } else if(NR=='\"$(($2+2))\"'){ printf \"%s%s\",val,RS } else { printf \"%s%s\",$0,RS } }'\n}";
-  return parse_block(code.c_str(), code.size(), 0).first;
-}
-
-block* create_array_create_func()
-{
-  std::string code="__lxsh_array_create() {\n  for N ; do\n    echo \"$N\"\n  done\n}";
-  return parse_block(code.c_str(), code.size(), 0).first;
-}
-
-block* create_array_get_func()
-{
-  std::string code="__lxsh_array_get() {\n  if [ \"$2\" = \"*\" ] || [ \"$2\" = \"@\" ] ; then\n    printf \"%s\" \"$1\" | tr '\\n' ' '\n  else\n    echo \"$1\" | awk 'BEGIN{RS=\"\\n\"};{if(NR=='\"$(($2+1))\"'){ print } }'\n  fi\n}";
-  return parse_block(code.c_str(), code.size(), 0).first;
-}
-
 bool r_debashify(_obj* o, debashify_params* params)
 {
   // global debashifies
@@ -567,6 +655,7 @@ bool r_debashify(_obj* o, debashify_params* params)
     } break;
     case _obj::_list: {
       list* t = dynamic_cast<list*>(o);
+      debashify_declare(t, params);
       debashify_procsub(t, params);
     } break;
     case _obj::_pipeline: {
@@ -577,7 +666,6 @@ bool r_debashify(_obj* o, debashify_params* params)
     case _obj::block_cmd: {
       cmd* t = dynamic_cast<cmd*>(o);
       debashify_combined_redirects(t);
-      debashify_declare(t);
       debashify_array_set(t, params);
       debashify_plusequal(t, params);
     } break;
@@ -624,13 +712,19 @@ void debashify(shmain* sh)
   sh->shebang = "#!/bin/sh";
   recurse(r_debashify, sh, &params);
   if(params.need_random_string || params.need_random_tmpfile)
-    sh->lst->insert(0, new condlist(create_random_tmpfile_func()));
+    sh->lst->insert(0, new condlist(make_block(RANDOM_TMPFILE_SH)));
   if(params.need_random_tmpfile)
-    sh->lst->insert(0, new condlist(create_random_string_func()));
+    sh->lst->insert(0, new condlist(make_block(RANDOM_STRING_SH)));
   if(params.need_array_create)
-    sh->lst->insert(0, new condlist(create_array_create_func()));
+    sh->lst->insert(0, new condlist(make_block(ARRAY_CREATE_SH)));
   if(params.need_array_set)
-    sh->lst->insert(0, new condlist(create_array_set_func()));
+    sh->lst->insert(0, new condlist(make_block(ARRAY_SET_SH)));
   if(params.need_array_get)
-    sh->lst->insert(0, new condlist(create_array_get_func()));
+    sh->lst->insert(0, new condlist(make_block(ARRAY_GET_SH)));
+  if(params.need_map_create)
+    sh->lst->insert(0, new condlist(make_block(MAP_CREATE_SH)));
+  if(params.need_map_set)
+    sh->lst->insert(0, new condlist(make_block(MAP_SET_SH)));
+  if(params.need_map_get)
+    sh->lst->insert(0, new condlist(make_block(MAP_GET_SH)));
 }

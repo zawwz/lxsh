@@ -39,7 +39,7 @@ bool r_replace_fct(_obj* in, strmap_t* fctmap)
     }; break;
     case _obj::block_cmd: {
       cmd* t = dynamic_cast<cmd*>(in);
-      std::string cmdname = t->firstarg_string();
+      std::string cmdname = t->arg_string(0);
       auto el=fctmap->find(cmdname);
       if(el!=fctmap->end())
       {

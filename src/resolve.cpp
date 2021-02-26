@@ -213,7 +213,7 @@ std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, shmain
   if(tc == nullptr)
     return std::make_pair(std::vector<condlist*>(), false);
 
-  std::string const& strcmd=tc->firstarg_string();
+  std::string const& strcmd=tc->arg_string(0);
 
   if(g_include && strcmd == "%include")
     return std::make_pair(do_include_parse(in, parent), true);
@@ -245,7 +245,7 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, shmain* parent, bool 
     cmd* c = tc->first_cmd();
     if(c == nullptr) // skip if not cmd
       continue;
-    std::string strcmd=c->firstarg_string();
+    std::string strcmd=c->arg_string(0);
     std::string fulltext;
     if(g_include && strcmd == "%include")
     {

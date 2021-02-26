@@ -61,6 +61,12 @@ list* make_list(std::string const& in)
   return parse_list_until(in.c_str(), in.size(), 0, 0).first;
 }
 
+block* make_block(std::string const& in)
+{
+  return parse_block(in.c_str(), in.size(), 0).first;
+}
+
+
 // copy
 
 arg* copy(arg* in) {
@@ -152,10 +158,10 @@ std::vector<std::string> arglist::strargs(uint32_t start)
   return ret;
 }
 
-std::string const& cmd::firstarg_string()
+std::string const& cmd::arg_string(uint32_t n)
 {
-  if(args!=nullptr && args->args.size()>0 && args->args[0]->sa.size() == 1 && args->args[0]->sa[0]->type == _obj::subarg_string)
-    return dynamic_cast<string_subarg*>(args->args[0]->sa[0])->val;
+  if(args!=nullptr && args->args.size()>n && args->args[n]->sa.size() == 1 && args->args[n]->sa[0]->type == _obj::subarg_string)
+    return dynamic_cast<string_subarg*>(args->args[n]->sa[0])->val;
   return cmd::empty_string;
 }
 

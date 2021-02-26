@@ -308,7 +308,7 @@ public:
 
   static const std::string empty_string;
 
-  std::string const& firstarg_string();
+  std::string const& arg_string(uint32_t n);
 
   size_t arglist_size();
 

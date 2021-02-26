@@ -164,7 +164,7 @@ bool cmd::is_argvar()
 
 bool cmd::is(std::string const& in)
 {
-  return in == this->firstarg_string();
+  return in == this->arg_string(0);
 }
 
 /** GETTERS **/
@@ -303,7 +303,7 @@ bool r_get_cmd(_obj* in, countmap_t* all_cmds)
   {
     case _obj::block_cmd: {
       cmd* t = dynamic_cast<cmd*>(in);
-      std::string cmdname = t->firstarg_string();
+      std::string cmdname = t->arg_string(0);
       if(cmdname != "" && !all_cmds->insert( std::make_pair(cmdname, 1) ).second)
         (*all_cmds)[cmdname]++;
     }; break;
