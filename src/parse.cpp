@@ -282,9 +282,13 @@ std::pair<variable*, uint32_t> parse_manipulation(const char* in, uint32_t size,
   {
 #endif
     ;
-    if(in[i] == '#')
+    if(in[i] == '#' || in[i] == '!')
     {
-      precede = new arg("#");
+      if(!g_bash && in[i] == '!')
+        throw PARSE_ERROR("bash specific: '${!}'", i);
+      std::string t;
+      t+=in[i];
+      precede = new arg( t );
       i++;
     }
 

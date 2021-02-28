@@ -766,12 +766,23 @@ bool debashify_procsub(list* lst, debashify_params* params)
   return has_replaced;
 }
 
+bool debashify_var(variable* in, debashify_params* params)
+{
+  if(in->is_manip && in->precedence && in->manip->string() == "!")
+    throw std::runtime_error("Cannot debashify ${!VAR}");
+  return false;
+}
+
 bool r_debashify(_obj* o, debashify_params* params)
 {
   // global debashifies
   debashify_array_arithmetic(o, params);
   switch(o->type)
   {
+    case _obj::_variable: {
+      variable* t = dynamic_cast<variable*>(o);
+      debashify_var(t, params);
+    } break;
     case _obj::_arg: {
       arg* t = dynamic_cast<arg*>(o);
       debashify_array_get(t, params);
