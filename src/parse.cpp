@@ -340,6 +340,8 @@ void do_one_subarg_step(arg* ret, const char* in, uint32_t size, uint32_t& i, ui
     uint32_t k=skip_until(in, size, i, "`");
     if(k>=size)
       throw PARSE_ERROR("Expecting '`'", i-1);
+    if(in[k-1] == '\\' && in[k-2] != '\\')
+      throw PARSE_ERROR("Escaping backticks is not supported", k);
     // get subshell
     auto r=parse_list_until(in, k, i, 0);
     ret->add(new subshell_subarg(new subshell(r.first), is_quoted));
