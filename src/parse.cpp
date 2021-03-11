@@ -419,7 +419,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
   try
   {
 #endif
-
+  ;
     if(unexpected != NULL && is_in(in[i], unexpected))
       throw PARSE_ERROR( strf("Unexpected token '%c'", in[i]) , i);
 
@@ -434,7 +434,16 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
         i++;
         if(i>=size)
           break;
-        i++;
+        if(in[i] == '\n') // \ on \n : skip this char
+        {
+          std::string tmpstr=std::string(in+j, i-1-j);
+          if(tmpstr!="")
+            ret->add(tmpstr);
+          i++;
+          j=i;
+        }
+        else
+          i++;
       }
       else if(doquote && in[i] == '"') // start double quote
       {
