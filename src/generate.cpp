@@ -342,7 +342,7 @@ std::string cmd::generate(int ind)
     // command
     ret += args->generate(ind);
     // delete potential trailing space
-    if(ret[ret.size()-1] == ' ')
+    if(ret.size()>2 && ret[ret.size()-1] == ' ' && ret[ret.size()-2] != '\\')
       ret.pop_back();
   }
   else // empty command: remove trailing space

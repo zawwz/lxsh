@@ -167,7 +167,10 @@ int main(int argc, char* argv[])
     // processing before output
     // minimize
     if(options['m'])
+    {
+      minimize_quotes(sh);
       opt_minimize=true;
+    }
     if(options["remove-unused"])
       delete_unused( sh, re_var_exclude, re_fct_exclude );
     if(options["minimize-var"])

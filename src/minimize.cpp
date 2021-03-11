@@ -1,5 +1,7 @@
 #include "minimize.hpp"
 
+
+#include "parse.hpp"
 #include "recursive.hpp"
 #include "processing.hpp"
 #include "util.hpp"
@@ -61,6 +63,158 @@ bool r_replace_var(_obj* in, strmap_t* varmap)
       auto el=varmap->find(t->varname);
       if(el!=varmap->end())
         t->varname = el->second;
+    }; break;
+    default: break;
+  }
+  return true;
+}
+
+const char* escaped_char=" \\\t!\"()|&*?";
+const char* doublequote_escape_char=" \t'|&\\*?";
+uint32_t count_escape_chars(std::string const& in, bool doublequote)
+{
+  uint32_t r=0;
+  for(uint32_t i=0; i<in.size(); i++)
+  {
+    if(doublequote && is_in(in[i], doublequote_escape_char))
+      r++;
+    else if(!doublequote && is_in(in[i], escaped_char))
+      r++;
+    else if(in[i] == '\n') // \n: can't remove quotes
+      return 2;
+    else if(in[i] == '$')
+    {
+      if(i+1>=in.size())
+        continue;
+      else if(is_in(in[i+1], SPECIAL_VARS) || is_alphanum(in[i+1]) || in[i+1] == '_' || in[i+1] == '(')
+      {
+        if(doublequote) // doublequote: can't remove otherwise not quoted var
+          return 2;
+        r++;
+      }
+    }
+  }
+  return r;
+}
+
+bool is_this_quote(char c, bool is_doublequote)
+{
+  if(is_doublequote)
+    return c == '"';
+  else
+    return c == '\'';
+}
+
+void do_one_minimize_quotes(string_subarg* in, bool prev_is_var, bool start_quoted)
+{
+  std::string& val = in->val;
+  if(val.size() <= 1)
+    return;
+  if(start_quoted) // don't handle start quoted for now
+    return;
+  if(val[0] == '"' && prev_is_var && (is_alphanum(val[1]) || val[1] == '_') ) // removing quote would change varname: skip
+    return;
+  if(val[0] == '\'' && prev_is_var && (is_alphanum(val[1]) || val[1] == '_') ) // removing quote would change varname: skip
+    return;
+
+  uint32_t i=0, j=0;
+  while( i < val.size() )
+  {
+    bool doublequote=false;
+    while(i<val.size() && !( val[i] == '\'' || val[i] == '"') )
+    {
+      if(val[i] == '\\')
+        i++;
+      i++;
+    }
+    if(i>=val.size()) // end before finding quote: exit
+      return;
+    if(val[i] == '"')
+      doublequote=true;
+
+    j=i;
+    i++;
+
+    if(doublequote)
+    {
+      while(i<val.size() && val[i] != '"')
+      {
+        if(val[i] == '\\')
+          i++;
+        i++;
+      }
+      if(i>=val.size()) // end before finding quote: exit
+        return;
+    }
+    else
+    {
+      while(i<val.size() && val[i] != '\'')
+        i++;
+      if(i>=val.size()) // end before finding quote: exit
+        return;
+
+    }
+    uint32_t ce = count_escape_chars(val.substr(j+1, i-j-1), doublequote);
+    if(ce == 0)
+    {
+      val.erase(val.begin()+i);
+      val.erase(val.begin()+j);
+    }
+    else if(ce == 1) // only one char to escape: can save some space
+    {
+      val.erase(val.begin()+i);
+      val.erase(val.begin()+j);
+      uint32_t k;
+      if(doublequote)
+      {
+        for(k=j; k<i-1; k++)
+        {
+          if( is_in(val[k], doublequote_escape_char) )
+          break;
+        }
+      }
+      else
+      {
+        for(k=j; k<i-1; k++)
+        {
+          if( is_in(val[k], escaped_char) )
+          break;
+          if( k+1<val.size() && val[k] == '$' && ( is_in(val[k+1], SPECIAL_VARS) || is_alpha(val[k+1]) || val[k+1] == '_' ) )
+          break;
+        }
+      }
+      if(k<i-1)
+        val.insert(val.begin()+k, '\\');
+    }
+
+  }
+
+}
+
+bool r_minimize_useless_quotes(_obj* in)
+{
+  switch(in->type)
+  {
+    case _obj::_arg: {
+      arg* t = dynamic_cast<arg*>(in);
+      for(uint32_t i=0; i<t->sa.size(); i++)
+      {
+        if(t->sa[i]->type == _obj::subarg_string)
+        {
+          string_subarg* ss = dynamic_cast<string_subarg*>(t->sa[i]);
+          bool prev_is_var=false;
+          if(i>0 && t->sa[i-1]->type == _obj::subarg_variable)
+          {
+            variable_subarg* vs = dynamic_cast<variable_subarg*>(t->sa[i-1]);
+            if(vs->var != nullptr && vs->var->is_manip == false && vs->var->varname.size()>0 && !(is_in(vs->var->varname[0], SPECIAL_VARS) || is_alpha(vs->var->varname[0]) ) )
+              prev_is_var=true;
+          }
+          if(t->sa.size()==1 && (ss->val=="\"\"" || ss->val=="''") ) // single argument as "" or '': don't minimize
+            continue;
+          do_one_minimize_quotes(ss, prev_is_var, i>0 && t->sa[i-1]->quoted);
+        }
+        //if()
+      }
     }; break;
     default: break;
   }
@@ -206,6 +360,11 @@ bool delete_unused_var(_obj* in, std::regex const& exclude)
   }
   else
     return false;
+}
+
+void minimize_quotes(_obj* in)
+{
+  recurse(r_minimize_useless_quotes, in);
 }
 
 void delete_unused(_obj* in, std::regex const& var_exclude, std::regex const& fct_exclude)
