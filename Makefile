@@ -14,7 +14,7 @@ LDFLAGS = -lpthread
 # compiler
 CC=g++
 # compiler flags
-CXXFLAGS= -I$(IDIR) -Wall -pedantic -std=c++17
+CXXFLAGS= -I$(IDIR) -Wall -pedantic -std=c++20
 ifeq	($(DEBUG),true)
   # debugging flags
   CC=clang++

@@ -54,9 +54,16 @@ int main(int argc, char* argv[])
 
   int ret=0;
 
+  bool optstop=false;
+
   try
   {
-    args=options.process(argc, argv, false, true);
+    args=options.process(argc, argv, {.stop_on_argument=true, .output_doubledash=true} );
+    if( args[0] == "--" )
+    {
+      optstop=true;
+      args.erase(args.begin());
+    }
   }
   catch(std::exception& e)
   {
@@ -126,7 +133,7 @@ int main(int argc, char* argv[])
         else
           is_exec = shebang_is_bin;
 
-        if(!is_exec && args.size() > 1) // not exec: parse options on args
+        if(!is_exec && args.size() > 1 && !optstop) // not exec: parse options on args
           args=options.process(args);
 
         if(!is_exec && options['e'])

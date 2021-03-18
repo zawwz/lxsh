@@ -188,7 +188,7 @@ void parse_exec(FILE* fd, const char* in, uint32_t size, std::string const& file
 }
   catch(ztd::format_error& e)
   {
-    throw ztd::format_error(e.what(), e.where(), in, filename);
+    throw ztd::format_error(e.what(), filename, in, e.where());
   }
 #endif
 }
@@ -255,7 +255,7 @@ int exec_process(std::string const& runtime, std::vector<std::string> const& arg
   pid_t pid=0;
   // std::string test="echo Hello world\nexit 10\n";
   // fprintf(ffd, "%s\n",, test.c_str(), test.size());
-  FILE* ffd;
+  FILE* ffd=0;
   try
   {
     pid = forkexec(runargs[0], runargs.data());
