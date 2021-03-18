@@ -15,8 +15,6 @@ bool g_bash=false;
 
 // macro
 
-#define PARSE_ERROR(str, i) ztd::format_error(str, "", in, i)
-
 // constants
 const std::vector<std::string> posix_cmdvar = { "export", "unset", "local", "read", "getopts" };
 const std::vector<std::string> bash_cmdvar  = { "readonly", "declare", "typeset" };
@@ -65,7 +63,7 @@ bool valid_name(std::string const& str)
 
 // string utils
 
-bool word_eq(const char* word, const char* in, uint32_t size, uint32_t start, const char* end_set=NULL)
+bool word_eq(const char* word, const char* in, uint32_t size, uint32_t start, const char* end_set)
 {
   uint32_t wordsize=strlen(word);
   if(wordsize > size-start)

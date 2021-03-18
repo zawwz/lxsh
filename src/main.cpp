@@ -16,6 +16,7 @@
 #include "resolve.hpp"
 #include "processing.hpp"
 #include "debashify.hpp"
+#include "exec.hpp"
 
 #include "version.h"
 #include "g_version.h"
@@ -108,6 +109,8 @@ int main(int argc, char* argv[])
       std::string file = args[i];
       std::string filecontents=import_file(file);
       std::string shebang=filecontents.substr(0,filecontents.find('\n'));
+      if(shebang.substr(0,2) != "#!")
+        shebang="#!/bin/sh";
       // resolve shebang and parse leftover options
       if(first_run)
       {
@@ -124,39 +127,52 @@ int main(int argc, char* argv[])
           is_exec = shebang_is_bin;
 
         if(!is_exec && args.size() > 1) // not exec: parse options on args
-        {
           args=options.process(args);
-        }
+
+        if(!is_exec && options['e'])
+          throw std::runtime_error("Option -e must be before file");
+
+        if(shebang_is_bin) // enable debashify option
+          options["debashify"].activated=true;
 
         oneshot_opt_process(argv[0]);
         get_opts();
+
       }
       // parse
       g_origin=file;
       if(!add_include(file))
         continue;
-      tsh = parse_text(filecontents, file);
-      if(shebang_is_bin) // resolve lxsh shebang to sh
-      {
-        options["debashify"].activated=true;
-        tsh->shebang="#!/bin/sh";
-      }
 
-      /* mid processing */
-      // resolve/include
-      if(g_include || g_resolve)
-      {
-        resolve(tsh);
-      }
-
-      // concatenate to main
-      sh->concat(tsh);
-      delete tsh;
-      tsh = nullptr;
-
-      // is exec: break and exec
       if(is_exec)
-        break;
+      {
+        if(options["debashify"])
+        {
+          shebang = "#!/bin/sh";
+        }
+        if(options["debashify"] || basename(shebang) == "bash")
+        {
+          g_bash = true;
+        }
+        args.erase(args.begin());
+        return exec_process(shebang.substr(2), args, filecontents, file);
+      }
+      else
+      {
+        tsh = parse_text(filecontents, file);
+        if(shebang_is_bin) // resolve lxsh shebang to sh
+        tsh->shebang="#!/bin/sh";
+
+        /* mid processing */
+        // resolve/include
+        if(g_include || g_resolve)
+        resolve(tsh);
+
+        // concatenate to main
+        sh->concat(tsh);
+        delete tsh;
+        tsh = nullptr;
+      }
     } // end of argument parse
 
     if(options["debashify"])
@@ -191,11 +207,6 @@ int main(int argc, char* argv[])
       list_fcts(sh, re_fct_exclude);
     else if(options["list-cmd"])
       list_cmds(sh, regex_null);
-    // execute
-    else if(is_exec)
-    {
-      ret = execute(sh, args);
-    }
     // output
     else if(options['o']) // file output
     {

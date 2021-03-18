@@ -23,7 +23,7 @@ echo '#ifndef G_VERSION_H' > "$tmpfile"
 echo '#define G_VERSION_H' >> "$tmpfile"
 for I in "$codedir"/*.sh
 do
-  printf '#define %s "%s"\n' "$(basename "$I" | tr [:lower:] [:upper:] | tr '.' '_')" "$(minimize "$I" | to_cstr)" >> "$tmpfile"
+  printf '#define %s "%s\\n"\n' "$(basename "$I" | tr [:lower:] [:upper:] | tr '.' '_')" "$(minimize "$I" | to_cstr)" >> "$tmpfile"
 done
 echo "#endif" >> "$tmpfile"
 

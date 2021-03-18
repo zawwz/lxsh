@@ -269,6 +269,8 @@ public:
   list(condlist* in) { type=_obj::_list; this->add(in); }
   ~list() { for(auto it: cls) delete it; }
 
+  void clear() { for(auto it: cls) delete it; cls.resize(0); }
+
   std::vector<condlist*> cls;
   inline void add(condlist* in) { cls.push_back(in); }
 
@@ -339,8 +341,6 @@ public:
   ~shmain() {
     if(lst!=nullptr) delete lst;
   }
-
-  bool is_dev_file() { return filename.substr(0,5) == "/dev/"; }
 
   void concat(shmain* in);
 

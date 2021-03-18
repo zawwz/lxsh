@@ -34,17 +34,18 @@ bool add_include(std::string const& file)
     if(it == truepath)
       return false;
   }
+  // std::cout << truepath << std::endl;
   included.push_back(truepath);
   return true;
 }
 
 // returns path to old dir
-std::string _pre_cd(shmain* parent)
+std::string _pre_cd(std::string const& filename)
 {
-  if(parent->is_dev_file() || parent->filename == "")
+  if(filename == "" || is_dev_file(filename))
     return "";
   std::string dir=pwd();
-  std::string cddir=dirname(parent->filename);
+  std::string cddir=dirname(filename);
   if(chdir(cddir.c_str()) != 0)
     throw std::runtime_error("Cannot cd to '"+cddir+"'");
   return dir;
@@ -59,7 +60,7 @@ void _cd(std::string const& dir)
 // -- COMMANDS --
 
 // return <name, contents>[]
-std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, shmain* parent, std::string* ex_dir=nullptr)
+std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, std::string const& filename, std::string* ex_dir)
 {
   std::vector<std::pair<std::string, std::string>> ret;
 
@@ -77,7 +78,7 @@ std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, s
   std::string dir;
   if(g_cd && !opts['C'])
   {
-    dir=_pre_cd(parent);
+    dir=_pre_cd(filename);
     if(ex_dir!=nullptr)
       *ex_dir=dir;
   }
@@ -104,31 +105,8 @@ std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, s
   return ret;
 }
 
-std::vector<condlist*> do_include_parse(condlist* cmd, shmain* parent)
-{
-  std::vector<condlist*> ret;
-
-  std::string dir;
-  auto incs=do_include_raw(cmd, parent, &dir);
-
-  for(auto it: incs)
-  {
-    shmain* sh=parse_text(it.second, it.first);
-    resolve(sh);
-    // get the cls
-    ret.insert(ret.end(), sh->lst->cls.begin(), sh->lst->cls.end());
-    // safety and cleanup
-    sh->lst->cls.resize(0);
-    delete sh;
-  }
-  // cd back
-  _cd(dir);
-
-  return ret;
-}
-
 //
-std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, shmain* parent, std::string* ex_dir=nullptr)
+std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, std::string const& filename, std::string* ex_dir)
 {
   std::pair<std::string, std::string> ret;
 
@@ -146,7 +124,7 @@ std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, shmain* parent
   std::string dir;
   if(g_cd && !opts['C'])
   {
-    dir=_pre_cd(parent);
+    dir=_pre_cd(filename);
     if(ex_dir!=nullptr)
       *ex_dir=dir;
   }
@@ -175,8 +153,31 @@ std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, shmain* parent
   return ret;
 }
 
+std::vector<condlist*> do_include_parse(condlist* cmd, std::string const& filename)
+{
+  std::vector<condlist*> ret;
+
+  std::string dir;
+  auto incs=do_include_raw(cmd, filename, &dir);
+
+  for(auto it: incs)
+  {
+    shmain* sh=parse_text(it.second, it.first);
+    resolve(sh);
+    // get the cls
+    ret.insert(ret.end(), sh->lst->cls.begin(), sh->lst->cls.end());
+    // safety and cleanup
+    sh->lst->cls.resize(0);
+    delete sh;
+  }
+  // cd back
+  _cd(dir);
+
+  return ret;
+}
+
 // if first is nullptr: is a string
-std::vector<condlist*> do_resolve_parse(condlist* cmd, shmain* parent)
+std::vector<condlist*> do_resolve_parse(condlist* cmd, std::string const& filename)
 {
   std::vector<condlist*> ret;
 
@@ -185,7 +186,7 @@ std::vector<condlist*> do_resolve_parse(condlist* cmd, shmain* parent)
   {
     // get
     std::string dir;
-    p=do_resolve_raw(cmd, parent, &dir);
+    p=do_resolve_raw(cmd, filename, &dir);
     // do parse
     shmain* sh = parse_text(p.second);
     resolve(sh);
@@ -207,7 +208,7 @@ std::vector<condlist*> do_resolve_parse(condlist* cmd, shmain* parent)
 
 // -- OBJECT CALLS --
 
-std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, shmain* parent)
+std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, std::string const& filename)
 {
   cmd* tc = in->first_cmd();
   if(tc == nullptr)
@@ -216,14 +217,14 @@ std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, shmain
   std::string const& strcmd=tc->arg_string(0);
 
   if(g_include && strcmd == "%include")
-    return std::make_pair(do_include_parse(in, parent), true);
+    return std::make_pair(do_include_parse(in, filename), true);
   else if(g_resolve && strcmd == "%resolve")
-    return std::make_pair(do_resolve_parse(in, parent), true);
+    return std::make_pair(do_resolve_parse(in, filename), true);
   else
     return std::make_pair(std::vector<condlist*>(), false);
 }
 
-std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, shmain* parent, bool forcequote=false)
+std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, std::string const& filename, bool forcequote=false)
 {
   std::vector<arg*> ret;
   if(in == nullptr)
@@ -249,12 +250,12 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, shmain* parent, bool 
     std::string fulltext;
     if(g_include && strcmd == "%include")
     {
-      for(auto it: do_include_raw(tc, parent) )
+      for(auto it: do_include_raw(tc, filename) )
         fulltext += it.second;
     }
     else if(g_resolve && strcmd == "%resolve")
     {
-      fulltext = do_resolve_raw(tc, parent).second;
+      fulltext = do_resolve_raw(tc, filename).second;
     }
     else // skip
       continue;
@@ -323,7 +324,7 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, shmain* parent, bool 
 
 // -- RECURSIVE CALL --
 
-bool r_resolve(_obj* o, shmain* parent)
+bool r_resolve(_obj* o, std::string* filename)
 {
   switch(o->type)
   {
@@ -336,7 +337,7 @@ bool r_resolve(_obj* o, shmain* parent)
       auto t = dynamic_cast<list*>(o);
       for(uint32_t i=0 ; i<t->cls.size() ; i++)
       {
-        auto r=resolve_condlist(t->cls[i], parent);
+        auto r=resolve_condlist(t->cls[i], *filename);
         if(r.second)
         {
           // add new cls after current
@@ -349,7 +350,7 @@ bool r_resolve(_obj* o, shmain* parent)
         }
         else
         {
-          resolve(t->cls[i], parent);
+          resolve(t->cls[i], filename);
         }
       }
       return false;
@@ -359,7 +360,7 @@ bool r_resolve(_obj* o, shmain* parent)
       auto t = dynamic_cast<arglist*>(o);
       for(uint32_t i=0 ; i<t->size() ; i++)
       {
-        auto r=resolve_arg(t->args[i], parent);
+        auto r=resolve_arg(t->args[i], *filename);
         if(r.first.size()>0)
         {
           // add new args
@@ -371,7 +372,7 @@ bool r_resolve(_obj* o, shmain* parent)
         }
         else
         {
-          resolve(t->args[i], parent);
+          resolve(t->args[i], filename);
         }
       }
       return false;
@@ -381,12 +382,12 @@ bool r_resolve(_obj* o, shmain* parent)
       auto t = dynamic_cast<cmd*>(o);
       for(auto it: t->var_assigns) // var assigns
       {
-        resolve_arg(it.second, parent, true); // force quoted
-        resolve(it.second, parent);
+        resolve_arg(it.second, *filename, true); // force quoted
+        resolve(it.second, filename);
       }
       for(auto it: t->redirs)
-        resolve(it, parent);
-      resolve(t->args, parent);
+        resolve(it, filename);
+      resolve(t->args, filename);
       return false;
     }; break;
     case _obj::block_case :
@@ -394,15 +395,15 @@ bool r_resolve(_obj* o, shmain* parent)
       auto t = dynamic_cast<case_block*>(o);
       for(auto sc: t->cases)
       {
-        resolve_arg(t->carg, parent, true); // force quoted
-        resolve(t->carg, parent);
+        resolve_arg(t->carg, *filename, true); // force quoted
+        resolve(t->carg, filename);
 
         for(auto it: sc.first)
         {
-          resolve_arg(it, parent, true); // force quoted
-          resolve(it, parent);
+          resolve_arg(it, *filename, true); // force quoted
+          resolve(it, filename);
         }
-        resolve(sc.second, parent);
+        resolve(sc.second, filename);
       }
     }; break;
     default: break;
@@ -411,12 +412,12 @@ bool r_resolve(_obj* o, shmain* parent)
 }
 
 // recursive call of resolve
-void resolve(_obj* in, shmain* parent)
+void resolve(_obj* in, std::string* filename)
 {
-  recurse(r_resolve, in, parent);
+  recurse(r_resolve, in, filename);
 }
 
 void resolve(shmain* sh)
 {
-  recurse(r_resolve, sh, sh);
+  recurse(r_resolve, sh, &sh->filename);
 }

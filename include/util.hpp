@@ -22,6 +22,8 @@ std::string cut_last(std::string const& in, char c);
 std::string basename(std::string const& in);
 std::string dirname(std::string const& in);
 
+inline bool is_dev_file(std::string const& filename) { return filename.substr(0,5) == "/dev/"; }
+
 std::string indent(int n);
 
 bool is_among(std::string const& in, std::vector<std::string> const& values);

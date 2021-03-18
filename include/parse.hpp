@@ -26,6 +26,13 @@
 // bash specific
 #define ARRAY_ARG_END " \t\n;#()&|<>]"
 
+// macros
+#define PARSE_ERROR(str, i) ztd::format_error(str, "", in, i)
+
+// globals
+
+extern bool g_bash;
+
 extern const std::vector<std::string> posix_cmdvar;
 extern const std::vector<std::string> bash_cmdvar;
 
@@ -38,6 +45,12 @@ inline shmain* parse(std::string const& file) { return parse_text(import_file(fi
 // ** unit parsers ** //
 
 /* util parsers */
+bool word_eq(const char* word, const char* in, uint32_t size, uint32_t start, const char* end_set=NULL);
+std::pair<std::string,uint32_t> get_word(const char* in, uint32_t size, uint32_t start, const char* end_set);
+uint32_t skip_chars(const char* in, uint32_t size, uint32_t start, const char* set);
+uint32_t skip_until(const char* in, uint32_t size, uint32_t start, const char* set);
+uint32_t skip_unread(const char* in, uint32_t size, uint32_t start);
+
 // list
 std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint32_t start, char end_c, const char* expecting=NULL);
 std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint32_t start, std::string const& end_word);
