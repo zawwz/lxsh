@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
   try
   {
     args=options.process(argc, argv, {.stop_on_argument=true, .output_doubledash=true} );
-    if( args[0] == "--" )
+    if( args.size()>0 && args[0] == "--" )
     {
       optstop=true;
       args.erase(args.begin());
