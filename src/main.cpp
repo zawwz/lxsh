@@ -12,7 +12,7 @@
 #include "parse.hpp"
 #include "options.hpp"
 #include "recursive.hpp"
-#include "minimize.hpp"
+#include "minify.hpp"
 #include "resolve.hpp"
 #include "processing.hpp"
 #include "debashify.hpp"
@@ -39,11 +39,16 @@ void oneshot_opt_process(const char* arg0)
     printf("%s\n", VERSION_SHA);
     exit(0);
   }
-  else if(options["help-commands"])
+  else if(options["help-link-commands"])
   {
     print_include_help();
     printf("\n\n");
     print_resolve_help();
+    exit(ERR_HELP);
+  }
+  else if(options["help-lxsh-commands"])
+  {
+    print_lxsh_cmd_help();
     exit(ERR_HELP);
   }
 }
@@ -188,17 +193,17 @@ int main(int argc, char* argv[])
     }
 
     // processing before output
-    // minimize
+    // minify
     if(options['m'])
-      opt_minimize=true;
+      opt_minify=true;
     if(options["remove-unused"])
       delete_unused( sh, re_var_exclude, re_fct_exclude );
-    if(options["minimize-quotes"])
-      minimize_quotes(sh);
-    if(options["minimize-var"])
-      minimize_var( sh, re_var_exclude );
-    if(options["minimize-fct"])
-      minimize_fct( sh, re_fct_exclude );
+    if(options["minify-quotes"])
+      minify_quotes(sh);
+    if(options["minify-var"])
+      minify_var( sh, re_var_exclude );
+    if(options["minify-fct"])
+      minify_fct( sh, re_fct_exclude );
     // other processing
     if(options["unset-var"])
       add_unset_variables( sh, re_var_exclude );

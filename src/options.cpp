@@ -1,9 +1,10 @@
 #include "options.hpp"
 
 #include "processing.hpp"
+#include "shellcode.hpp"
 
 ztd::option_set options = gen_options();
-bool opt_minimize=false;
+bool opt_minify=false;
 
 bool g_cd=false;
 bool g_include=true;
@@ -17,7 +18,8 @@ ztd::option_set gen_options()
       ztd::option("\r  [Help]"),
       ztd::option('h', "help",          false, "Display this help message"),
       ztd::option("version",            false, "Display version"),
-      ztd::option("help-commands",      false, "Print help for linker commands"),
+      ztd::option("help-link-commands", false, "Print help for special lxsh commands"),
+      ztd::option("help-lxsh-commands", false, "Print help for linker commands"),
       ztd::option("\r  [Output]"),
       ztd::option('o', "output",        true , "Output result script to file", "file"),
       ztd::option('c', "stdout",        false, "Output result script to stdout"),
@@ -25,15 +27,15 @@ ztd::option_set gen_options()
       ztd::option("no-shebang",         false, "Don't output shebang"),
       ztd::option('J', "json",          false, "Output the json structure"),
       ztd::option("\r  [Processing]"),
-      ztd::option('m', "minimize",      false, "Minimize code without changing functionality"),
-      ztd::option("minimize-quotes",    false, "Remove unnecessary quotes"),
+      ztd::option('m', "minify",        false, "Minify code without changing functionality"),
+      ztd::option("minify-quotes",      false, "Remove unnecessary quotes"),
       ztd::option('C', "no-cd",         false, "Don't cd when doing %include and %resolve"),
       ztd::option('I', "no-include",    false, "Don't resolve %include commands"),
       ztd::option('R', "no-resolve",    false, "Don't resolve %resolve commands"),
       ztd::option("debashify",          false, "Attempt to turn a bash-specific script into a POSIX shell script"),
       ztd::option("\r  [var/fct processing]"),
-      ztd::option("minimize-var",       false, "Minimize variable names"),
-      ztd::option("minimize-fct",       false, "Minimize function names"),
+      ztd::option("minify-var",         false, "Minify variable names"),
+      ztd::option("minify-fct",         false, "Minify function names"),
       ztd::option("exclude-var",        true,  "List of matching regex to ignore for variable processing", "list"),
       ztd::option("exclude-fct",        true,  "List of matching regex to ignore for function processing", "list"),
       ztd::option("no-exclude-reserved",false, "Don't exclude reserved variables"),
@@ -120,4 +122,12 @@ void print_resolve_help()
   ztd::option_set opts=create_resolve_opts();
   printf("Options:\n");
   opts.print_help(3,7);
+}
+
+void print_lxsh_cmd_help()
+{
+  for(auto it: lxsh_shellcode_fcts)
+  {
+    printf("%s %s\n%s\n\n", it.first.c_str(), it.second.arguments.c_str(), it.second.description.c_str());
+  }
 }

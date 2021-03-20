@@ -59,6 +59,9 @@ $(ODIR)/%.o: $(SRCDIR)/%.cpp $(DEPS)
 $(ODIR)/main.o: $(SRCDIR)/main.cpp $(DEPS) $(IDIR)/g_version.h
 	$(CC) $(CXXFLAGS) -c -o $@ $<
 
+$(ODIR)/shellcode.o: $(SRCDIR)/shellcode.cpp $(DEPS) $(IDIR)/g_shellcode.h
+	$(CC) $(CXXFLAGS) -c -o $@ $<
+
 $(ODIR)/debashify.o: $(SRCDIR)/debashify.cpp $(DEPS) $(IDIR)/g_shellcode.h
 	$(CC) $(CXXFLAGS) -c -o $@ $<
 

@@ -13,7 +13,7 @@ bool is_sub_special_cmd(std::string in)
 
 std::string indented(std::string const& in, uint32_t ind)
 {
-  if(!opt_minimize)
+  if(!opt_minify)
     return indent(ind) + in;
   else
     return in;
@@ -56,7 +56,7 @@ std::string pipeline::generate(int ind)
   ret += cmds[0]->generate(ind);
   for(uint32_t i=1 ; i<cmds.size() ; i++)
   {
-    ret += opt_minimize ? "|" : " | " ;
+    ret += opt_minify ? "|" : " | " ;
     ret += cmds[i]->generate(ind);
   }
 
@@ -72,16 +72,16 @@ std::string condlist::generate(int ind)
   for(uint32_t i=0 ; i<pls.size()-1 ; i++)
   {
     if(or_ops[i])
-      ret += opt_minimize ? "||" : " || ";
+      ret += opt_minify ? "||" : " || ";
     else
-      ret += opt_minimize ? "&&" : " && ";
+      ret += opt_minify ? "&&" : " && ";
     ret += pls[i+1]->generate(ind);
   }
   if(ret=="")
     return "";
   if(parallel)
   {
-    ret += opt_minimize ? "&" : " &\n";
+    ret += opt_minify ? "&" : " &\n";
   }
   else
     ret += '\n';
@@ -114,7 +114,7 @@ std::string redirect::generate(int ind)
   std::string ret=op;
   if(target!=nullptr)
   {
-    if(!opt_minimize)
+    if(!opt_minify)
       ret += ' ';
     ret += target->generate(0);
   }
@@ -130,7 +130,7 @@ std::string block::generate_redirs(int ind, std::string const& _str)
   for(auto it: redirs)
   {
     std::string _r = it->generate(0);
-    if(opt_minimize && _r.size() > 0 && !is_num(_r[0]) && previous_isnt_num)
+    if(opt_minify && _r.size() > 0 && !is_num(_r[0]) && previous_isnt_num)
       ret.pop_back(); // remove one space if possible
     ret += _r + ' ';
     previous_isnt_num = ret.size()>1 && !is_num(ret[ret.size()-2]);
@@ -185,7 +185,7 @@ std::string for_block::generate(int ind)
   ret += ops->generate(ind+1);
   ret += indented("done", ind);
 
-  if(opt_minimize && ret.size()>1 && !is_alpha(ret[ret.size()-2]))
+  if(opt_minify && ret.size()>1 && !is_alpha(ret[ret.size()-2]))
     ret.pop_back();
   ret += generate_redirs(ind, ret);
   return ret;
@@ -205,7 +205,7 @@ std::string while_block::generate(int ind)
   ret += ops->generate(ind+1);
   ret += indented("done", ind);
 
-  if(opt_minimize && ret.size()>1 && !is_alpha(ret[ret.size()-2]))
+  if(opt_minify && ret.size()>1 && !is_alpha(ret[ret.size()-2]))
     ret.pop_back();
   ret += generate_redirs(ind, ret);
   return ret;
@@ -216,10 +216,10 @@ std::string subshell::generate(int ind)
   std::string ret;
   // open subshell
   ret += '(';
-  if(!opt_minimize) ret += '\n';
+  if(!opt_minify) ret += '\n';
   // commands
   ret += lst->generate(ind+1);
-  if(opt_minimize && ret.size()>1)
+  if(opt_minify && ret.size()>1)
     ret.pop_back(); // ) can be right after command
   // close subshell
   ret += indented(")", ind);
@@ -238,7 +238,7 @@ std::string shmain::generate(bool print_shebang, int ind)
   if(print_shebang && shebang!="")
     ret += shebang + '\n';
   ret += lst->generate(ind);
-  if( opt_minimize && ret[ret.size()-1] == '\n')
+  if( opt_minify && ret[ret.size()-1] == '\n')
     ret.pop_back();
 
   ret += generate_redirs(ind, ret);
@@ -262,7 +262,7 @@ std::string function::generate(int ind)
   std::string ret;
   // function definition
   ret += name + "()";
-  if(!opt_minimize) ret += '\n';
+  if(!opt_minify) ret += '\n';
   // commands
   ret += indented("{\n", ind);
   ret += lst->generate(ind+1);
@@ -286,17 +286,17 @@ std::string case_block::generate(int ind)
       ret += it->generate(ind) + '|';
     ret.pop_back();
     ret += ')';
-    if(!opt_minimize) ret += '\n';
+    if(!opt_minify) ret += '\n';
     // commands
     ret += cs.second->generate(ind+1);
     // end of case: ;;
-    if(opt_minimize && ret[ret.size()-1] == '\n') // ;; can be right after command
+    if(opt_minify && ret[ret.size()-1] == '\n') // ;; can be right after command
       ret.pop_back();
     ret += indented(";;\n", ind+1);
   }
 
   // remove ;; from last case
-  if(this->cases.size()>0 && opt_minimize)
+  if(this->cases.size()>0 && opt_minify)
   {
     ret.erase(ret.size()-3, 2);
   }
@@ -374,9 +374,9 @@ std::string arithmetic_subarg::generate(int ind)
 {
   std::string ret;
   ret += "$((";
-  if(!opt_minimize) ret += ' ';
+  if(!opt_minify) ret += ' ';
   ret += arith->generate(ind);
-  if(!opt_minimize) ret += ' ';
+  if(!opt_minify) ret += ' ';
   ret += "))";
   return ret;
 }
@@ -389,15 +389,15 @@ std::string operation_arithmetic::generate(int ind)
   if(precedence)
   {
     ret += oper;
-    if(!opt_minimize) ret += ' ';
+    if(!opt_minify) ret += ' ';
     ret += val1->generate(ind);
   }
   else
   {
     ret += val1->generate(ind);
-    if(!opt_minimize) ret += ' ';
+    if(!opt_minify) ret += ' ';
     ret += oper;
-    if(!opt_minimize) ret += ' ';
+    if(!opt_minify) ret += ' ';
     ret += val2->generate(ind);
   }
   return ret;
@@ -407,9 +407,9 @@ std::string parenthesis_arithmetic::generate(int ind)
 {
   std::string ret;
   ret += '(';
-  if(!opt_minimize) ret += ' ';
+  if(!opt_minify) ret += ' ';
     ret += val->generate(ind);
-  if(!opt_minimize) ret += ' ';
+  if(!opt_minify) ret += ' ';
     ret += ')';
   return ret;
 }

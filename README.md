@@ -1,6 +1,6 @@
 # lxsh
 
-Extended shell linker for linking, processing and minimizing shell code
+Extended shell linker for linking, processing and minifying shell code
 
 # Installing
 
@@ -31,9 +31,9 @@ See [Build](#build).
 
 # Features
 
-## Command extensions
+## Linking
 
-lxsh implements special linking commands that are resolved at linking.
+lxsh implements special linking commands that are resolved at build time.
 These commands can be placed anywhere within the script like regular commands.
 
 - `%include` : allows to insert file contents
@@ -41,20 +41,20 @@ These commands can be placed anywhere within the script like regular commands.
 
 > See `lxsh --help-commands` for more details
 
-## Minimize code
+## Minify code
 
 Reduce code size to a minimum without changing functionality with the `-m` option.
 
-### Further minimizing
+### Further minifying
 
-The script can be further minimized by altering code elements.
+The script can be further minified by altering code elements.
 This can cause some change in execution behavior if you are not careful.
 
-Variable names can be minimized with `--minimize-var`,
-use `--exclude-var` to exclude variables from being minimized (for example environment config).
+Variable names can be minified with `--minify-var`,
+use `--exclude-var` to exclude variables from being minified (for example environment config).
 
-Function names can be minimized with `--minimize-fct`,
-use `--exclude-fct` to exclude functions from being minimized.
+Function names can be minified with `--minify-fct`,
+use `--exclude-fct` to exclude functions from being minified.
 
 Unused functions and variables can be removed with `--remove-unused`.
 

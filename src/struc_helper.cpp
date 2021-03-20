@@ -164,13 +164,13 @@ std::string arg::first_sa_string()
 std::vector<std::string> arglist::strargs(uint32_t start)
 {
   std::vector<std::string> ret;
-  bool t=opt_minimize;
-  opt_minimize=true;
+  bool t=opt_minify;
+  opt_minify=true;
   for(uint32_t i=start; i<args.size(); i++)
   {
     ret.push_back(args[i]->generate(0));
   }
-  opt_minimize=t;
+  opt_minify=t;
   return ret;
 }
 

@@ -340,12 +340,12 @@ subshell_arithmetic* do_debashify_arithmetic(arithmetic* in, debashify_params* p
       cmd* c;
       if(params->arrays[varname])
       {
-        c = make_cmd_varindex("__lxsh_map_get", varname, index);
+        c = make_cmd_varindex("_lxsh_map_get", varname, index);
         params->need_map_get=true;
       }
       else
       {
-        c = make_cmd_varindex("__lxsh_array_get", varname, index);
+        c = make_cmd_varindex("_lxsh_array_get", varname, index);
         params->need_array_get=true;
       }
 
@@ -429,12 +429,12 @@ bool debashify_array_get(arg* in, debashify_params* params)
         cmd* c;
         if(params->arrays[varname])
         {
-          c = make_cmd_varindex("__lxsh_map_get", varname, index);
+          c = make_cmd_varindex("_lxsh_map_get", varname, index);
           params->need_map_get=true;
         }
         else
         {
-          c = make_cmd_varindex("__lxsh_array_get", varname, index);
+          c = make_cmd_varindex("_lxsh_array_get", varname, index);
           params->need_array_get=true;
         }
 
@@ -465,15 +465,15 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       // create cmd out of arguments
       arglist* args = parse_arglist( gen.c_str(), gen.size(), 0 ).first;
       cmd* c = new cmd(args);
-      // cmd first argument is __lxsh_X_create
+      // cmd first argument is _lxsh_X_create
       if(params->arrays[varname])
       {
-        c->args->insert(0, new arg("__lxsh_map_create") );
+        c->args->insert(0, new arg("_lxsh_map_create") );
         params->need_map_create=true;
       }
       else
       {
-        c->args->insert(0, new arg("__lxsh_array_create") );
+        c->args->insert(0, new arg("_lxsh_array_create") );
         params->need_array_create=true;
       }
       subshell_subarg* sb = new subshell_subarg(new subshell(c));
@@ -506,12 +506,12 @@ bool debashify_array_set(cmd* in, debashify_params* params)
         cmd* c;
         if(params->arrays[varname])
         {
-          c = make_cmd_varindex("__lxsh_map_get", varname, copy(index));
+          c = make_cmd_varindex("_lxsh_map_get", varname, copy(index));
           params->need_map_get=true;
         }
         else
         {
-          c = make_cmd_varindex("__lxsh_array_get", varname, copy(index));
+          c = make_cmd_varindex("_lxsh_array_get", varname, copy(index));
           params->need_array_get=true;
         }
         subshell_subarg* sb = new subshell_subarg(new subshell(c));
@@ -527,21 +527,21 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       cmd* c = new cmd(new arglist);
       if(params->arrays[varname])
       {
-        c->args->add(new arg("__lxsh_map_set") );
+        c->args->add(new arg("_lxsh_map_set") );
         params->need_map_set=true;
       }
       else
       {
-        c->args->add(new arg("__lxsh_array_set") );
+        c->args->add(new arg("_lxsh_array_set") );
         params->need_array_set=true;
       }
-      // __lxsh_array_set "$VAR"
+      // _lxsh_array_set "$VAR"
       c->args->add( make_arg("\"$"+varname+"\"") );
-      // __lxsh_array_set "$VAR" N
+      // _lxsh_array_set "$VAR" N
       c->args->add( index );
-      // __lxsh_array_set "$VAR" N value
+      // _lxsh_array_set "$VAR" N value
       c->args->add( value );
-      // $(__lxsh_array_set "$VAR" N value)
+      // $(_lxsh_array_set "$VAR" N value)
       subshell_subarg* sb = new subshell_subarg(new subshell(c));
 
       it->second = new arg("=");
@@ -563,14 +563,14 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       // create cmd out of arguments
       arglist* args = parse_arglist( gen.c_str(), gen.size(), 0 ).first;
       cmd* c = new cmd(args);
-      // cmd first argument is __lxsh_array_create
+      // cmd first argument is _lxsh_array_create
       if(params->arrays[varname])
       {
         throw std::runtime_error("Cannot debashify VAR+=() on associative arrays");
       }
       else
       {
-        c->args->insert(0, new arg("__lxsh_array_create") );
+        c->args->insert(0, new arg("_lxsh_array_create") );
         params->need_array_create=true;
       }
       // second arg is varname
@@ -667,7 +667,7 @@ bool debashify_combined_redirects(block* in)
 // replace <() and >()
 /*
 REPLACE TO:
-  fifoN=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random_string 10)
+  fifoN=${TMPDIR-/tmp}/lxshfifo_$(_lxsh_random_string 10)
   mkfifo "$fifoN"
   ( {PSUB;} [>|<] "$fifoN" ; rm "$fifoN") &
   CMD "$fifoN"
@@ -709,9 +709,9 @@ bool debashify_procsub(list* lst, debashify_params* params)
       std::string mkfifocmd="mkfifo";
       for(uint32_t i=0; i<affected_args.size(); i++)
       {
-        // fifoN=${TMPDIR-/tmp}/lxshfifo_$(__lxsh_random_string 10)
-        lst_insert->add( make_condlist( strf("__lxshfifo%u=$(__lxsh_random_tmpfile lxshfifo)", i) ) );
-        mkfifocmd += strf(" \"$__lxshfifo%u\"", i);
+        // fifoN=${TMPDIR-/tmp}/lxshfifo_$(_lxsh_random_string 10)
+        lst_insert->add( make_condlist( strf("_lxshfifo%u=$(_lxsh_random_tmpfile lxshfifo)", i) ) );
+        mkfifocmd += strf(" \"$_lxshfifo%u\"", i);
       }
       // mkfifo "$fifoN"
       lst_insert->add( make_condlist(mkfifocmd) );
@@ -724,13 +724,13 @@ bool debashify_procsub(list* lst, debashify_params* params)
         brace* cbr = new brace(st->sbsh->lst);
         // deindex list for delete
         st->sbsh->lst=nullptr;
-        // {PSUB;} > "$__lxshfifoN"
-        cbr->redirs.push_back( new redirect( affected_args[i].second ? "<" : ">", make_arg(strf("\"$__lxshfifo%u\"", i)) ) );
-        // ( {PSUB;} > "$__lxshfifoN" )
+        // {PSUB;} > "$_lxshfifoN"
+        cbr->redirs.push_back( new redirect( affected_args[i].second ? "<" : ">", make_arg(strf("\"$_lxshfifo%u\"", i)) ) );
+        // ( {PSUB;} > "$_lxshfifoN" )
         psub->lst->add( new condlist(cbr) );
-        // ( {PSUB;} > "$__lxshfifoN" ; rm "$__lxshfifoN" )
-        psub->lst->add( make_condlist(strf("rm \"$__lxshfifo%u\"", i)) );
-        // ( {PSUB;} > "$__lxshfifoN" ; rm "$__lxshfifoN" ) &
+        // ( {PSUB;} > "$_lxshfifoN" ; rm "$_lxshfifoN" )
+        psub->lst->add( make_condlist(strf("rm \"$_lxshfifo%u\"", i)) );
+        // ( {PSUB;} > "$_lxshfifoN" ; rm "$_lxshfifoN" ) &
         condlist* pscl = new condlist(psub);
         pscl->parallel=true;
         lst_insert->add( pscl );
@@ -738,7 +738,7 @@ bool debashify_procsub(list* lst, debashify_params* params)
         // replace the arg
         delete affected_args[i].first->sa[0];
         affected_args[i].first->sa[0] = new string_subarg("\"");
-        affected_args[i].first->add( new variable_subarg( new variable(strf("__lxshfifo%u", i)) ) );
+        affected_args[i].first->add( new variable_subarg( new variable(strf("_lxshfifo%u", i)) ) );
         affected_args[i].first->add( new string_subarg("\"") );
       }
       lst->insert(li, *lst_insert );

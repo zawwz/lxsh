@@ -5,11 +5,13 @@
 
 extern ztd::option_set options;
 
-extern bool opt_minimize;
+extern bool opt_minify;
 extern bool g_cd;
 extern bool g_include;
 extern bool g_resolve;
 extern bool g_shebang;
+
+void print_lxsh_cmd_help();
 
 void get_opts();
 

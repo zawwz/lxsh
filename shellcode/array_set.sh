@@ -1,4 +1,4 @@
-__lxsh_array_set()
+_lxsh_array_set()
 {
   [ "$2" -gt 0 ] && printf "%s\t" "$(printf "%s" "$1" | cut -f1-$2)"
   printf "%s" "$3"

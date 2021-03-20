@@ -1,4 +1,4 @@
-#include "minimize.hpp"
+#include "minify.hpp"
 
 
 #include "parse.hpp"
@@ -105,7 +105,7 @@ bool is_this_quote(char c, bool is_doublequote)
     return c == '\'';
 }
 
-void do_one_minimize_quotes(string_subarg* in, bool prev_is_var, bool start_quoted)
+void do_one_minify_quotes(string_subarg* in, bool prev_is_var, bool start_quoted)
 {
   std::string& val = in->val;
   if(val.size() <= 1)
@@ -191,7 +191,7 @@ void do_one_minimize_quotes(string_subarg* in, bool prev_is_var, bool start_quot
 
 }
 
-bool r_minimize_useless_quotes(_obj* in)
+bool r_minify_useless_quotes(_obj* in)
 {
   switch(in->type)
   {
@@ -209,9 +209,9 @@ bool r_minimize_useless_quotes(_obj* in)
             if(vs->var != nullptr && vs->var->is_manip == false && vs->var->varname.size()>0 && !(is_in(vs->var->varname[0], SPECIAL_VARS) || is_alpha(vs->var->varname[0]) ) )
               prev_is_var=true;
           }
-          if(t->sa.size()==1 && (ss->val=="\"\"" || ss->val=="''") ) // single argument as "" or '': don't minimize
+          if(t->sa.size()==1 && (ss->val=="\"\"" || ss->val=="''") ) // single argument as "" or '': don't minify
             continue;
-          do_one_minimize_quotes(ss, prev_is_var, i>0 && t->sa[i-1]->quoted);
+          do_one_minify_quotes(ss, prev_is_var, i>0 && t->sa[i-1]->quoted);
         }
         //if()
       }
@@ -221,7 +221,7 @@ bool r_minimize_useless_quotes(_obj* in)
   return true;
 }
 
-/** NAME MINIMIZING **/
+/** NAME MINIFYING **/
 
 char nchar(uint32_t n)
 {
@@ -282,7 +282,7 @@ strmap_t gen_minimal_map(countmap_t const& vars, set_t const& excluded)
 
 // calls
 
-void minimize_var(_obj* in, std::regex const& exclude)
+void minify_var(_obj* in, std::regex const& exclude)
 {
   // countmap_t vars;
   set_t excluded;
@@ -296,7 +296,7 @@ void minimize_var(_obj* in, std::regex const& exclude)
   require_rescan_var();
 }
 
-void minimize_fct(_obj* in, std::regex const& exclude)
+void minify_fct(_obj* in, std::regex const& exclude)
 {
   // countmap_t fcts, cmdmap;
   set_t allcmds, excluded, unsets;
@@ -362,9 +362,9 @@ bool delete_unused_var(_obj* in, std::regex const& exclude)
     return false;
 }
 
-void minimize_quotes(_obj* in)
+void minify_quotes(_obj* in)
 {
-  recurse(r_minimize_useless_quotes, in);
+  recurse(r_minify_useless_quotes, in);
 }
 
 void delete_unused(_obj* in, std::regex const& var_exclude, std::regex const& fct_exclude)
