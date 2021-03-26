@@ -68,6 +68,7 @@ The following bash features can be debashified:
 - `>&`, `&>` and `&>>` output redirects
 - `[[ ]]` conditions
 - indexed arrays and associative arrays (+ their `declare` and `typeset` definitions)
+- `$RANDOM`
 
 ### Advantages
 
@@ -76,6 +77,13 @@ The following bash features can be debashified:
   * this doesn't always apply for all situations, make sure to verify through testing
 
 ### Limitations
+
+#### $RANDOM
+
+Debashifying of $RANDOM assumes /dev/urandom exists and provides proper randomness. <br>
+The debashified $RANDOM generates numbers in range 0:65535 instead of 0:32767.
+
+Debashified calls of $RANDOM have major performance loss
 
 #### Process substitution
 
@@ -98,7 +106,7 @@ Getting the value of an array without index will give the full value instead of 
 
 > To avoid such situation, always get values from an index in your array
 
-Arrays are store as strings. Indexed arrays are delimited by tabs and associative arrays by newlines,
+Arrays are stored as strings. Indexed arrays are delimited by tabs and associative arrays by newlines,
 This means inserting values containing these characters will have undesired behavior.
 
 Debashified arrays have substantially reduced performance.
