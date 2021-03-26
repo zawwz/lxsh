@@ -28,6 +28,7 @@ ztd::option_set gen_options()
       ztd::option('J', "json",          false, "Output the json structure"),
       ztd::option("\r  [Processing]"),
       ztd::option('m', "minify",        false, "Minify code without changing functionality"),
+      ztd::option('M', "minify-full",   false, "Enable all minifying features: -m --minify-quotes --minify-var --minify-fct --remove-unused"),
       ztd::option("minify-quotes",      false, "Remove unnecessary quotes"),
       ztd::option('C', "no-cd",         false, "Don't cd when doing %include and %resolve"),
       ztd::option('I', "no-include",    false, "Don't resolve %include commands"),
@@ -62,6 +63,14 @@ void get_opts()
     re_var_exclude=var_exclude_regex("", !options["no-exclude-reserved"]);
   if(options["exclude-fct"])
     re_fct_exclude=fct_exclude_regex(options["exclude-fct"]);
+  if(options['M'])
+  {
+    options['m'].activated=true;
+    options["minify-var"].activated=true;
+    options["minify-fct"].activated=true;
+    options["minify-quotes"].activated=true;
+    options["remove-unused"].activated=true;
+  }
 }
 
 ztd::option_set create_include_opts()
@@ -126,7 +135,7 @@ void print_resolve_help()
 
 void print_lxsh_cmd_help()
 {
-  for(auto it: lxsh_shellcode_fcts)
+  for(auto it: lxsh_extend_fcts)
   {
     printf("%s %s\n%s\n\n", it.first.c_str(), it.second.arguments.c_str(), it.second.description.c_str());
   }

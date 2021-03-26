@@ -17,6 +17,7 @@
 #include "processing.hpp"
 #include "debashify.hpp"
 #include "exec.hpp"
+#include "shellcode.hpp"
 
 #include "version.h"
 #include "g_version.h"
@@ -115,9 +116,9 @@ int main(int argc, char* argv[])
     bool first_run = true;
 
     // do parsing
+    bool shebang_is_bin=false;
     for(uint32_t i=0 ; i<args.size() ; i++)
     {
-      bool shebang_is_bin=false;
       std::string file = args[i];
       std::string filecontents=import_file(file);
       std::string shebang=filecontents.substr(0,filecontents.find('\n'));
@@ -173,12 +174,12 @@ int main(int argc, char* argv[])
       {
         tsh = parse_text(filecontents, file);
         if(shebang_is_bin) // resolve lxsh shebang to sh
-        tsh->shebang="#!/bin/sh";
+          tsh->shebang="#!/bin/sh";
 
         /* mid processing */
         // resolve/include
         if(g_include || g_resolve)
-        resolve(tsh);
+          resolve(tsh);
 
         // concatenate to main
         sh->concat(tsh);
@@ -186,6 +187,10 @@ int main(int argc, char* argv[])
         tsh = nullptr;
       }
     } // end of argument parse
+
+    // pre-listing modifiers
+    if(options["remove-unused"])
+      delete_unused( sh, re_var_exclude, re_fct_exclude );
 
     // list outputs
     if(options["list-var"])
@@ -205,17 +210,20 @@ int main(int argc, char* argv[])
     }
     else
     {
-      // modifiers
-      insert_lxsh_commands(sh);
+      // post-listing modifiers
+      // implement commands
+      std::set<std::string> req_fcts;
+      if(shebang_is_bin)
+        req_fcts = find_lxsh_commands(sh);
       if(options["debashify"])
-        debashify(sh);
+        concat_sets(req_fcts, debashify(sh) );
+
+      add_lxsh_fcts(sh, req_fcts);
 
       // processing before output
       // minify
       if(options['m'])
         opt_minify=true;
-      if(options["remove-unused"])
-        delete_unused( sh, re_var_exclude, re_fct_exclude );
       if(options["minify-quotes"])
         minify_quotes(sh);
       if(options["minify-var"])

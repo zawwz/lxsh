@@ -9,7 +9,7 @@
 #include "struc.hpp"
 
 // constants
-#define RESERVED_VARIABLES "HOME", "PATH", "SHELL", "PWD", "OPTIND", "OPTARG", "LC_.*", "LANG", "TERM", "RANDOM"
+#define RESERVED_VARIABLES "HOME", "PATH", "SHELL", "PWD", "OPTIND", "OPTARG", "LC_.*", "LANG", "TERM", "RANDOM", "TMPDIR"
 
 // types
 typedef std::map<std::string,uint32_t> countmap_t;
@@ -73,7 +73,7 @@ bool r_delete_var(_obj* in, set_t* vars);
 
 /** Processing **/
 
-void insert_lxsh_commands(shmain* sh);
+std::set<std::string> find_lxsh_commands(shmain* sh);
 void add_unset_variables(shmain* sh, std::regex const& exclude);
 
 #endif //PROCESSING_HPP

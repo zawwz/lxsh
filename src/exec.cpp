@@ -13,6 +13,7 @@
 #include "debashify.hpp"
 #include "resolve.hpp"
 #include "recursive.hpp"
+#include "shellcode.hpp"
 
 #define PIPE_READ  0
 #define PIPE_WRITE 1
@@ -262,15 +263,11 @@ int exec_process(std::string const& runtime, std::vector<std::string> const& arg
     ffd = fopen(fifopath.c_str(), "w");
     if(options["debashify"])
     {
-      fprintf(ffd, "%s\n", ARRAY_CREATE_SH);
-      fprintf(ffd, "%s\n", ARRAY_GET_SH);
-      fprintf(ffd, "%s\n", ARRAY_SET_SH);
-      fprintf(ffd, "%s\n", MAP_CREATE_SH);
-      fprintf(ffd, "%s\n", MAP_GET_SH);
-      fprintf(ffd, "%s\n", MAP_SET_SH);
-      fprintf(ffd, "%s\n", RANDOM_STRING_SH);
-      fprintf(ffd, "%s\n", RANDOM_TMPFILE_SH);
+      for(auto it: lxsh_array_fcts)
+        fprintf(ffd, "%s\n", it.second.code);
     }
+    for(auto it: lxsh_extend_fcts)
+      fprintf(ffd, "%s\n", it.second.code);
     parse_exec(ffd, filecontents, file);
   }
   catch(std::runtime_error& e)

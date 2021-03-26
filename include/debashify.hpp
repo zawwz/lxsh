@@ -4,16 +4,11 @@
 #include "struc.hpp"
 
 #include <map>
+#include <set>
 
 typedef struct debashify_params {
-  bool need_random_string=false;
-  bool need_random_tmpfile=false;
-  bool need_array_create=false;
-  bool need_array_set=false;
-  bool need_array_get=false;
-  bool need_map_create=false;
-  bool need_map_set=false;
-  bool need_map_get=false;
+  std::set<std::string> required_fcts;
+  void require_fct(std::string const& in) { required_fcts.insert(in); }
   // map of detected arrays
   // bool value: is associative
   std::map<std::string,bool> arrays;
@@ -21,7 +16,7 @@ typedef struct debashify_params {
 
 bool r_debashify(_obj* o, debashify_params* params);
 
-void debashify(_obj* o, debashify_params* params);
-void debashify(shmain* sh);
+std::set<std::string> debashify(_obj* o, debashify_params* params);
+std::set<std::string> debashify(shmain* sh);
 
 #endif //DEBASHIFY_HPP

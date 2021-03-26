@@ -401,20 +401,18 @@ bool r_delete_var(_obj* in, set_t* vars)
   return true;
 }
 
-void insert_lxsh_commands(shmain* sh)
+std::set<std::string> find_lxsh_commands(shmain* sh)
 {
+  std::set<std::string> ret;
   cmdmap_get(sh, regex_null);
-  bool req_rescan=false;
-  for(auto it: lxsh_shellcode_fcts)
+  for(auto it: lxsh_extend_fcts)
   {
     if(m_cmds.find(it.first) != m_cmds.end())
     {
-      sh->lst->insert(0, make_condlist(it.second.code));
-      req_rescan=true;
+      ret.insert(it.first);
     }
   }
-  if(req_rescan)
-    require_rescan_all();
+  return ret;
 }
 
 /** JSON **/
