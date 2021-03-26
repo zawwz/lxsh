@@ -187,27 +187,6 @@ int main(int argc, char* argv[])
       }
     } // end of argument parse
 
-    if(options["debashify"])
-    {
-      debashify(sh);
-    }
-
-    // processing before output
-    // minify
-    if(options['m'])
-      opt_minify=true;
-    if(options["remove-unused"])
-      delete_unused( sh, re_var_exclude, re_fct_exclude );
-    if(options["minify-quotes"])
-      minify_quotes(sh);
-    if(options["minify-var"])
-      minify_var( sh, re_var_exclude );
-    if(options["minify-fct"])
-      minify_fct( sh, re_fct_exclude );
-    // other processing
-    if(options["unset-var"])
-      add_unset_variables( sh, re_var_exclude );
-
     // list outputs
     if(options["list-var"])
       list_vars(sh, re_var_exclude);
@@ -220,25 +199,49 @@ int main(int argc, char* argv[])
     else if(options["list-cmd"])
       list_cmds(sh, regex_null);
     // output
-    else if(options['o']) // file output
-    {
-      std::string destfile=options['o'];
-      // resolve - to stdout
-      if(destfile == "-")
-        destfile = "/dev/stdout";
-      // output
-      std::ofstream(destfile) << sh->generate(g_shebang, 0);
-      // don't chmod on /dev/
-      if(destfile.substr(0,5) != "/dev/")
-        ztd::exec("chmod", "+x", destfile);
-    }
     else if(options['J'])
     {
       std::cout << gen_json_struc(sh) << std::endl;
     }
-    else // to console
+    else
     {
-      std::cout << sh->generate(g_shebang, 0);
+      // modifiers
+      insert_lxsh_commands(sh);
+      if(options["debashify"])
+        debashify(sh);
+
+      // processing before output
+      // minify
+      if(options['m'])
+        opt_minify=true;
+      if(options["remove-unused"])
+        delete_unused( sh, re_var_exclude, re_fct_exclude );
+      if(options["minify-quotes"])
+        minify_quotes(sh);
+      if(options["minify-var"])
+        minify_var( sh, re_var_exclude );
+      if(options["minify-fct"])
+        minify_fct( sh, re_fct_exclude );
+      // other processing
+      if(options["unset-var"])
+        add_unset_variables( sh, re_var_exclude );
+
+      if(options['o']) // file output
+      {
+        std::string destfile=options['o'];
+        // resolve - to stdout
+        if(destfile == "-")
+        destfile = "/dev/stdout";
+        // output
+        std::ofstream(destfile) << sh->generate(g_shebang, 0);
+        // don't chmod on /dev/
+        if(destfile.substr(0,5) != "/dev/")
+        ztd::exec("chmod", "+x", destfile);
+      }
+      else // to console
+      {
+        std::cout << sh->generate(g_shebang, 0);
+      }
     }
   }
 #ifndef NO_PARSE_CATCH

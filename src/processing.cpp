@@ -5,6 +5,8 @@
 #include "recursive.hpp"
 #include "parse.hpp"
 #include "util.hpp"
+#include "shellcode.hpp"
+#include "struc_helper.hpp"
 
 // Global regex
 
@@ -398,6 +400,24 @@ bool r_delete_var(_obj* in, set_t* vars)
   }
   return true;
 }
+
+void insert_lxsh_commands(shmain* sh)
+{
+  cmdmap_get(sh, regex_null);
+  bool req_rescan=false;
+  for(auto it: lxsh_shellcode_fcts)
+  {
+    if(m_cmds.find(it.first) != m_cmds.end())
+    {
+      sh->lst->insert(0, make_condlist(it.second.code));
+      req_rescan=true;
+    }
+  }
+  if(req_rescan)
+    require_rescan_all();
+}
+
+/** JSON **/
 
 std::string quote_string(std::string const& in)
 {

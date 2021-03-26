@@ -31,6 +31,7 @@ extern bool b_gotvar, b_gotfct, b_gotcmd;
 
 /** map get functions (optimizations) **/
 
+
 // rescans
 void require_rescan_all();
 void require_rescan_var();
@@ -72,6 +73,7 @@ bool r_delete_var(_obj* in, set_t* vars);
 
 /** Processing **/
 
+void insert_lxsh_commands(shmain* sh);
 void add_unset_variables(shmain* sh, std::regex const& exclude);
 
 #endif //PROCESSING_HPP
