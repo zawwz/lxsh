@@ -322,40 +322,67 @@ cmd* make_cmd_varindex(std::string const& strcmd, std::string const& varname, ar
   return c;
 }
 
+subshell* do_debashify_array_var_get(variable* in, debashify_params* params)
+{
+  if(in->manip != nullptr)
+    throw std::runtime_error("Cannot debashify manipulations on ${VAR[]}");
+
+  std::string varname = in->varname;
+  arg* index = in->index;
+  in->index=nullptr;
+
+  if(index->string() == "*")
+  {
+    delete index;
+    index = new arg("\\*");
+  }
+
+  cmd* c;
+  if(params->arrays[varname])
+  {
+    c = make_cmd_varindex("_lxsh_map_get", varname, index);
+    params->require_fct("_lxsh_map_get");
+  }
+  else
+  {
+    c = make_cmd_varindex("_lxsh_array_get", varname, index);
+    params->require_fct("_lxsh_array_get");
+  }
+
+  return new subshell(c);
+}
+
+subshell* do_debashify_random(variable* in, debashify_params* params)
+{
+  if(in->manip != nullptr)
+    throw std::runtime_error("Cannot debashify manipulations on ${RANDOM}");
+  cmd* c = make_cmd("_lxsh_random");
+  params->require_fct("_lxsh_random");
+  return new subshell(c);
+}
+
+// does multiple debashifies:
+// - array
+// - RANDOM
 subshell_arithmetic* do_debashify_arithmetic(arithmetic* in, debashify_params* params)
 {
   subshell_arithmetic* ret = nullptr;
   if(in->type == _obj::arithmetic_variable)
   {
     variable_arithmetic* t = dynamic_cast<variable_arithmetic*>(in);
-    if(t->var != nullptr && t->var->index != nullptr)
+    if(t->var != nullptr && t->var->varname == "RANDOM")
     {
-      if(t->var->manip != nullptr)
-        throw std::runtime_error("Cannot debashify manipulations on ${VAR[]}");
-
-      std::string varname = t->var->varname;
-      arg* index = t->var->index;
-      t->var->index=nullptr;
-
-      cmd* c;
-      if(params->arrays[varname])
-      {
-        c = make_cmd_varindex("_lxsh_map_get", varname, index);
-        params->require_fct("_lxsh_map_get");
-      }
-      else
-      {
-        c = make_cmd_varindex("_lxsh_array_get", varname, index);
-        params->require_fct("_lxsh_array_get");
-      }
-
-      ret = new subshell_arithmetic(new subshell(c));
+      ret = new subshell_arithmetic(do_debashify_random(t->var, params));
+    }
+    else if(t->var != nullptr && t->var->index != nullptr)
+    {
+      ret = new subshell_arithmetic(do_debashify_array_var_get(t->var, params));
     }
   }
   return ret;
 }
 
-bool debashify_array_arithmetic(_obj* o, debashify_params* params)
+bool debashify_arithmetic_replace(_obj* o, debashify_params* params)
 {
   bool ret=false;
   switch(o->type)
@@ -402,48 +429,31 @@ bool debashify_array_arithmetic(_obj* o, debashify_params* params)
   return ret;
 }
 
-bool debashify_array_get(arg* in, debashify_params* params)
+bool debashify_subarg_replace(arg* in, debashify_params* params)
 {
   bool has_replaced=false;
   for(auto it=in->sa.begin() ; it!=in->sa.end() ; it++)
   {
+    subarg* replacer=nullptr;
+    bool quoted=(*it)->quoted;
     if((*it)->type == _obj::subarg_variable)
     {
       variable_subarg* t = dynamic_cast<variable_subarg*>(*it);
-      bool quoted=t->quoted;
+      if(t->var != nullptr && t->var->varname == "RANDOM")
+      {
+        replacer = new subshell_subarg(do_debashify_random(t->var, params));
+      }
       if(t->var != nullptr && t->var->is_manip && t->var->index != nullptr)
       {
-        if(t->var->manip != nullptr)
-          throw std::runtime_error("Cannot debashify manipulations on ${VAR[]}");
-
-        std::string varname = t->var->varname;
-        arg* index = t->var->index;
-        t->var->index=nullptr;
-
-        if(index->string() == "*")
-        {
-          delete index;
-          index = new arg("\\*");
-        }
-
-        cmd* c;
-        if(params->arrays[varname])
-        {
-          c = make_cmd_varindex("_lxsh_map_get", varname, index);
-          params->require_fct("_lxsh_map_get");
-        }
-        else
-        {
-          c = make_cmd_varindex("_lxsh_array_get", varname, index);
-          params->require_fct("_lxsh_array_get");
-        }
-
-        subshell_subarg* sb = new subshell_subarg(new subshell(c));
-        sb->quoted=quoted;
-        delete *it;
-        *it = sb;
-        has_replaced=true;
+        replacer = new subshell_subarg(do_debashify_array_var_get(t->var, params));
       }
+    }
+    if(replacer != nullptr)
+    {
+      replacer->quoted=quoted;
+      delete *it;
+      *it = replacer;
+      has_replaced=true;
     }
   }
   return has_replaced;
@@ -761,7 +771,7 @@ bool debashify_var(variable* in, debashify_params* params)
 bool r_debashify(_obj* o, debashify_params* params)
 {
   // global debashifies
-  debashify_array_arithmetic(o, params);
+  debashify_arithmetic_replace(o, params);
   switch(o->type)
   {
     case _obj::_variable: {
@@ -770,7 +780,7 @@ bool r_debashify(_obj* o, debashify_params* params)
     } break;
     case _obj::_arg: {
       arg* t = dynamic_cast<arg*>(o);
-      debashify_array_get(t, params);
+      debashify_subarg_replace(t, params);
     } break;
     case _obj::_list: {
       list* t = dynamic_cast<list*>(o);
