@@ -19,40 +19,7 @@
 #include "exec.hpp"
 #include "shellcode.hpp"
 
-#include "version.h"
-#include "g_version.h"
-
-#define ERR_HELP    1001
-#define ERR_OPT     1002
-#define ERR_PARSE   1003
-#define ERR_RUNTIME 1004
-
-void oneshot_opt_process(const char* arg0)
-{
-  if(options['h'])
-  {
-    print_help(arg0);
-    exit(ERR_HELP);
-  }
-  else if(options["version"])
-  {
-    printf("%s %s%s\n", arg0, VERSION_STRING, VERSION_SUFFIX);
-    printf("%s\n", VERSION_SHA);
-    exit(0);
-  }
-  else if(options["help-link-commands"])
-  {
-    print_include_help();
-    printf("\n\n");
-    print_resolve_help();
-    exit(ERR_HELP);
-  }
-  else if(options["help-lxsh-commands"])
-  {
-    print_lxsh_cmd_help();
-    exit(ERR_HELP);
-  }
-}
+#include "errcodes.h"
 
 int main(int argc, char* argv[])
 {
@@ -160,13 +127,9 @@ int main(int argc, char* argv[])
       if(is_exec)
       {
         if(options["debashify"])
-        {
           shebang = "#!/bin/sh";
-        }
         if(options["debashify"] || basename(shebang) == "bash")
-        {
           g_bash = true;
-        }
         args.erase(args.begin());
         return exec_process(shebang.substr(2), args, filecontents, file);
       }
@@ -213,7 +176,7 @@ int main(int argc, char* argv[])
       // post-listing modifiers
       // implement commands
       std::set<std::string> req_fcts;
-      if(shebang_is_bin)
+      if(shebang_is_bin && !options["no-extend"])
         req_fcts = find_lxsh_commands(sh);
       if(options["debashify"])
         concat_sets(req_fcts, debashify(sh) );
@@ -239,12 +202,12 @@ int main(int argc, char* argv[])
         std::string destfile=options['o'];
         // resolve - to stdout
         if(destfile == "-")
-        destfile = "/dev/stdout";
+          destfile = "/dev/stdout";
         // output
         std::ofstream(destfile) << sh->generate(g_shebang, 0);
         // don't chmod on /dev/
         if(destfile.substr(0,5) != "/dev/")
-        ztd::exec("chmod", "+x", destfile);
+          ztd::exec("chmod", "+x", destfile);
       }
       else // to console
       {

@@ -3,6 +3,10 @@
 #include "processing.hpp"
 #include "shellcode.hpp"
 
+#include "errcodes.h"
+#include "version.h"
+#include "g_version.h"
+
 ztd::option_set options = gen_options();
 bool opt_minify=false;
 
@@ -18,8 +22,8 @@ ztd::option_set gen_options()
       ztd::option("\r  [Help]"),
       ztd::option('h', "help",          false, "Display this help message"),
       ztd::option("version",            false, "Display version"),
-      ztd::option("help-link-commands", false, "Print help for special lxsh commands"),
-      ztd::option("help-lxsh-commands", false, "Print help for linker commands"),
+      ztd::option("help-link-commands", false, "Print help for linker commands"),
+      ztd::option("help-extend-fcts",   false, "Print help for lxsh extension functions"),
       ztd::option("\r  [Output]"),
       ztd::option('o', "output",        true , "Output result script to file", "file"),
       ztd::option('c', "stdout",        false, "Output result script to stdout"),
@@ -33,6 +37,7 @@ ztd::option_set gen_options()
       ztd::option('C', "no-cd",         false, "Don't cd when doing %include and %resolve"),
       ztd::option('I', "no-include",    false, "Don't resolve %include commands"),
       ztd::option('R', "no-resolve",    false, "Don't resolve %resolve commands"),
+      ztd::option("no-extend",          false, "Don't add lxsh extension functions"),
       ztd::option("debashify",          false, "Attempt to turn a bash-specific script into a POSIX shell script"),
       ztd::option("\r  [var/fct processing]"),
       ztd::option("minify-var",         false, "Minify variable names"),
@@ -133,10 +138,37 @@ void print_resolve_help()
   opts.print_help(3,7);
 }
 
-void print_lxsh_cmd_help()
+void print_lxsh_extension_help()
 {
   for(auto it: lxsh_extend_fcts)
   {
     printf("%s %s\n%s\n\n", it.first.c_str(), it.second.arguments.c_str(), it.second.description.c_str());
+  }
+}
+
+void oneshot_opt_process(const char* arg0)
+{
+  if(options['h'])
+  {
+    print_help(arg0);
+    exit(ERR_HELP);
+  }
+  else if(options["version"])
+  {
+    printf("%s %s%s\n", arg0, VERSION_STRING, VERSION_SUFFIX);
+    printf("%s\n", VERSION_SHA);
+    exit(0);
+  }
+  else if(options["help-link-commands"])
+  {
+    print_include_help();
+    printf("\n\n");
+    print_resolve_help();
+    exit(ERR_HELP);
+  }
+  else if(options["help-extend-fcts"])
+  {
+    print_lxsh_extension_help();
+    exit(ERR_HELP);
   }
 }

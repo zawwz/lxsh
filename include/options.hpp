@@ -11,7 +11,7 @@ extern bool g_include;
 extern bool g_resolve;
 extern bool g_shebang;
 
-void print_lxsh_cmd_help();
+void print_lxsh_extension_help();
 
 void get_opts();
 
@@ -38,5 +38,7 @@ options:
   -f   ignore non zero return values
 */
 ztd::option_set create_resolve_opts();
+
+void oneshot_opt_process(const char* arg0);
 
 #endif //OPTIONS_HPP
