@@ -16,11 +16,11 @@ zpkg install lxsh
 
 ### Binary
 
-Download the `lxsh-linux-amd64.tar.gz` archive, extract it,
+Download the `lxsh.tar.gz` archive, extract it,
 and move the `lxsh` binary in a PATH folder (`/usr/local/bin` is the recommended).
 
 ```shell
-wget https://github.com/zawwz/lxsh/releases/download/v1.0.0/lxsh-linux-amd64.tar.xz
+wget https://github.com/zawwz/lxsh/releases/download/v1.1.0/lxsh.tar.gz
 tar -xvf lxsh.tar.gz
 sudo mv lxsh /usr/local/bin
 ```
@@ -56,7 +56,11 @@ use `--exclude-var` to exclude variables from being minified (for example enviro
 Function names can be minified with `--minify-fct`,
 use `--exclude-fct` to exclude functions from being minified.
 
+Unnecessary quotes can be removed with `--minify-quotes`.
+
 Unused functions and variables can be removed with `--remove-unused`.
+
+Use `-M` to enable all of these minifying features (you still have to specify `--exclude` options when needed)
 
 ## Debashify
 
@@ -116,7 +120,7 @@ these features will continue working with undesired behavior.
 
 > To avoid this, make sure to never access incorrect values
 
-Array argument with `[@]` does not work with spaces, tabs and newlines in values.
+Array argument with `[@]` does not expand into the desired multiple arguments.
 
 ## Other features
 
@@ -133,11 +137,10 @@ Directly execute an extended lxsh script with either
 - `-e` option
 - shebang is lxsh
 
-> Direct execution introduces direct dependency on lxsh and code generation overhead,
-> therefore it should be avoided outside of development use.
-> This may be optimized in a later version
+> Direct execution introduces direct dependency on lxsh and code parsing overhead,
+> therefore it should be avoided in production environments.
 
-> There are some issues with direct execution as of now
+> stdin is known to not work properly on direct execution as of now
 
 ### Variable/Function/command listing
 
@@ -151,7 +154,7 @@ Depends on [ztd](https://github.com/zawwz/ztd)
 
 ## Building
 
-Use `make -j11` to build.<br>
+Use `make -j13` to build.<br>
 You can use environment variables to alter some aspects:
 - DEBUG: when set to `true` will generate a debug binary with profiling
 - RELEASE: when set to `true`, the version string will be generated for release format
