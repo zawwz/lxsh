@@ -69,8 +69,8 @@ bool r_replace_var(_obj* in, strmap_t* varmap)
   return true;
 }
 
-const char* escaped_char=" \\\t!\"()|&*?~";
-const char* doublequote_escape_char="  \t'|&\\*?~";
+const char* escaped_char=" \\\t!\"()|&*?~><";
+const char* doublequote_escape_char="  \t'|&\\*?~><";
 uint32_t count_escape_chars(std::string const& in, bool doublequote)
 {
   uint32_t r=0;
