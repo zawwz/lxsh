@@ -186,7 +186,10 @@ int main(int argc, char* argv[])
       // processing before output
       // minify
       if(options['m'])
+      {
         opt_minify=true;
+        string_processors(sh);
+      }
       if(options["minify-quotes"])
         minify_quotes(sh);
       if(options["minify-var"])

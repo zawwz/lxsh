@@ -205,10 +205,6 @@ pid_t forkexec(const char* bin, char *const args[])
   }
   if (child_pid == 0) // child process
   {
-    // char buf[1000] = {0};
-    // read(STDIN_FILENO, buf, 1000);
-    // std::cout << std::string(buf) << std::endl;
-    // std::cout << dup2(tfd, STDIN_FILENO) << std::endl;
     setpgid(child_pid, child_pid); //Needed so negative PIDs can kill children of /bin/sh
     execv(bin, args);
     throw std::runtime_error("execv() failed");

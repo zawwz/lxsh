@@ -34,7 +34,6 @@ bool add_include(std::string const& file)
     if(it == truepath)
       return false;
   }
-  // std::cout << truepath << std::endl;
   included.push_back(truepath);
   return true;
 }

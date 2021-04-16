@@ -236,14 +236,11 @@ void printErrorIndex(const char* in, const int index, const std::string& message
       i++;
     }
   }
-  if(origin != "")
+  fprintf(stderr, "%s:%u:%u: %s\n", origin.c_str(), line, index-j+1, message.c_str());
+  if(print_line)
   {
-    fprintf(stderr, "%s:%u:%u: %s\n", origin.c_str(), line, index-j+1, message.c_str());
-    if(print_line)
-    {
-      std::cerr << std::string(in+j, i-j) << std::endl;
-      std::cerr << repeatString(" ", index-j) << '^' << std::endl;
-    }
+    std::cerr << std::string(in+j, i-j) << std::endl;
+    std::cerr << repeatString(" ", index-j) << '^' << std::endl;
   }
 }
 

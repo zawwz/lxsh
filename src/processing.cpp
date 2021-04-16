@@ -7,6 +7,10 @@
 #include "util.hpp"
 #include "shellcode.hpp"
 #include "struc_helper.hpp"
+#include "options.hpp"
+#include "minify.hpp"
+
+#include "errcodes.h"
 
 // Global regex
 
@@ -413,6 +417,66 @@ std::set<std::string> find_lxsh_commands(shmain* sh)
     }
   }
   return ret;
+}
+
+std::set<std::string> get_processors(std::string const& in)
+{
+  std::set<std::string> ret;
+  if(in.size()>2 && in[0] == '\'' && in[in.size()-1] == '\'')
+  {
+    uint32_t i=1;
+    while(true)
+    {
+      std::string ln = in.substr(i, in.find('\n', i)-i);
+      if(ln.size()>1 && ln[0] == '#' && is_alphanum(ln[1]))
+      {
+        i+=ln.size();
+        ret.insert(get_word(ln.c_str(), ln.size(), 1, SEPARATORS).first);
+      }
+      else
+        break;
+    }
+  }
+  return ret;
+}
+
+bool r_do_string_processor(_obj* in)
+{
+  if(in->type == _obj::subarg_string)
+  {
+    string_subarg* t = dynamic_cast<string_subarg*>(in);
+    auto v = get_processors(t->val);
+    if(v.find("LXSH_PARSE_MINIFY") != v.end())
+    {
+      try
+      {
+        shmain* tsh = parse_text(t->val.substr(1, t->val.size()-2));
+        require_rescan_all();
+        if(options["remove-unused"])
+          delete_unused( tsh, re_var_exclude, re_fct_exclude );
+        if(options["minify-quotes"])
+          minify_quotes(tsh);
+        if(options["minify-var"])
+          minify_var( tsh, re_var_exclude );
+        if(options["minify-fct"])
+          minify_fct( tsh, re_fct_exclude );
+        require_rescan_all();
+        t->val='\'' + tsh->generate(false, 0) + '\'';
+      }
+      catch(ztd::format_error& e) // if fail: skip processing
+      {
+        std::cerr << "Exception caused in string processing LXSH_PARSE_MINIFY\n";
+        printFormatError(e);
+        exit(ERR_RUNTIME);
+      }
+    }
+  }
+  return true;
+}
+
+void string_processors(_obj* in)
+{
+  recurse(r_do_string_processor, in);
 }
 
 /** JSON **/

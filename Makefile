@@ -18,17 +18,21 @@ CXXFLAGS= -I$(IDIR) -Wall -pedantic -std=c++20
 ifeq	($(DEBUG),true)
   # debugging flags
   CC=clang++
-  CXXFLAGS += -g -pg -D NO_PARSE_CATCH
+  CXXFLAGS += -g -D NO_PARSE_CATCH
 else
   # release flags
   CXXFLAGS += -Ofast
+endif
+
+ifeq	($(PROFILE),true)
+  CXXFLAGS += -pg
 endif
 
 ifneq	($(RELEASE), true)
 	VSUFFIX=-dev-$(SHA_SHORT)
 endif
 
-ifeq    ($(STATIC),true)
+ifeq	($(STATIC),true)
   # static links
   LDFLAGS += -l:libztd.a
 else

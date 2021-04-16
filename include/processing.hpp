@@ -76,4 +76,6 @@ bool r_delete_var(_obj* in, set_t* vars);
 std::set<std::string> find_lxsh_commands(shmain* sh);
 void add_unset_variables(shmain* sh, std::regex const& exclude);
 
+void string_processors(_obj* in);
+
 #endif //PROCESSING_HPP
