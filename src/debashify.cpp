@@ -168,7 +168,7 @@ bool debashify_echo(pipeline* pl)
     std::vector<std::string> postargs;
     try
     {
-      postargs=opts.process(args, true, true);
+      postargs=opts.process(args, {.ignore_numbers=true, .stop_on_argument=true} );
     }
     catch(ztd::option_error& e)
     {

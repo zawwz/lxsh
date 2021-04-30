@@ -67,7 +67,7 @@ std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, s
   std::vector<std::string> rargs;
   try
   {
-    rargs = opts.process(cmd->first_cmd()->args->strargs(1), false, true, false);
+    rargs = opts.process(cmd->first_cmd()->args->strargs(1), {.stop_on_argument=true});
   }
   catch(ztd::option_error& e)
   {
@@ -113,7 +113,7 @@ std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, std::string co
   std::vector<std::string> rargs;
   try
   {
-    rargs = opts.process(cmd->first_cmd()->args->strargs(1), false, true, false);
+    rargs = opts.process(cmd->first_cmd()->args->strargs(1), {.stop_on_argument=true} );
   }
   catch(ztd::option_error& e)
   {
