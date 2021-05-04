@@ -62,6 +62,31 @@ subarg: can be one of
 
 */
 
+// exceptions
+class format_error : public std::exception
+{
+public:
+  //! @brief Conctructor
+  inline format_error(const std::string& what, const std::string& origin, const std::string& data, int where)  { desc=what; index=where; filename=origin; sdat=data; }
+
+  //! @brief Error message
+  inline const char * what () const throw () {return desc.c_str();}
+  //! @brief Origin of the data, name of imported file, otherwise empty if generated
+  inline const char * origin() const throw () {return filename.c_str();}
+  //! @brief Data causing the exception
+  inline const char * data() const throw () {return sdat.c_str();}
+  //! @brief Where the error is located in the data
+  inline const int where () const throw () {return index;}
+private:
+  std::string desc;
+  int index;
+  std::string filename;
+  std::string sdat;
+};
+
+// objects
+
+
 #define AND_OP false
 #define OR_OP  true
 

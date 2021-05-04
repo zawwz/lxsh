@@ -463,7 +463,7 @@ bool r_do_string_processor(_obj* in)
         require_rescan_all();
         t->val='\'' + tsh->generate(false, 0) + '\'';
       }
-      catch(ztd::format_error& e) // if fail: skip processing
+      catch(format_error& e) // if fail: skip processing
       {
         std::cerr << "Exception caused in string processing LXSH_PARSE_MINIFY\n";
         printFormatError(e);

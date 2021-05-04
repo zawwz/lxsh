@@ -7,6 +7,7 @@
 #include <tuple>
 
 #include <iostream>
+#include <fstream>
 
 #include <ztd/shell.hpp>
 
@@ -210,7 +211,7 @@ std::string repeatString(std::string const& str, uint32_t n)
   return ret;
 }
 
-void printFormatError(ztd::format_error const& e, bool print_line)
+void printFormatError(format_error const& e, bool print_line)
 {
   printErrorIndex(e.data(), e.where(), e.what(), e.origin(), print_line);
 }

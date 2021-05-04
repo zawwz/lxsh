@@ -7,54 +7,48 @@
 #include "version.h"
 #include "g_version.h"
 
-ztd::option_set options = gen_options();
 bool opt_minify=false;
+
+ztd::option_set options( {
+  ztd::option("\r  [Help]"),
+  ztd::option('h', "help",          false, "Display this help message"),
+  ztd::option("version",            false, "Display version"),
+  ztd::option("help-link-commands", false, "Print help for linker commands"),
+  ztd::option("help-extend-fcts",   false, "Print help for lxsh extension functions"),
+  ztd::option("\r  [Output]"),
+  ztd::option('o', "output",        true , "Output result script to file", "file"),
+  ztd::option('c', "stdout",        false, "Output result script to stdout"),
+  ztd::option('e', "exec",          false, "Directly execute script"),
+  ztd::option("no-shebang",         false, "Don't output shebang"),
+  ztd::option('J', "json",          false, "Output the json structure"),
+  ztd::option("\r  [Processing]"),
+  ztd::option('m', "minify",        false, "Minify code without changing functionality"),
+  ztd::option('M', "minify-full",   false, "Enable all minifying features: -m --minify-quotes --minify-var --minify-fct --remove-unused"),
+  ztd::option("minify-quotes",      false, "Remove unnecessary quotes"),
+  ztd::option('C', "no-cd",         false, "Don't cd when doing %include and %resolve"),
+  ztd::option('I', "no-include",    false, "Don't resolve %include commands"),
+  ztd::option('R', "no-resolve",    false, "Don't resolve %resolve commands"),
+  ztd::option("no-extend",          false, "Don't add lxsh extension functions"),
+  ztd::option("debashify",          false, "Attempt to turn a bash-specific script into a POSIX shell script"),
+  ztd::option("\r  [var/fct processing]"),
+  ztd::option("minify-var",         false, "Minify variable names"),
+  ztd::option("minify-fct",         false, "Minify function names"),
+  ztd::option("exclude-var",        true,  "List of matching regex to ignore for variable processing", "list"),
+  ztd::option("exclude-fct",        true,  "List of matching regex to ignore for function processing", "list"),
+  ztd::option("no-exclude-reserved",false, "Don't exclude reserved variables"),
+  ztd::option("list-var",           false, "List all variables set and invoked in the script"),
+  ztd::option("list-var-def",       false, "List all variables set in the script"),
+  ztd::option("list-var-call",      false, "List all variables invoked in the script"),
+  ztd::option("list-fct",           false, "List all functions defined in the script"),
+  ztd::option("list-cmd",           false, "List all commands invoked in the script"),
+  ztd::option("remove-unused",      false, "Remove unused functions and variables"),
+  ztd::option("unset-var",          false, "Add 'unset' to all vars at the start of the script to avoid environment interference")
+} );
 
 bool g_cd=false;
 bool g_include=true;
 bool g_resolve=true;
 bool g_shebang=true;
-
-ztd::option_set gen_options()
-{
-  ztd::option_set ret;
-  ret.add(
-      ztd::option("\r  [Help]"),
-      ztd::option('h', "help",          false, "Display this help message"),
-      ztd::option("version",            false, "Display version"),
-      ztd::option("help-link-commands", false, "Print help for linker commands"),
-      ztd::option("help-extend-fcts",   false, "Print help for lxsh extension functions"),
-      ztd::option("\r  [Output]"),
-      ztd::option('o', "output",        true , "Output result script to file", "file"),
-      ztd::option('c', "stdout",        false, "Output result script to stdout"),
-      ztd::option('e', "exec",          false, "Directly execute script"),
-      ztd::option("no-shebang",         false, "Don't output shebang"),
-      ztd::option('J', "json",          false, "Output the json structure"),
-      ztd::option("\r  [Processing]"),
-      ztd::option('m', "minify",        false, "Minify code without changing functionality"),
-      ztd::option('M', "minify-full",   false, "Enable all minifying features: -m --minify-quotes --minify-var --minify-fct --remove-unused"),
-      ztd::option("minify-quotes",      false, "Remove unnecessary quotes"),
-      ztd::option('C', "no-cd",         false, "Don't cd when doing %include and %resolve"),
-      ztd::option('I', "no-include",    false, "Don't resolve %include commands"),
-      ztd::option('R', "no-resolve",    false, "Don't resolve %resolve commands"),
-      ztd::option("no-extend",          false, "Don't add lxsh extension functions"),
-      ztd::option("debashify",          false, "Attempt to turn a bash-specific script into a POSIX shell script"),
-      ztd::option("\r  [var/fct processing]"),
-      ztd::option("minify-var",         false, "Minify variable names"),
-      ztd::option("minify-fct",         false, "Minify function names"),
-      ztd::option("exclude-var",        true,  "List of matching regex to ignore for variable processing", "list"),
-      ztd::option("exclude-fct",        true,  "List of matching regex to ignore for function processing", "list"),
-      ztd::option("no-exclude-reserved",false, "Don't exclude reserved variables"),
-      ztd::option("list-var",           false, "List all variables set and invoked in the script"),
-      ztd::option("list-var-def",       false, "List all variables set in the script"),
-      ztd::option("list-var-call",      false, "List all variables invoked in the script"),
-      ztd::option("list-fct",           false, "List all functions defined in the script"),
-      ztd::option("list-cmd",           false, "List all commands invoked in the script"),
-      ztd::option("remove-unused",      false, "Remove unused functions and variables"),
-      ztd::option("unset-var",          false, "Add 'unset' to all vars at the start of the script to avoid environment interference")
-  );
-  return ret;
-}
 
 void get_opts()
 {

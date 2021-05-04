@@ -197,9 +197,9 @@ std::vector<condlist*> do_resolve_parse(condlist* cmd, std::string const& filena
     // cd back
     _cd(dir);
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
-    throw ztd::format_error(e.what(), '`'+p.first+'`', e.data(), e.where());
+    throw format_error(e.what(), '`'+p.first+'`', e.data(), e.where());
   }
 
   return ret;

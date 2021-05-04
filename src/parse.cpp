@@ -259,7 +259,7 @@ std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size,
     }
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -315,7 +315,7 @@ std::pair<variable*, uint32_t> parse_manipulation(const char* in, uint32_t size,
 
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     if(ret != nullptr) delete ret;
     throw e;
@@ -482,7 +482,7 @@ std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t star
 
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -624,7 +624,7 @@ std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uin
       }
 #ifndef NO_PARSE_CATCH
     }
-    catch(ztd::format_error& e)
+    catch(format_error& e)
     {
       if(ret!=nullptr)
         delete ret;
@@ -732,7 +732,7 @@ std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint3
 
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     if(ret != nullptr)
       delete ret;
@@ -773,7 +773,7 @@ std::pair<pipeline*, uint32_t> parse_pipeline(const char* in, uint32_t size, uin
     }
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -829,7 +829,7 @@ std::pair<condlist*, uint32_t> parse_condlist(const char* in, uint32_t size, uin
     }
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -882,7 +882,7 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
     }
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -936,7 +936,7 @@ std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint3
     g_expecting=old_expect;
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -1004,7 +1004,7 @@ std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32
     g_expecting=old_expect;
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -1033,7 +1033,7 @@ std::pair<subshell*, uint32_t> parse_subshell(const char* in, uint32_t size, uin
     i++;
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -1063,7 +1063,7 @@ std::pair<brace*, uint32_t> parse_brace(const char* in, uint32_t size, uint32_t 
     i++;
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -1099,7 +1099,7 @@ std::pair<function*, uint32_t> parse_function(const char* in, uint32_t size, uin
     i++;
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -1236,7 +1236,7 @@ std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t star
 
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -1322,7 +1322,7 @@ std::pair<case_block*, uint32_t> parse_case(const char* in, uint32_t size, uint3
     i+=4;
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     if(ret != nullptr) delete ret;
     throw e;
@@ -1377,7 +1377,7 @@ std::pair<if_block*, uint32_t> parse_if(const char* in, uint32_t size, uint32_t 
 
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -1434,7 +1434,7 @@ std::pair<for_block*, uint32_t> parse_for(const char* in, uint32_t size, uint32_
     i=lp.second;
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -1469,7 +1469,7 @@ std::pair<while_block*, uint32_t> parse_while(const char* in, uint32_t size, uin
       throw PARSE_ERROR("while is empty", i);
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
     throw e;
@@ -1595,7 +1595,7 @@ std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t 
     }
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     if(ret != nullptr) delete ret;
     throw e;
@@ -1631,10 +1631,10 @@ shmain* parse_text(const char* in, uint32_t size, std::string const& filename)
     i=pp.second;
 #ifndef NO_PARSE_CATCH
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     delete ret;
-    throw ztd::format_error(e.what(), filename, e.data(), e.where());
+    throw format_error(e.what(), filename, e.data(), e.where());
   }
 #endif
   return ret;

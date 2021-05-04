@@ -1,11 +1,12 @@
 #include <iostream>
 
 #include <string.h>
+#include <unistd.h>
+
+#include <fstream>
 
 #include <ztd/options.hpp>
 #include <ztd/shell.hpp>
-
-#include <unistd.h>
 
 #include "util.hpp"
 #include "struc.hpp"
@@ -29,6 +30,7 @@ int main(int argc, char* argv[])
 
   bool optstop=false;
 
+  shmain *sh=nullptr, *tsh=nullptr;
   try
   {
     args=options.process(argc, argv, {.stop_on_argument=true, .output_doubledash=true} );
@@ -37,48 +39,41 @@ int main(int argc, char* argv[])
       optstop=true;
       args.erase(args.begin());
     }
-  }
-  catch(std::exception& e)
-  {
-    std::cerr << e.what() << std::endl;
-    return ERR_OPT;
-  }
 
-  oneshot_opt_process(argv[0]);
 
-  // resolve input
-  std::string file;
-  if(args.size() > 0) // argument provided
-  {
-    if(args[0] == "-" || args[0] == "/dev/stdin") //stdin
+    oneshot_opt_process(argv[0]);
+
+    // resolve input
+    std::string file;
+    if(args.size() > 0) // argument provided
     {
-      file = "/dev/stdin";
+      if(args[0] == "-" || args[0] == "/dev/stdin") //stdin
+      {
+        file = "/dev/stdin";
+      }
+      else
+      {
+        file=args[0];
+      }
     }
     else
     {
-      file=args[0];
+      if(isatty(fileno(stdin))) // stdin is interactive
+      {
+        print_help(argv[0]);
+        return ERR_HELP;
+      }
+      else // is piped
+      {
+        file = "/dev/stdin";
+        args.push_back("/dev/stdin");
+      }
     }
-  }
-  else
-  {
-    if(isatty(fileno(stdin))) // stdin is interactive
-    {
-      print_help(argv[0]);
-      return ERR_HELP;
-    }
-    else // is piped
-    {
-      file = "/dev/stdin";
-      args.push_back("/dev/stdin");
-    }
-  }
 
-  // parsing
+    // parsing
 
-  shmain* sh = new shmain(new list);
-  shmain* tsh = nullptr;
-  try
-  {
+    sh = new shmain(new list);
+
     bool is_exec = false;
     bool first_run = true;
 
@@ -219,7 +214,7 @@ int main(int argc, char* argv[])
     }
   }
 #ifndef NO_PARSE_CATCH
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     if(tsh != nullptr)
       delete tsh;
@@ -228,11 +223,17 @@ int main(int argc, char* argv[])
     return ERR_PARSE;
   }
 #endif
+  catch(ztd::option_error& e)
+  {
+    std::cerr << e.what() << std::endl;
+    return ERR_OPT;
+  }
   catch(std::runtime_error& e)
   {
     if(tsh != nullptr)
       delete tsh;
-    delete sh;
+    if(sh != nullptr)
+      delete sh;
     std::cerr << e.what() << std::endl;
     return ERR_RUNTIME;
   }

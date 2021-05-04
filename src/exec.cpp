@@ -51,9 +51,9 @@ std::vector<condlist*> do_resolve_exec(condlist* cmd, std::string const& filenam
     // cd back
     _cd(dir);
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
-    throw ztd::format_error(e.what(), '`'+p.first+'`', e.data(), e.where());
+    throw format_error(e.what(), '`'+p.first+'`', e.data(), e.where());
   }
 
   return ret;
@@ -187,9 +187,9 @@ void parse_exec(FILE* fd, const char* in, uint32_t size, std::string const& file
     delete t_lst;
 #ifndef NO_PARSE_CATCH
 }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
-    throw ztd::format_error(e.what(), filename, in, e.where());
+    throw format_error(e.what(), filename, in, e.where());
   }
 #endif
 }

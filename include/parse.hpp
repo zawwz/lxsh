@@ -7,8 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include <ztd/filedat.hpp>
-
 #define SPACES          " \t"
 #define SEPARATORS      " \t\n"
 #define ARG_END         " \t\n;#()&|<>"
@@ -27,7 +25,7 @@
 #define ARRAY_ARG_END " \t\n;#()&|<>]"
 
 // macros
-#define PARSE_ERROR(str, i) ztd::format_error(str, "", in, i)
+#define PARSE_ERROR(str, i) format_error(str, "", in, i)
 
 // globals
 
