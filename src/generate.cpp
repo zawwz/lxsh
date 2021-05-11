@@ -292,13 +292,15 @@ std::string case_block::generate(int ind)
     // end of case: ;;
     if(opt_minify && ret[ret.size()-1] == '\n') // ;; can be right after command
       ret.pop_back();
-    ret += indented(";;\n", ind+1);
+    ret += indented(";;", ind+1);
+    if(!opt_minify)
+      ret+="\n";
   }
 
-  // remove ;; from last case
+  // replace ;; from last case with ;
   if(this->cases.size()>0 && opt_minify)
   {
-    ret.erase(ret.size()-3, 2);
+    ret.erase(ret.size()-1, 2);
   }
 
   // close case
