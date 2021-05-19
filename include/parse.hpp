@@ -12,6 +12,7 @@
 #define ARG_END         " \t\n;#()&|<>"
 #define VARNAME_END     " \t\n;#()&|=\"'\\{}/-+"
 #define BLOCK_TOKEN_END " \t\n;#()&|=\"'\\"
+#define BASH_BLOCK_END  " \t\n;#()&|=\"'\\{}"
 #define COMMAND_SEPARATOR  "\n;"
 #define CONTROL_END           "#)"
 #define PIPELINE_END       "\n;#()&"

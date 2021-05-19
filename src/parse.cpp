@@ -1849,10 +1849,10 @@ std::pair<block*, parse_context> parse_block(parse_context ctx)
           newct.has_errored=true;
         }
         newct.i = skip_unread(newct);
-        auto wp2=get_word(newct, VARNAME_END);
+        auto wp2=get_word(newct, BASH_BLOCK_END);
         if(!valid_name(wp2.first))
         {
-          parse_error( strf("Bad function name: '%s'", word.c_str()), newct );
+          parse_error( strf("Bad function name: '%s'", wp2.first.c_str()), newct );
         }
 
         newct.i = wp2.second;
