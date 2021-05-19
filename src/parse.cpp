@@ -1566,8 +1566,6 @@ std::pair<case_block*, parse_context> parse_case(parse_context ctx)
       {
         parse_error("Unexpected token ';'", ctx);
       }
-
-      ctx.i++;
       ctx.i=skip_unread(ctx);
     }
 
