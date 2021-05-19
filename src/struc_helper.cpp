@@ -9,7 +9,7 @@
 
 arg* make_arg(std::string const& in)
 {
-  return parse_arg(in.c_str(), in.size(), 0).first;
+  return parse_arg(make_context(in)).first;
 }
 
 cmd* make_cmd(std::vector<std::string> const& args)
@@ -34,7 +34,7 @@ cmd* make_cmd(std::vector<arg*> const& args)
 
 cmd* make_cmd(std::string const& in)
 {
-  return parse_cmd(in.c_str(), in.size(), 0).first;
+  return parse_cmd(make_context(in)).first;
 }
 
 pipeline* make_pipeline(std::vector<block*> const& bls)
@@ -48,22 +48,22 @@ pipeline* make_pipeline(std::vector<block*> const& bls)
 
 pipeline* make_pipeline(std::string const& in)
 {
-  return parse_pipeline(in.c_str(), in.size(), 0).first;
+  return parse_pipeline(make_context(in)).first;
 }
 
 condlist* make_condlist(std::string const& in)
 {
-  return parse_condlist(in.c_str(), in.size(), 0).first;
+  return parse_condlist(make_context(in)).first;
 }
 
 list* make_list(std::string const& in)
 {
-  return parse_list_until(in.c_str(), in.size(), 0, 0).first;
+  return parse_list_until(make_context(in), 0).first;
 }
 
 block* make_block(std::string const& in)
 {
-  return parse_block(in.c_str(), in.size(), 0).first;
+  return parse_block(make_context(in)).first;
 }
 
 
@@ -71,7 +71,7 @@ block* make_block(std::string const& in)
 
 arg* copy(arg* in) {
   std::string str = in->generate(0);
-  return parse_arg(str.c_str(), str.size(), 0).first;
+  return parse_arg(make_context(str)).first;
 }
 
 // modifiers

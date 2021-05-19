@@ -62,13 +62,26 @@ subarg: can be one of
 
 */
 
+struct parse_context {
+  const char* data=NULL;
+  uint64_t size=0;
+  uint64_t i=0;
+  const char* filename="";
+  bool bash=false;
+  const char* expecting="";
+  const char* here_delimiter="";
+  const char* here_doc="";
+  const char operator[](uint64_t a) { return data[a]; }
+  bool has_errored=false;
+};
+
 // exceptions
 class format_error : public std::exception
 {
 public:
   //! @brief Conctructor
   inline format_error(const std::string& what, const std::string& origin, const std::string& data, int where)  { desc=what; index=where; filename=origin; sdat=data; }
-
+  inline format_error(const std::string& what, parse_context const& ctx) { desc=what; index=ctx.i; filename=ctx.filename; sdat=ctx.data; }
   //! @brief Error message
   inline const char * what () const throw () {return desc.c_str();}
   //! @brief Origin of the data, name of imported file, otherwise empty if generated
@@ -83,6 +96,7 @@ private:
   std::string filename;
   std::string sdat;
 };
+
 
 // objects
 

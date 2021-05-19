@@ -300,7 +300,7 @@ std::string case_block::generate(int ind)
   // replace ;; from last case with ;
   if(this->cases.size()>0 && opt_minify)
   {
-    ret.erase(ret.size()-1, 2);
+    ret.pop_back();
   }
 
   // close case

@@ -79,6 +79,9 @@ int main(int argc, char* argv[])
 
     // do parsing
     bool shebang_is_bin=false;
+    bool parse_bash=false;
+    parse_context ctx;
+    std::string binshebang;
     for(uint32_t i=0 ; i<args.size() ; i++)
     {
       std::string file = args[i];
@@ -91,7 +94,9 @@ int main(int argc, char* argv[])
       {
         first_run=false;
         // resolve shebang
-        shebang_is_bin = ( basename(argv[0]) == basename(shebang) );
+        binshebang = basename(shebang);
+        shebang_is_bin = ( basename(argv[0]) == binshebang );
+        parse_bash = (options["debashify"] || binshebang == "bash" || binshebang == "lxsh");
 
         // detect if need execution
         if(options['e'])
@@ -108,7 +113,10 @@ int main(int argc, char* argv[])
           throw std::runtime_error("Option -e must be before file");
 
         if(shebang_is_bin) // enable debashify option
+        {
+          shebang="#!/bin/sh";
           options["debashify"].activated=true;
+        }
 
         oneshot_opt_process(argv[0]);
         get_opts();
@@ -119,25 +127,27 @@ int main(int argc, char* argv[])
       if(!add_include(file))
         continue;
 
+      ctx.data=filecontents.data();
+
+
+      ctx = make_context(filecontents, file, parse_bash);
       if(is_exec)
       {
-        if(options["debashify"])
-          shebang = "#!/bin/sh";
-        if(options["debashify"] || basename(shebang) == "bash")
-          g_bash = true;
         args.erase(args.begin());
-        return exec_process(shebang.substr(2), args, filecontents, file);
+        return exec_process(shebang.substr(2), args, ctx);
       }
       else
       {
-        tsh = parse_text(filecontents, file);
+        auto pp = parse_text(ctx);
+        tsh = pp.first;
+        ctx = pp.second;
         if(shebang_is_bin) // resolve lxsh shebang to sh
           tsh->shebang="#!/bin/sh";
 
         /* mid processing */
         // resolve/include
         if(g_include || g_resolve)
-          resolve(tsh);
+          resolve(tsh, ctx);
 
         // concatenate to main
         sh->concat(tsh);

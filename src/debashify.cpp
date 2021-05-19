@@ -473,7 +473,7 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       gen=gen.substr(2);
       gen.pop_back();
       // create cmd out of arguments
-      arglist* args = parse_arglist( gen.c_str(), gen.size(), 0 ).first;
+      arglist* args = parse_arglist( make_context(gen) ).first;
       cmd* c = new cmd(args);
       // cmd first argument is _lxsh_X_create
       if(params->arrays[varname])
@@ -569,7 +569,7 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       gen=gen.substr(3);
       gen.pop_back();
       // create cmd out of arguments
-      arglist* args = parse_arglist( gen.c_str(), gen.size(), 0 ).first;
+      arglist* args = parse_arglist( make_context(gen) ).first;
       cmd* c = new cmd(args);
       // cmd first argument is _lxsh_array_create
       if(params->arrays[varname])

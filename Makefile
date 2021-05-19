@@ -17,7 +17,6 @@ CC=g++
 CXXFLAGS= -I$(IDIR) -Wall -pedantic -std=c++20
 ifeq	($(DEBUG),true)
   # debugging flags
-  CC=clang++
   CXXFLAGS += -g -D NO_PARSE_CATCH
 else
   # release flags

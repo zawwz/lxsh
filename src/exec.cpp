@@ -18,16 +18,16 @@
 #define PIPE_READ  0
 #define PIPE_WRITE 1
 
-std::vector<condlist*> do_include_exec(condlist* cmd, std::string const& filename, FILE* fd)
+std::vector<condlist*> do_include_exec(condlist* cmd, parse_context ctx, FILE* fd)
 {
   std::vector<condlist*> ret;
 
   std::string dir;
-  auto incs=do_include_raw(cmd, filename, &dir);
+  auto incs=do_include_raw(cmd, ctx, &dir);
 
   for(auto it: incs)
   {
-    parse_exec(fd, it.second, it.first);
+    parse_exec(fd, make_context(ctx, it.second, it.first));
   }
   // cd back
   _cd(dir);
@@ -36,7 +36,7 @@ std::vector<condlist*> do_include_exec(condlist* cmd, std::string const& filenam
 }
 
 // if first is nullptr: is a string
-std::vector<condlist*> do_resolve_exec(condlist* cmd, std::string const& filename, FILE* fd)
+std::vector<condlist*> do_resolve_exec(condlist* cmd, parse_context ctx, FILE* fd)
 {
   std::vector<condlist*> ret;
 
@@ -45,9 +45,9 @@ std::vector<condlist*> do_resolve_exec(condlist* cmd, std::string const& filenam
   {
     // get
     std::string dir;
-    p=do_resolve_raw(cmd, filename, &dir);
+    p=do_resolve_raw(cmd, ctx, &dir);
     // do parse
-    parse_exec(fd, p.second, filename);
+    parse_exec(fd, make_context(ctx, p.second, p.first));
     // cd back
     _cd(dir);
   }
@@ -61,7 +61,7 @@ std::vector<condlist*> do_resolve_exec(condlist* cmd, std::string const& filenam
 
 // -- OBJECT CALLS --
 
-bool resolve_condlist_exec(condlist* in, std::string const& filename, FILE* fd)
+bool resolve_condlist_exec(condlist* in, parse_context ctx, FILE* fd)
 {
   cmd* tc = in->first_cmd();
   if(tc == nullptr)
@@ -71,23 +71,23 @@ bool resolve_condlist_exec(condlist* in, std::string const& filename, FILE* fd)
 
   if(g_include && strcmd == "%include")
   {
-    do_include_exec(in, filename, fd);
+    do_include_exec(in, ctx, fd);
     return true;
   }
   else if(g_resolve && strcmd == "%resolve")
   {
-    do_resolve_exec(in, filename, fd);
+    do_resolve_exec(in, ctx, fd);
     return true;
   }
   return false;
 }
 
 
-bool resolve_exec(condlist* in, std::string const& filename, FILE* fd)
+bool resolve_exec(condlist* in, parse_context ctx, FILE* fd)
 {
-  if(!resolve_condlist_exec(in, filename, fd))
+  if(!resolve_condlist_exec(in, ctx, fd))
   {
-    resolve(in, (std::string*) &filename);
+    resolve(in, ctx);
     return false;
   }
   return true;
@@ -138,60 +138,57 @@ std::string random_string()
   return ret;
 }
 
-void parse_exec(FILE* fd, const char* in, uint32_t size, std::string const& filename)
+void parse_exec(FILE* fd, parse_context ctx)
 {
-  uint32_t i=skip_unread(in, size, 0);
-#ifndef NO_PARSE_CATCH
-  try
+  ctx.i=skip_unread(ctx);
+
+  debashify_params debash_params;
+  list* t_lst=new list;
+  if(t_lst == nullptr)
+    throw std::runtime_error("Alloc error");
+  while(ctx.i<ctx.size)
   {
-#endif
-    ;
-    debashify_params debash_params;
-    list* t_lst=new list;
-    if(t_lst == nullptr)
-      throw std::runtime_error("Alloc error");
-    while(i<size)
+    auto pp=parse_condlist(ctx);
+    ctx=pp.second;
+    if(ctx.has_errored)
     {
-      auto pp=parse_condlist(in, size, i);
-      i=pp.second;
-      t_lst->add(pp.first);
-      if(g_resolve || g_include)
+      parse_list_until(ctx, 0);
+      throw std::runtime_error("Aborting due to previous errors");
+    }
+    t_lst->add(pp.first);
+    if(g_resolve || g_include)
+    {
+      if(resolve_exec(t_lst->cls[0], ctx, fd))
       {
-        if(resolve_exec(t_lst->cls[0], filename, fd))
-        {
-          t_lst->clear();
-          continue;
-        }
-      }
-      if(options["debashify"])
-        debashify(t_lst, &debash_params);
-
-
-      std::string gen=t_lst->generate(0);
-      t_lst->clear();
-
-      fprintf(fd, "%s", gen.c_str());
-
-      if(i < size)
-      {
-        if(in[i] == '#')
-          ; // skip here
-        else if(is_in(in[i], COMMAND_SEPARATOR))
-          i++; // skip on next char
-        else if(is_in(in[i], CONTROL_END))
-          throw PARSE_ERROR(strf("Unexpected token: '%c'", in[i]), i);
-
-        i = skip_unread(in, size, i);
+        t_lst->clear();
+        continue;
       }
     }
-    delete t_lst;
-#ifndef NO_PARSE_CATCH
-}
-  catch(format_error& e)
-  {
-    throw format_error(e.what(), filename, in, e.where());
+    if(options["debashify"])
+      debashify(t_lst, &debash_params);
+
+
+    std::string gen=t_lst->generate(0);
+    t_lst->clear();
+
+    fprintf(fd, "%s", gen.c_str());
+
+    if(ctx.i < ctx.size)
+    {
+      if(ctx[ctx.i] == '#')
+        ; // skip here
+      else if(is_in(ctx[ctx.i], COMMAND_SEPARATOR))
+        ctx.i++; // skip on next char
+      else if(is_in(ctx[ctx.i], CONTROL_END))
+      {
+        format_error(strf("Unexpected token: '%c'", ctx[ctx.i]), ctx);
+        return;
+      }
+
+      ctx.i = skip_unread(ctx);
+    }
   }
-#endif
+  delete t_lst;
 }
 
 pid_t forkexec(const char* bin, char *const args[])
@@ -230,7 +227,7 @@ int wait_pid(pid_t pid)
   return WEXITSTATUS(stat);
 }
 
-int exec_process(std::string const& runtime, std::vector<std::string> const& args, std::string const& filecontents, std::string const& file)
+int exec_process(std::string const& runtime, std::vector<std::string> const& args, parse_context ctx)
 {
   std::vector<std::string> strargs = split(runtime, " \t");
   std::vector<char*> runargs;
@@ -250,8 +247,6 @@ int exec_process(std::string const& runtime, std::vector<std::string> const& arg
   runargs.push_back(NULL);
 
   pid_t pid=0;
-  // std::string test="echo Hello world\nexit 10\n";
-  // fprintf(ffd, "%s\n",, test.c_str(), test.size());
   FILE* ffd=0;
   try
   {
@@ -264,7 +259,7 @@ int exec_process(std::string const& runtime, std::vector<std::string> const& arg
     }
     for(auto it: lxsh_extend_fcts)
       fprintf(ffd, "%s\n", it.second.code);
-    parse_exec(ffd, filecontents, file);
+    parse_exec(ffd, ctx);
   }
   catch(std::runtime_error& e)
   {

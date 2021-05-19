@@ -431,7 +431,7 @@ std::set<std::string> get_processors(std::string const& in)
       if(ln.size()>1 && ln[0] == '#' && is_alphanum(ln[1]))
       {
         i+=ln.size();
-        ret.insert(get_word(ln.c_str(), ln.size(), 1, SEPARATORS).first);
+        ret.insert(get_word(make_context(ln.substr(1)), SEPARATORS).first);
       }
       else
         break;
@@ -450,7 +450,8 @@ bool r_do_string_processor(_obj* in)
     {
       try
       {
-        shmain* tsh = parse_text(t->val.substr(1, t->val.size()-2));
+        std::string stringcode = t->val.substr(1, t->val.size()-2);
+        shmain* tsh = parse_text( stringcode ).first;
         require_rescan_all();
         if(options["remove-unused"])
           delete_unused( tsh, re_var_exclude, re_fct_exclude );

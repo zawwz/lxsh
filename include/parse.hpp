@@ -25,59 +25,84 @@
 #define ARRAY_ARG_END " \t\n;#()&|<>]"
 
 // macros
-#define PARSE_ERROR(str, i) format_error(str, "", in, i)
+// #define PARSE_ERROR_I(str, ctx, i) format_error(str, ctx.filename, ctx.data, i)
+// #define PARSE_ERROR(str, ctx) format_error(str, ctx.filename, ctx.data, ctx.i)
+// #define PARSE_ERROR_I(str, ctx, i)  { printFormatError(format_error(str, ctx.filename, ctx.data, i)); ctx.has_errored=true; }
+// #define PARSE_ERROR(str, ctx) { printFormatError(format_error(str, ctx.filename, ctx.data, ctx.i)); ctx.has_errored=true; }
 
+// structs
+
+void parse_error(std::string const& message, parse_context& ctx);
+
+void parse_error(std::string const& message, parse_context& ctx, uint64_t i);
 // globals
-
-extern bool g_bash;
 
 extern const std::vector<std::string> posix_cmdvar;
 extern const std::vector<std::string> bash_cmdvar;
 
 std::string import_file(std::string const& path);
 
-shmain* parse_text(const char* in, uint32_t size, std::string const& filename="");
-inline shmain* parse_text(std::string const& in, std::string const& filename="") { return parse_text(in.c_str(), in.size(), filename); }
-inline shmain* parse(std::string const& file) { return parse_text(import_file(file), file); }
+std::pair<shmain*, parse_context> parse_text(parse_context context);
+std::pair<shmain*, parse_context> parse_text(std::string const& in, std::string const& filename="");
+inline std::pair<shmain*, parse_context> parse(std::string const& file) { return parse_text(import_file(file), file); }
+
+// tools
+parse_context make_context(std::string const& in, std::string const& filename="", bool bash=false);
+parse_context make_context(parse_context ctx, std::string const& in="", std::string const& filename="", bool bash=false);
+parse_context make_context(parse_context ctx, uint64_t i);
+parse_context operator+(parse_context ctx, int64_t a);
+parse_context operator-(parse_context ctx, int64_t a);
 
 // ** unit parsers ** //
 
 /* util parsers */
-bool word_eq(const char* word, const char* in, uint32_t size, uint32_t start, const char* end_set=NULL);
-std::pair<std::string,uint32_t> get_word(const char* in, uint32_t size, uint32_t start, const char* end_set);
+uint32_t word_eq(const char* word, const char* in, uint32_t size, uint32_t start, const char* end_set=NULL);
+inline bool word_eq(const char* word, parse_context const& ct, const char* end_set=NULL) {
+  return word_eq(word, ct.data, ct.size, ct.i, end_set);
+}
+std::pair<std::string,uint32_t> get_word(parse_context ct, const char* end_set);
 uint32_t skip_chars(const char* in, uint32_t size, uint32_t start, const char* set);
+inline uint32_t skip_chars(parse_context const& ct, const char* set) {
+  return skip_chars(ct.data, ct.size, ct.i, set);
+}
 uint32_t skip_until(const char* in, uint32_t size, uint32_t start, const char* set);
+inline uint32_t skip_until(parse_context const& ct, const char* set) {
+  return skip_until(ct.data, ct.size, ct.i, set);
+}
 uint32_t skip_unread(const char* in, uint32_t size, uint32_t start);
+inline uint32_t skip_unread(parse_context const& ct) {
+  return skip_unread(ct.data, ct.size, ct.i);
+}
 
 // list
-std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint32_t start, char end_c, const char* expecting=NULL);
-std::pair<list*, uint32_t> parse_list_until(const char* in, uint32_t size, uint32_t start, std::string const& end_word);
-std::tuple<list*, uint32_t, std::string> parse_list_until(const char* in, uint32_t size, uint32_t start, std::vector<std::string> const& end_words, const char* expecting=NULL);
+std::pair<list*, parse_context> parse_list_until(parse_context ct, char end_c, const char* expecting=NULL);
+std::pair<list*, parse_context> parse_list_until(parse_context ct, std::string const& end_word);
+std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ct, std::vector<std::string> const& end_words, const char* expecting=NULL);
 // name
-std::pair<variable*, uint32_t> parse_var(const char* in, uint32_t size, uint32_t start, bool specialvars=true, bool array=false);
+std::pair<variable*, parse_context> parse_var(parse_context ct, bool specialvars=true, bool array=false);
 
 // subarg parsers
-std::pair<arithmetic*, uint32_t> parse_arithmetic(const char* in, uint32_t size, uint32_t start);
-std::pair<variable*, uint32_t> parse_manipulation(const char* in, uint32_t size, uint32_t start);
+std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ct);
+std::pair<variable*, parse_context> parse_manipulation(parse_context ct);
 // arg parser
-std::pair<arg*, uint32_t> parse_arg(const char* in, uint32_t size, uint32_t start, const char* end=ARG_END, const char* unexpected=SPECIAL_TOKENS, bool doquote=true);
+std::pair<arg*, parse_context> parse_arg(parse_context ct, const char* end=ARG_END, const char* unexpected=SPECIAL_TOKENS, bool doquote=true);
 // redirect parser
-std::pair<redirect*, uint32_t> parse_redirect(const char* in, uint32_t size, uint32_t start);
+std::pair<redirect*, parse_context> parse_redirect(parse_context ct);
 // arglist parser
-std::pair<arglist*, uint32_t> parse_arglist(const char* in, uint32_t size, uint32_t start, bool hard_error=false, std::vector<redirect*>* redirs=nullptr);
+std::pair<arglist*, parse_context> parse_arglist(parse_context ct, bool hard_error=false, std::vector<redirect*>* redirs=nullptr);
 // block parsers
-std::pair<block*, uint32_t> parse_block(const char* in, uint32_t size, uint32_t start);
-std::pair<cmd*, uint32_t> parse_cmd(const char* in, uint32_t size, uint32_t start);
-std::pair<function*, uint32_t> parse_function(const char* in, uint32_t size, uint32_t start, const char* after="()");
-std::pair<subshell*, uint32_t> parse_subshell(const char* in, uint32_t size, uint32_t start);
-std::pair<brace*, uint32_t> parse_brace(const char* in, uint32_t size, uint32_t start);
-std::pair<case_block*, uint32_t> parse_case(const char* in, uint32_t size, uint32_t start);
-std::pair<if_block*, uint32_t> parse_if(const char* in, uint32_t size, uint32_t start);
-std::pair<for_block*, uint32_t> parse_for(const char* in, uint32_t size, uint32_t start);
-std::pair<while_block*, uint32_t> parse_while(const char* in, uint32_t size, uint32_t start);
+std::pair<block*, parse_context> parse_block(parse_context ct);
+std::pair<cmd*, parse_context> parse_cmd(parse_context ct);
+std::pair<function*, parse_context> parse_function(parse_context ct, const char* after="()");
+std::pair<subshell*, parse_context> parse_subshell(parse_context ct);
+std::pair<brace*, parse_context> parse_brace(parse_context ct);
+std::pair<case_block*, parse_context> parse_case(parse_context ct);
+std::pair<if_block*, parse_context> parse_if(parse_context ct);
+std::pair<for_block*, parse_context> parse_for(parse_context ct);
+std::pair<while_block*, parse_context> parse_while(parse_context ct);
 // pipeline parser
-std::pair<pipeline*, uint32_t> parse_pipeline(const char* in, uint32_t size, uint32_t start);
+std::pair<pipeline*, parse_context> parse_pipeline(parse_context ct);
 // condlist parser
-std::pair<condlist*, uint32_t> parse_condlist(const char* in, uint32_t size, uint32_t start);
+std::pair<condlist*, parse_context> parse_condlist(parse_context ct);
 
 #endif //PARSE_HPP
