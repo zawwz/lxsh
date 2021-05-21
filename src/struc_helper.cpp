@@ -58,7 +58,8 @@ condlist* make_condlist(std::string const& in)
 
 list* make_list(std::string const& in)
 {
-  return parse_list_until(make_context(in), 0).first;
+  auto t = parse_list_until(make_context(in));
+  return std::get<0>(t);
 }
 
 block* make_block(std::string const& in)

@@ -152,7 +152,7 @@ void parse_exec(FILE* fd, parse_context ctx)
     ctx=pp.second;
     if(ctx.has_errored)
     {
-      parse_list_until(ctx, 0);
+      parse_list_until(ctx);
       throw std::runtime_error("Aborting due to previous errors");
     }
     t_lst->add(pp.first);

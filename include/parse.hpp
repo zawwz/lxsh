@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <tuple>
 
 #define SPACES          " \t"
 #define SEPARATORS      " \t\n"
@@ -33,9 +34,13 @@
 
 // structs
 
-void parse_error(std::string const& message, parse_context& ctx);
+struct list_parse_options {
+  char end_char=0;
+  bool word_mode=false;
+  std::vector<std::string> end_words={};
+  const char* expecting=NULL;
+};
 
-void parse_error(std::string const& message, parse_context& ctx, uint64_t i);
 // globals
 
 extern const std::vector<std::string> posix_cmdvar;
@@ -48,11 +53,16 @@ std::pair<shmain*, parse_context> parse_text(std::string const& in, std::string 
 inline std::pair<shmain*, parse_context> parse(std::string const& file) { return parse_text(import_file(file), file); }
 
 // tools
+
 parse_context make_context(std::string const& in, std::string const& filename="", bool bash=false);
 parse_context make_context(parse_context ctx, std::string const& in="", std::string const& filename="", bool bash=false);
 parse_context make_context(parse_context ctx, uint64_t i);
 parse_context operator+(parse_context ctx, int64_t a);
 parse_context operator-(parse_context ctx, int64_t a);
+
+// error handlers
+void parse_error(std::string const& message, parse_context& ctx);
+void parse_error(std::string const& message, parse_context& ctx, uint64_t i);
 
 // ** unit parsers ** //
 
@@ -76,9 +86,10 @@ inline uint32_t skip_unread(parse_context const& ct) {
 }
 
 // list
-std::pair<list*, parse_context> parse_list_until(parse_context ct, char end_c, const char* expecting=NULL);
-std::pair<list*, parse_context> parse_list_until(parse_context ct, std::string const& end_word);
-std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ct, std::vector<std::string> const& end_words, const char* expecting=NULL);
+// std::pair<list*, parse_context> parse_list_until(parse_context ct, char end_c, const char* expecting=NULL);
+// std::pair<list*, parse_context> parse_list_until(parse_context ct, std::string const& end_word);
+// std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ct, std::vector<std::string> const& end_words, const char* expecting=NULL);
+std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ct, list_parse_options opts={});
 // name
 std::pair<variable*, parse_context> parse_var(parse_context ct, bool specialvars=true, bool array=false);
 

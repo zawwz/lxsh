@@ -25,7 +25,6 @@ const std::vector<std::string> out_reserved_words = { "then", "else", "fi", "esa
 
 // stuff
 
-
 std::string unexpected_token(char c)
 {
   std::string print;
@@ -442,9 +441,9 @@ parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool 
     // get subshell
     parse_context newct = ctx;
     ctx.size=k;
-    auto r=parse_list_until(newct, 0);
-    ret->add(new subshell_subarg(new subshell(r.first), is_quoted));
-    ctx = r.second;
+    auto r=parse_list_until(newct);
+    ret->add(new subshell_subarg(new subshell(std::get<0>(r)), is_quoted));
+    ctx = std::get<1>(r);
     ctx.i++;
     j = ctx.i;
   }
@@ -617,6 +616,35 @@ std::pair<arg*, parse_context> parse_arg(parse_context ctx, const char* end, con
   return std::make_pair(ret, ctx);
 }
 
+parse_context parse_heredocument(parse_context ctx)
+{
+  if(ctx.here_document == nullptr)
+    return ctx;
+
+  uint32_t j=ctx.i;
+  char* tc=NULL;
+  std::string delimitor=ctx.here_delimitor;
+  tc = (char*) strstr(ctx.data+ctx.i, std::string("\n"+delimitor+"\n").c_str()); // find delimitor
+  if(tc!=NULL) // delimitor was found
+  {
+    ctx.i = (tc-ctx.data)+delimitor.size()+1;
+  }
+  else
+  {
+    ctx.i = ctx.size;
+  }
+  // std::string tmpparse=std::string(ctx.data+j, ctx.i-j);
+  auto pval = parse_arg({ .data=ctx.data, .size=ctx.i, .i=j, .bash=ctx.bash} , NULL);
+  ctx.here_document->here_document = pval.first;
+
+  //
+  ctx.here_document=nullptr;
+  free(ctx.here_delimitor);
+  ctx.here_delimitor=NULL;
+
+  return ctx;
+}
+
 std::pair<redirect*, parse_context> parse_redirect(parse_context ctx)
 {
   bool is_redirect=false;
@@ -717,14 +745,20 @@ std::pair<redirect*, parse_context> parse_redirect(parse_context ctx)
         ctx.i = skip_chars(ctx, SPACES);
         if(ret->op == "<<")
         {
+          if(ctx.here_document != nullptr)
+          {
+            parse_error("unsupported multiple here documents at the same time", ctx);
+            return std::make_pair(ret, ctx);
+          }
+          else
+            ctx.here_document=ret;
+
           auto pa = parse_arg(ctx);
           std::string delimitor = pa.first->string();
-          delete pa.first;
-          pa.first = nullptr;
 
           if(delimitor == "")
           {
-            parse_error("Non-static or empty text input delimitor", ctx);
+            parse_error("non-static or empty here document delimitor", ctx);
           }
 
           if(delimitor.find('"') != std::string::npos || delimitor.find('\'') != std::string::npos || delimitor.find('\\') != std::string::npos)
@@ -732,34 +766,11 @@ std::pair<redirect*, parse_context> parse_redirect(parse_context ctx)
             delimitor = ztd::sh("echo "+delimitor); // shell resolve the delimitor
             delimitor.pop_back(); // remove \n
           }
-
+          ret->target = pa.first;
           ctx = pa.second;
-          ctx.i = skip_chars(ctx, SPACES);  // skip spaces
-
-          if(ctx[ctx.i] == '#') // skip comment
-            ctx.i = skip_until(ctx, "\n"); //skip to endline
-          if(ctx[ctx.i] != '\n') // has another arg
-          {
-            parse_error("Additionnal argument after text input delimitor", ctx);
-            return std::make_pair(ret, ctx);
-          }
-
-          ctx.i++;
-          uint32_t j=ctx.i;
-          char* tc=NULL;
-          tc = (char*) strstr(ctx.data+ctx.i, std::string("\n"+delimitor+"\n").c_str()); // find delimitor
-          if(tc!=NULL) // delimitor was found
-          {
-            ctx.i = (tc-ctx.data)+delimitor.size()+1;
-          }
-          else
-          {
-            ctx.i = ctx.size;
-          }
-          std::string tmpparse=std::string(ctx.data+j, ctx.i-j);
-          auto pval = parse_arg({ .data=tmpparse.c_str(), .size=tmpparse.size(), .i=0, .bash=ctx.bash}, NULL);
-          ret->target = pval.first;
-          ret->target->insert(0, delimitor+"\n");
+          // copy delimitor
+          ctx.here_delimitor = (char*) malloc(delimitor.length()+1);
+          strcpy(ctx.here_delimitor, delimitor.c_str());
         }
         else
         {
@@ -1017,67 +1028,7 @@ std::pair<condlist*, parse_context> parse_condlist(parse_context ctx)
   return std::make_pair(ret, ctx);
 }
 
-std::pair<list*, parse_context> parse_list_until(parse_context ctx, char end_c, const char* expecting)
-{
-  list* ret = new list;
-  ctx.i=skip_unread(ctx);
-
-#ifndef NO_PARSE_CATCH
-  try
-  {
-#endif
-;
-    const char* old_expect=ctx.expecting;
-    if(ctx.expecting!=NULL)
-      ctx.expecting = expecting;
-
-    while(ctx[ctx.i] != end_c)
-    {
-      auto pp=parse_condlist(ctx);
-      ret->add(pp.first);
-      ctx=pp.second;
-
-      if(ctx.i < ctx.size)
-      {
-        if(ctx[ctx.i] == end_c) // end char, stop here
-          break;
-        else if(ctx[ctx.i] == '#')
-          ; // skip here
-        else if(is_in(ctx[ctx.i], COMMAND_SEPARATOR))
-          ctx.i++; // skip on next char
-        else if(is_in(ctx[ctx.i], CONTROL_END))
-        {
-          parse_error( unexpected_token(ctx[ctx.i]), ctx);
-          return std::make_pair(ret, ctx);
-        }
-
-        ctx.i = skip_unread(ctx);
-      }
-
-      if(ctx.i>=ctx.size)
-      {
-        if(end_c != 0)
-        {
-          parse_error(strf("Expecting '%s'", expecting), ctx);
-          return std::make_pair(ret, ctx);
-        }
-        else
-          break;
-      }
-    }
-    ctx.expecting = old_expect;
-#ifndef NO_PARSE_CATCH
-  }
-  catch(format_error& e)
-  {
-    delete ret;
-    throw e;
-  }
-#endif
-  return std::make_pair(ret, ctx);
-}
-
-std::pair<list*, parse_context> parse_list_until(parse_context ctx, std::string const& end_word)
+std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ctx, list_parse_options opts)
 {
   list* ret = new list;
   ctx.i=skip_unread(ctx);
@@ -1088,114 +1039,114 @@ std::pair<list*, parse_context> parse_list_until(parse_context ctx, std::string 
   {
 #endif
 ;
+
+    char& end_c = opts.end_char;
+    std::vector<std::string>& end_words = opts.end_words;
+
     const char* old_expect=ctx.expecting;
 
-    ctx.expecting=end_word.c_str();
-
-    while(true)
-    {
-      // check word
-      auto wp=get_word(ctx, ARG_END);
-      if(wp.first == end_word)
-      {
-        ctx.i=wp.second;
-        break;
-      }
-      // do a parse
-      auto pp=parse_condlist(ctx);
-      ret->add(pp.first);
-      ctx=pp.second;
-      if(ctx.i<ctx.size)
-      {
-        if(ctx[ctx.i] == '#')
-          ; // skip here
-        else if(is_in(ctx[ctx.i], COMMAND_SEPARATOR))
-          ctx.i++;
-        else if(is_in(ctx[ctx.i], CONTROL_END))
-        {
-          parse_error(unexpected_token(ctx[ctx.i]), ctx);
-          return std::make_pair(ret, ctx);
-        }
-
-        ctx.i = skip_unread(ctx);
-      }
-      // word wasn't found
-      if(ctx.i>=ctx.size)
-      {
-        parse_error(strf("Expecting '%s'", ctx.expecting), ctx);
-        return std::make_pair(ret, ctx);
-      }
-    }
-    ctx.expecting=old_expect;
-#ifndef NO_PARSE_CATCH
-  }
-  catch(format_error& e)
-  {
-    delete ret;
-    throw e;
-  }
-#endif
-  return std::make_pair(ret, ctx);
-}
-
-
-std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ctx, std::vector<std::string> const& end_words, const char* expecting)
-{
-  list* ret = new list;
-  ctx.i=skip_unread(ctx);
-  std::string found_end_word;
-
-#ifndef NO_PARSE_CATCH
-  try
-  {
-#endif
-;
-    const char* old_expect=ctx.expecting;
-
-    if(expecting!=NULL)
-      ctx.expecting=expecting;
-    else
+    if(opts.expecting!=NULL)
+      ctx.expecting=opts.expecting;
+    else if(opts.word_mode)
       ctx.expecting=end_words[0].c_str();
+    else
+      ctx.expecting=std::string(&end_c, 1).c_str();
 
     bool stop=false;
     while(true)
     {
-      // check words
-      auto wp=get_word(ctx, ARG_END);
-      for(auto it: end_words)
+      if(opts.word_mode)
       {
-        if(it == ";" && ctx[ctx.i] == ';')
+        // check words
+        auto wp=get_word(ctx, ARG_END);
+        for(auto it: end_words)
         {
-          found_end_word=";";
-          ctx.i++;
-          stop=true;
-          break;
+          if(it == ";" && ctx[ctx.i] == ';')
+          {
+            found_end_word=";";
+            ctx.i++;
+            stop=true;
+            break;
+          }
+          if(wp.first == it)
+          {
+            found_end_word=it;
+            ctx.i=wp.second;
+            stop=true;
+            break;
+          }
         }
-        if(wp.first == it)
-        {
-          found_end_word=it;
-          ctx.i=wp.second;
-          stop=true;
+        if(stop)
           break;
-        }
       }
-      if(stop)
+      else if(ctx[ctx.i] == end_c)
+      {
         break;
+      }
       // do a parse
       auto pp=parse_condlist(ctx);
       ret->add(pp.first);
       ctx=pp.second;
-      if(ctx[ctx.i] == '#')
+
+      if(!opts.word_mode && ctx[ctx.i] == end_c)
+        break; // reached end char: stop here
+      else if(ctx[ctx.i] == '\n')
+      {
+        if(ctx.here_document != nullptr)
+          ctx = parse_heredocument(ctx+1);
+        // do here document parse
+      }
+      else if(ctx[ctx.i] == '#')
         ; // skip here
       else if(is_in(ctx[ctx.i], COMMAND_SEPARATOR))
-        ctx.i++; // skip on next
+        ; // skip on next
+      else if(is_in(ctx[ctx.i], CONTROL_END))
+      {
+        // control end: unexpected
+        parse_error( unexpected_token(ctx[ctx.i]), ctx);
+        break;
+      }
+
+      if(ctx.here_document != nullptr)
+      {
+        uint8_t do_twice=2;
+        // case of : cat << EOF ;
+        while(do_twice>0)
+        {
+          if(ctx[ctx.i] == '\n')
+          {
+            ctx = parse_heredocument(ctx+1);
+            break;
+          }
+          else if(ctx[ctx.i] == '#')
+          {
+            ctx.i = skip_until(ctx, "\n"); //skip to endline
+            ctx = parse_heredocument(ctx+1);
+            break;
+          }
+          skip_chars(ctx, SPACES);
+          do_twice--;
+        }
+        // case of : cat << EOF ; ;
+        if(do_twice==0 && is_in(ctx[ctx.i], COMMAND_SEPARATOR))
+          parse_error( unexpected_token(ctx[ctx.i]), ctx);
+      }
+
+      if(is_in(ctx[ctx.i], COMMAND_SEPARATOR))
+        ctx.i++;
 
       ctx.i = skip_unread(ctx);
+
       // word wasn't found
       if(ctx.i>=ctx.size)
       {
-        parse_error(strf("Expecting '%s'", ctx.expecting), ctx);
-        return std::make_tuple(ret, ctx, "");
+        if(opts.word_mode || opts.end_char != 0)
+        {
+          parse_error(strf("Expecting '%s'", ctx.expecting), ctx);
+          return std::make_tuple(ret, ctx, "");
+        }
+        else
+          break;
       }
     }
     ctx.expecting=old_expect;
@@ -1224,9 +1175,9 @@ std::pair<subshell*, parse_context> parse_subshell(parse_context ctx)
   {
 #endif
 ;
-    auto pp=parse_list_until(ctx, ')', ")");
-    ret->lst=pp.first;
-    ctx=pp.second;
+    auto pp=parse_list_until(ctx, {.end_char=')', .expecting=")"} );
+    ret->lst=std::get<0>(pp);
+    ctx=std::get<1>(pp);
     if(ret->lst->size()<=0)
     {
       parse_error("Subshell is empty", ctx, start-1);
@@ -1258,9 +1209,9 @@ std::pair<brace*, parse_context> parse_brace(parse_context ctx)
   {
 #endif
 ;
-    auto pp=parse_list_until(ctx, '}', "}");
-    ret->lst=pp.first;
-    ctx=pp.second;
+    auto pp=parse_list_until(ctx, {.end_char='}', .expecting="}"});
+    ret->lst=std::get<0>(pp);
+    ctx=std::get<1>(pp);
     if(ret->lst->size()<=0)
     {
       parse_error("Brace block is empty", ctx, start-1);
@@ -1299,16 +1250,16 @@ std::pair<function*, parse_context> parse_function(parse_context ctx, const char
     }
     ctx.i++;
 
-    auto pp=parse_list_until(ctx, '}', "}");
-    if(pp.first->size()<=0)
+    auto pp=parse_list_until(ctx, {.end_char='}', .expecting="}"} );
+    ret->lst=std::get<0>(pp);
+    if(ret->lst->size()<=0)
     {
       parse_error("Function is empty", ctx);
-      ctx.i=pp.second.i+1;
+      ctx.i=std::get<1>(pp).i+1;
       return std::make_pair(ret, ctx);
     }
 
-    ret->lst=pp.first;
-    ctx=pp.second;
+    ctx=std::get<1>(pp);
     ctx.i++;
 #ifndef NO_PARSE_CATCH
   }
@@ -1549,7 +1500,7 @@ std::pair<case_block*, parse_context> parse_case(parse_context ctx)
       ctx.i++;
 
       // until ;;
-      auto tp = parse_list_until(ctx, {";", "esac"}, ";;");
+      auto tp = parse_list_until(ctx, { .word_mode=true, .end_words={";", "esac"}, .expecting=";;" });
       cc->second = std::get<0>(tp);
       ctx = std::get<1>(tp);
       std::string word = std::get<2>(tp);
@@ -1600,20 +1551,21 @@ std::pair<if_block*, parse_context> parse_if(parse_context ctx)
     while(true)
     {
       std::string word;
+      parse_context oldctx = ctx;
 
       ret->blocks.push_back(std::make_pair(nullptr, nullptr));
       auto ll = ret->blocks.end()-1;
 
-      auto pp=parse_list_until(ctx, "then");
-      ll->first = pp.first;
+      auto pp=parse_list_until(ctx, {.word_mode=true, .end_words={"then"}});
+      ll->first = std::get<0>(pp);
+      ctx = std::get<1>(pp);
       if(ll->first->size()<=0)
       {
-        parse_error("Condition is empty", ctx);
-        pp.second.has_errored=true;
+        parse_error("Condition is empty", oldctx);
+        ctx.has_errored=true;
       }
-      ctx = pp.second;
 
-      auto tp=parse_list_until(ctx, {"fi", "elif", "else"});
+      auto tp=parse_list_until(ctx, {.word_mode=true, .end_words={"fi", "elif", "else"}} );
       ll->second = std::get<0>(tp);
       parse_context newctx = std::get<1>(tp);
       word = std::get<2>(tp);
@@ -1628,14 +1580,17 @@ std::pair<if_block*, parse_context> parse_if(parse_context ctx)
         break;
       if(word == "else")
       {
-        auto pp=parse_list_until(ctx, "fi");
-        if(pp.first->size()<=0)
+        auto pp=parse_list_until(ctx, {.word_mode=true, .end_words={"fi"}});
+        ret->else_lst=std::get<0>(pp);
+        if(ret->else_lst->size()<=0)
         {
           parse_error("else block is empty", ctx);
-          pp.second.has_errored=true;
+          ctx=std::get<1>(pp);
+          ctx.has_errored=true;
         }
-        ret->else_lst=pp.first;
-        ctx=pp.second;
+        else
+          ctx=std::get<1>(pp);
+
         break;
       }
 
@@ -1714,9 +1669,9 @@ std::pair<for_block*, parse_context> parse_for(parse_context ctx)
     }
 
     // ops
-    auto lp = parse_list_until(ctx, "done");
-    ret->ops=lp.first;
-    ctx=lp.second;
+    auto lp = parse_list_until(ctx, {.word_mode=true, .end_words={"done"}} );
+    ret->ops=std::get<0>(lp);
+    ctx=std::get<1>(lp);
 #ifndef NO_PARSE_CATCH
   }
   catch(format_error& e)
@@ -1739,24 +1694,28 @@ std::pair<while_block*, parse_context> parse_while(parse_context ctx)
 #endif
 ;
     // cond
-    auto pp=parse_list_until(ctx, "do");
-    if(pp.first->size() <= 0)
+    parse_context oldctx = ctx;
+    auto pp=parse_list_until(ctx, {.word_mode=true, .end_words={"do"}});
+
+    ret->cond = std::get<0>(pp);
+    ctx = std::get<1>(pp);
+
+    if(ret->cond->size() <= 0)
     {
-      parse_error("condition is empty", ctx);
-      pp.second.has_errored=true;
+      parse_error("condition is empty", oldctx);
+      ctx.has_errored=true;
     }
-    ret->cond = pp.first;
-    ctx = pp.second;
 
     // ops
-    auto lp = parse_list_until(ctx, "done");
-    if(lp.first->size() <= 0)
+    oldctx = ctx;
+    auto lp = parse_list_until(ctx, {.word_mode=true, .end_words={"done"}} );
+    ret->ops=std::get<0>(lp);
+    ctx = std::get<1>(lp);
+    if(ret->ops->size() <= 0)
     {
-      parse_error("while is empty", ctx);
-      lp.second.has_errored=true;
+      parse_error("while is empty", oldctx);
+      ctx.has_errored=true;
     }
-    ret->ops=lp.first;
-    ctx = lp.second;
 #ifndef NO_PARSE_CATCH
   }
   catch(format_error& e)
@@ -1936,13 +1895,14 @@ std::pair<shmain*, parse_context> parse_text(parse_context ctx)
   if(!ctx.bash)
     ctx.bash = (binshebang == "bash" || binshebang == "lxsh");
   // parse all commands
-  auto pp=parse_list_until(ctx, 0);
-  ret->lst=pp.first;
+  auto pp=parse_list_until(ctx);
+  ret->lst=std::get<0>(pp);
+  ctx = std::get<1>(pp);
 
-  if(pp.second.has_errored)
+  if(ctx.has_errored)
     throw std::runtime_error("Aborted due to previous errors");
 
-  return std::make_pair(ret, pp.second);
+  return std::make_pair(ret, ctx);
 }
 
 std::pair<shmain*, parse_context> parse_text(std::string const& in, std::string const& filename)
