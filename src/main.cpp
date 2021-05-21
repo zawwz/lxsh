@@ -223,7 +223,6 @@ int main(int argc, char* argv[])
       }
     }
   }
-#ifndef NO_PARSE_CATCH
   catch(format_error& e)
   {
     if(tsh != nullptr)
@@ -232,7 +231,6 @@ int main(int argc, char* argv[])
     printFormatError(e);
     return ERR_PARSE;
   }
-#endif
   catch(ztd::option_error& e)
   {
     std::cerr << e.what() << std::endl;
