@@ -122,6 +122,18 @@ these features will continue working with undesired behavior.
 
 Array argument with `[@]` does not expand into the desired multiple arguments.
 
+## String processors
+
+You can use prefixes in singlequote strings to apply processing to the string contents. <br>
+To use string processors, prefix the string content with a line in the form of `#<PROCESSOR>`.
+Example:
+```shell
+sh -c '#LXSH_PARSE_MINIFY
+printf "%s\n" "Hello world!"'
+```
+
+As of now only the processor `LXSH_PARSE_MINIFY` is implemented, but more may come later
+
 ## Other features
 
 ### Output generated code
@@ -154,7 +166,7 @@ Depends on [ztd](https://github.com/zawwz/ztd)
 
 ## Building
 
-Use `make -j13` to build.<br>
+Use `make -j` to build.<br>
 You can use environment variables to alter some aspects:
 - DEBUG: when set to `true` will generate a debug binary with profiling
 - RELEASE: when set to `true`, the version string will be generated for release format
