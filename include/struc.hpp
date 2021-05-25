@@ -243,7 +243,10 @@ public:
   redirect(arg* in) { type=_obj::_redirect; target=in; here_document=nullptr; }
   redirect(std::string strop, arg* in) { type=_obj::_redirect; op=strop; target=in; here_document=nullptr; }
   redirect(std::string strop, arg* in, arg* doc) { type=_obj::_redirect; op=strop; target=in; here_document=doc; }
-  ~redirect() { if(target != nullptr) delete target; }
+  ~redirect() {
+    if(target != nullptr) delete target;
+    if(here_document != nullptr) delete here_document;
+  }
 
   std::string generate(int ind);
 
