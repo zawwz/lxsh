@@ -1363,8 +1363,10 @@ std::pair<case_block*, parse_context> parse_case(parse_context ctx)
     }
     if(ctx[ctx.i-1] != ';')
     {
-      parse_error("Unexpected token ';'", ctx);
+      parse_error(strf("Unexpected token '%c'", ctx[ctx.i-1]), ctx);
     }
+    if(ctx[ctx.i] == ';')
+      ctx.i++;
     ctx.i=skip_unread(ctx);
   }
 
