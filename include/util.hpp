@@ -148,8 +148,5 @@ int _exec(std::string const& bin, std::vector<std::string> const& args);
 std::string stringReplace(std::string subject, const std::string& search, const std::string& replace);
 
 void printFormatError(format_error const& e, bool print_line=true);
-void printErrorIndex(const char* in, const int index, const std::string& message, const std::string& origin, bool print_line=true);
-
-int execute(shmain* sh, std::vector<std::string>& args);
 
 #endif //UTIL_HPP

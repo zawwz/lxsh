@@ -30,19 +30,20 @@ ztd::option_set options( {
   ztd::option('R', "no-resolve",    false, "Don't resolve %resolve commands"),
   ztd::option("no-extend",          false, "Don't add lxsh extension functions"),
   ztd::option("debashify",          false, "Attempt to turn a bash-specific script into a POSIX shell script"),
-  ztd::option("\r  [var/fct processing]"),
-  ztd::option("minify-var",         false, "Minify variable names"),
-  ztd::option("minify-fct",         false, "Minify function names"),
+  ztd::option("remove-unused",      false, "Remove unused functions and variables"),
+  ztd::option("list-cmd",           false, "List all commands invoked in the script"),
+  ztd::option("\r  [Variable processing]"),
   ztd::option("exclude-var",        true,  "List of matching regex to ignore for variable processing", "list"),
-  ztd::option("exclude-fct",        true,  "List of matching regex to ignore for function processing", "list"),
   ztd::option("no-exclude-reserved",false, "Don't exclude reserved variables"),
+  ztd::option("minify-var",         false, "Minify variable names"),
   ztd::option("list-var",           false, "List all variables set and invoked in the script"),
   ztd::option("list-var-def",       false, "List all variables set in the script"),
   ztd::option("list-var-call",      false, "List all variables invoked in the script"),
-  ztd::option("list-fct",           false, "List all functions defined in the script"),
-  ztd::option("list-cmd",           false, "List all commands invoked in the script"),
-  ztd::option("remove-unused",      false, "Remove unused functions and variables"),
-  ztd::option("unset-var",          false, "Add 'unset' to all vars at the start of the script to avoid environment interference")
+  ztd::option("unset-var",          false, "Add 'unset' to all variables at the start of the script to avoid environment interference"),
+  ztd::option("\r  [Function processing]"),
+  ztd::option("exclude-fct",        true,  "List of matching regex to ignore for function processing", "list"),
+  ztd::option("minify-fct",         false, "Minify function names"),
+  ztd::option("list-fct",           false, "List all functions defined in the script")
 } );
 
 bool g_cd=false;
@@ -96,9 +97,8 @@ ztd::option_set create_resolve_opts()
 void print_help(const char* arg0)
 {
   printf("%s [options] <file> [arg...]\n", arg0);
-  printf("Link extended shell\n");
-  printf("Include files and resolve commands on build time\n");
-  printf("See --help-commands for help on linker commands\n");
+  printf("Extended shell linker\n");
+  printf("Include files, resolve commands on build time, process and minify shell code\n");
   printf("\n");
   printf("Options:\n");
   options.print_help(4,25);

@@ -41,13 +41,15 @@ std::string unexpected_token(std::string const& s)
 
 void parse_error(std::string const& message, parse_context& ctx)
 {
-  printFormatError(format_error(message, ctx.filename, ctx.data, ctx.i));
+  printFormatError(format_error(message, ctx));
   ctx.has_errored=true;
 }
 
 void parse_error(std::string const& message, parse_context& ctx, uint64_t i)
 {
-  printFormatError(format_error(message, ctx.filename, ctx.data, i));
+  parse_context newctx = ctx;
+  newctx.i = i;
+  printFormatError(format_error(message, newctx));
   ctx.has_errored=true;
 }
 

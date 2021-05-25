@@ -102,14 +102,16 @@ class format_error : public std::exception
 {
 public:
   //! @brief Conctructor
-  inline format_error(const std::string& what, const std::string& origin, const std::string& data, int where)  { desc=what; index=where; filename=origin; sdat=data; }
-  inline format_error(const std::string& what, parse_context const& ctx) { desc=what; index=ctx.i; filename=ctx.filename; sdat=ctx.data; }
+  inline format_error(const std::string& what, const std::string& origin, const std::string& data, int where, std::string level="error")  { desc=what; index=where; filename=origin; sdat=data; severity=level; }
+  inline format_error(const std::string& what, parse_context const& ctx, std::string level="error") { desc=what; index=ctx.i; filename=ctx.filename; sdat=ctx.data; severity=level; }
   //! @brief Error message
   inline const char * what () const throw () {return desc.c_str();}
   //! @brief Origin of the data, name of imported file, otherwise empty if generated
   inline const char * origin() const throw () {return filename.c_str();}
   //! @brief Data causing the exception
   inline const char * data() const throw () {return sdat.c_str();}
+  //! @brief Severity of the exception
+  inline const std::string level() const throw () {return severity.c_str();}
   //! @brief Where the error is located in the data
   inline const int where () const throw () {return index;}
 private:
@@ -117,6 +119,7 @@ private:
   int index;
   std::string filename;
   std::string sdat;
+  std::string severity;
 };
 
 // objects
