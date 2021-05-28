@@ -148,18 +148,45 @@ size_t cmd::arglist_size()
 
 // string getters
 
+bool arg::is_string()
+{
+  return sa.size() == 1 && sa[0]->type == _obj::subarg_string;
+}
+
 std::string arg::string()
 {
-  if(sa.size() != 1 || sa[0]->type != subarg::subarg_string)
+  if(!this->is_string())
     return "";
   return dynamic_cast<string_subarg*>(sa[0])->val;
 }
 
 std::string arg::first_sa_string()
 {
-  if(sa.size() <=0 || sa[0]->type != subarg::subarg_string)
-    return "";
+  if(sa.size() <=0 || sa[0]->type != _obj::subarg_string)
+  return "";
   return dynamic_cast<string_subarg*>(sa[0])->val;
+}
+
+bool arg::can_expand()
+{
+  for(auto it: sa)
+  {
+    if(it->type != _obj::subarg_string && !it->quoted)
+      return true;
+  }
+  return false;
+}
+
+bool arglist::can_expand()
+{
+  bool arg_expands=false;
+  for(auto it: args)
+  {
+    arg_expands = it->can_expand();
+    if(arg_expands)
+      return true;
+  }
+  return false;
 }
 
 std::vector<std::string> arglist::strargs(uint32_t start)

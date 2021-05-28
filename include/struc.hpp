@@ -187,10 +187,14 @@ public:
 
   std::vector<subarg*> sa;
 
+  bool is_string();
   // return if is a string and only one subarg
   std::string string();
   // return if the first subarg is a string
   std::string first_sa_string();
+
+  // can expand into multiple arguments
+  bool can_expand();
 
   inline bool equals(std::string const& in) { return this->string() == in; }
 
@@ -230,6 +234,9 @@ public:
   std::vector<arg*> args;
 
   std::vector<std::string> strargs(uint32_t start);
+
+  // potentially expands into more arguments than its size
+  bool can_expand();
 
   void insert(uint32_t i, arg* val);
   void insert(uint32_t i, arglist const& lst);

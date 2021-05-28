@@ -1,6 +1,6 @@
 #include "debashify.hpp"
 
-#include "ztd/options.hpp"
+#include <ztd/options.hpp>
 
 #include "processing.hpp"
 #include "recursive.hpp"
@@ -144,12 +144,11 @@ std::string get_declare_opt(cmd* in)
 
 ztd::option_set gen_echo_opts()
 {
-  ztd::option_set ret;
-  ret.add(
-      ztd::option('e'),
-      ztd::option('E'),
-      ztd::option('n')
-  );
+  ztd::option_set ret( std::vector<ztd::option>({
+    ztd::option('e'),
+    ztd::option('E'),
+    ztd::option('n')
+  }) );
   return ret;
 }
 
@@ -166,6 +165,7 @@ bool debashify_echo(pipeline* pl)
     ztd::option_set opts=gen_echo_opts();
     std::vector<std::string> args=in->args->strargs(1);
     std::vector<std::string> postargs;
+
     try
     {
       postargs=opts.process(args, {.ignore_numbers=true, .stop_on_argument=true} );
@@ -174,52 +174,115 @@ bool debashify_echo(pipeline* pl)
     {
       skip=true;
     }
-    if(skip || postargs.size() == args.size()) // no options processed: skip
-      return false;
 
-    // delete the number of args that were processed
-    for(uint32_t i=0; i<args.size()-postargs.size(); i++)
-    {
-      delete in->args->args[1];
-      in->args->args.erase(in->args->args.begin()+1);
-    }
-
-    bool doprintf=false;
+    bool enable_interpretation=false;
     bool newline=true;
-    if(opts['E'])
+    bool has_escape_sequence=false;
+    bool has_processed_options=false;
+
+    if(!skip && postargs.size() != args.size())
     {
-      doprintf=true;
-    }
-    else if(opts['n'])
-    {
-      doprintf=true;
-      newline=false;
+      has_processed_options=true;
+      // delete the number of args that were processed
+      for(uint32_t i=0; i<args.size()-postargs.size(); i++)
+      {
+        delete in->args->args[1];
+        in->args->args.erase(in->args->args.begin()+1);
+      }
+
+      if(opts['e'])
+        enable_interpretation=true;
+      else if(opts['n'])
+        newline=false;
     }
 
-    if(doprintf)
+    for(auto it=in->args->args.begin()+1; it!=in->args->args.end(); it++)
     {
-      delete in->args->args[0];
-      in->args->args[0] = new arg("printf");
-      if(possibly_expands(in->args->args[2]) )
+      if(!(*it)->is_string() || (*it)->string().find('\\') != std::string::npos)
       {
-        in->args->insert(1, new arg("%s\\ "));
-        if(newline) // newline: add a newline command at the end
+        has_escape_sequence=true;
+        break;
+      }
+    }
+
+    if(newline && !has_escape_sequence)
+    {
+      // newline and no potential escape: don't replace, keep echo
+      return has_processed_options;
+    }
+    else
+    {
+      // replace by printf
+      if(!in->args->can_expand())
+      {
+        // no potential expansion: static number of args
+        std::string format_str = "'";
+        for(uint32_t i=1; i<in->args->args.size(); i++)
         {
-          brace* br = new brace(new list);
-          br->lst->add(new condlist(in));
-          br->lst->add(make_condlist("echo"));
-          pl->cmds[0] = br;
+          if(enable_interpretation)
+            format_str += "%b ";
+          else
+            format_str += "%s ";
         }
+        format_str.pop_back();
+        if(newline)
+          format_str += "\\n";
+        format_str += '\'';
+
+        in->args->insert(1, new arg(format_str));
+        delete in->args->args[0];
+        in->args->args[0] = new arg("printf");
       }
       else
       {
-        std::string printfarg="'%s";
-        for(uint32_t i=2; i<in->args->size(); i++)
-          printfarg+=" %s";
+        std::string format_str;
+        if(enable_interpretation)
+          format_str = "%b";
+        else
+          format_str = "%s";
+
+        list* lst=nullptr;
+
+        // more than 1 arg and first arg can't expand: can split into two printf
+        // printf '%s' arg1
+        // printf ' %s' args...
+        if(in->args->args.size()>2 && !in->args->args[1]->can_expand())
+        {
+          // extract arg 1
+          arg* arg1 = in->args->args[1];
+          in->args->args.erase(in->args->args.begin()+1);
+          delete in->args->args[0];
+          in->args->args[0] = new arg("printf");
+
+          lst = new list;
+          lst->add(new condlist(make_cmd({new arg("printf"), new arg(format_str), arg1 })));
+          lst->add(new condlist(in));
+        }
+        else
+        {
+          // can't reliable replace: keep echo if newline
+          if(newline)
+            return has_processed_options;
+
+          in->args->insert(1, new arg(format_str+"\\ "));
+          delete in->args->args[0];
+          in->args->args[0] = new arg("printf");
+        }
+
         if(newline)
-          printfarg+="\\n";
-        printfarg+="'";
-        in->args->insert(1, new arg(printfarg));
+        {
+          if(lst == nullptr)
+          {
+            lst = new list;
+            lst->add(new condlist(in));
+          }
+          lst->add(make_condlist("echo"));
+        }
+
+        if(lst != nullptr)
+        {
+          pl->cmds[0] = new brace(lst);
+        }
       }
     }
 
