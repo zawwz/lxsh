@@ -171,11 +171,13 @@ int main(int argc, char* argv[])
       list_fcts(sh, re_fct_exclude);
     else if(options["list-cmd"])
       list_cmds(sh, regex_null);
-    // output
+#ifdef DEBUG_MODE
     else if(options['J'])
     {
       std::cout << gen_json_struc(sh) << std::endl;
     }
+#endif
+    // output
     else
     {
       // post-listing modifiers

@@ -519,6 +519,7 @@ std::string boolstring(bool in)
     return "false";
 }
 
+#ifdef DEBUG_MODE
 std::string gen_json_struc(_obj* o)
 {
   if(o==nullptr)
@@ -846,3 +847,4 @@ std::string gen_json_struc(_obj* o)
   }
   return gen_json(vec);
 }
+#endif

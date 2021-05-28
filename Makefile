@@ -17,7 +17,7 @@ CC=g++
 CXXFLAGS= -I$(IDIR) -Wall -std=c++20
 ifeq	($(DEBUG),true)
 	# debugging flags
-	CXXFLAGS += -g
+	CXXFLAGS += -g -D DEBUG_MODE
 	RODIR = $(ODIR)/debug
 else
 	# release flags

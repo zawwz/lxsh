@@ -20,7 +20,10 @@ ztd::option_set options( {
   ztd::option('c', "stdout",        false, "Output result script to stdout"),
   ztd::option('e', "exec",          false, "Directly execute script"),
   ztd::option("no-shebang",         false, "Don't output shebang"),
+#ifdef DEBUG_MODE
+  ztd::option("\r  [Debugging]"),
   ztd::option('J', "json",          false, "Output the json structure"),
+#endif
   ztd::option("\r  [Processing]"),
   ztd::option('m', "minify",        false, "Minify code without changing functionality"),
   ztd::option('M', "minify-full",   false, "Enable all minifying features: -m --minify-quotes --minify-var --minify-fct --remove-unused"),

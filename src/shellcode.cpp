@@ -5,9 +5,10 @@
 #include "struc_helper.hpp"
 
 const std::map<const std::string, const lxsh_fct> lxsh_extend_fcts = {
-  { "_lxsh_random",         { "[K]", "Generate a random number between 0 and 2^(K*8). Default 2", RANDOM_SH} },
-  { "_lxsh_random_string",  { "[N]", "Generate a random alphanumeric string of length N. Default 20", RANDOM_STRING_SH} },
-  { "_lxsh_random_tmpfile", { "[N]", "Get a random TMP filepath, with N random chars. Default 20", RANDOM_TMPFILE_SH, {"_lxsh_random_string"} } }
+    { "_lxsh_random",         { "[K]", "Generate a random number between 0 and 2^(K*8). Default 2", RANDOM_SH} },
+    { "_lxsh_random_string",  { "[N]", "Generate a random alphanumeric string of length N. Default 20", RANDOM_STRING_SH} },
+    { "_lxsh_random_tmpfile", { "[N]", "Get a random TMP filepath, with N random chars. Default 20", RANDOM_TMPFILE_SH, {"_lxsh_random_string"} }
+  }
 };
 
 const std::map<const std::string, const lxsh_fct> lxsh_array_fcts = {
