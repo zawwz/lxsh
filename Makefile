@@ -14,7 +14,7 @@ LDFLAGS = -lpthread
 # compiler
 CC=g++
 # compiler flags
-CXXFLAGS= -I$(IDIR) -Wall -pedantic -std=c++20
+CXXFLAGS= -I$(IDIR) -Wall -std=c++20
 ifeq	($(DEBUG),true)
 	# debugging flags
 	CXXFLAGS += -g
@@ -77,7 +77,7 @@ $(RODIR)/%.o: $(SRCDIR)/%.cpp $(DEPS)
 
 
 $(BINDIR)/$(NAME): $(OBJ)
-	$(CC) $(CXXFLAGS) $(LDFLAGS) -o $@ $^
+	$(CC) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 test: $(BINDIR)/$(NAME)
 	$(BINDIR)/$(NAME)
