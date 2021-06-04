@@ -255,7 +255,7 @@ bool debashify_echo(pipeline* pl)
           in->args->args[0] = new arg("printf");
 
           lst = new list;
-          lst->add(new condlist(make_cmd({new arg("printf"), new arg(format_str), arg1 })));
+          lst->add(new condlist(make_cmd({new arg("printf"), new arg(format_str+"\\ "), arg1 })));
           lst->add(new condlist(in));
         }
         else
