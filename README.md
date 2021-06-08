@@ -8,7 +8,7 @@ Extended shell linker for linking, processing and minifying shell code
 
 ### zpkg
 
-Available from the `zpkg` repository:
+Available from the [zpkg](https://github.com/zawwz/zpkg) repository:
 ```shell
 wget -qO- https://zpkg.zawz.net/install.sh | sh
 zpkg install lxsh
@@ -121,6 +121,11 @@ these features will continue working with undesired behavior.
 > To avoid this, make sure to never access incorrect values
 
 Array argument with `[@]` does not expand into the desired multiple arguments.
+
+## Extension commands
+
+If you use the `#!/usr/bin/lxsh` shebang, you can use special lxsh-defined commands.
+To list such commands, see `lxsh --help-extend-fcts`
 
 ## String processors
 
