@@ -1473,7 +1473,7 @@ std::pair<for_block*, parse_context> parse_for(parse_context ctx)
   // end of arg list
   if(!is_in(ctx[ctx.i], "\n;#"))
   {
-    parse_error( unexpected_token(ctx[ctx.i])+", expecting '\\n' or ';'", ctx );
+    parse_error( unexpected_token(ctx[ctx.i])+", expecting newline, ';' or 'in'", ctx );
     while(!is_in(ctx[ctx.i], "\n;#"))
       ctx.i++;
   }
