@@ -20,7 +20,7 @@ Download the `lxsh.tar.gz` archive, extract it,
 and move the `lxsh` binary in a PATH folder (`/usr/local/bin` is the recommended).
 
 ```shell
-wget https://github.com/zawwz/lxsh/releases/download/v1.1.0/lxsh.tar.gz
+wget https://github.com/zawwz/lxsh/releases/download/v1.2.0/lxsh-linux-amd64.tar.gz
 tar -xvf lxsh.tar.gz
 sudo mv lxsh /usr/local/bin
 ```
