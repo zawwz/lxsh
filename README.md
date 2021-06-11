@@ -21,7 +21,7 @@ and move the `lxsh` binary in a PATH folder (`/usr/local/bin` is the recommended
 
 ```shell
 wget https://github.com/zawwz/lxsh/releases/download/v1.2.0/lxsh-linux-amd64.tar.gz
-tar -xvf lxsh.tar.gz
+tar -xvf lxsh-linux-amd64.tar.gz
 sudo mv lxsh /usr/local/bin
 ```
 
