@@ -44,7 +44,7 @@ std::string arglist::generate(int ind)
   return ret;
 }
 
-std::string pipeline::generate(int ind)
+std::string pipeline::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -53,11 +53,11 @@ std::string pipeline::generate(int ind)
 
   if(negated)
     ret += "! ";
-  ret += cmds[0]->generate(ind);
+  ret += cmds[0]->generate(ind, ctx);
   for(uint32_t i=1 ; i<cmds.size() ; i++)
   {
     ret += opt_minify ? "|" : " | " ;
-    ret += cmds[i]->generate(ind);
+    ret += cmds[i]->generate(ind, ctx);
   }
 
   return ret;
@@ -68,18 +68,27 @@ std::string condlist::generate(int ind)
   std::string ret;
   if(pls.size() <= 0)
     return "";
-  ret += pls[0]->generate(ind);
+  generate_context ctx;
+  ret += pls[0]->generate(ind, &ctx);
   for(uint32_t i=0 ; i<pls.size()-1 ; i++)
   {
     if(or_ops[i])
       ret += opt_minify ? "||" : " || ";
     else
       ret += opt_minify ? "&&" : " && ";
-    ret += pls[i+1]->generate(ind);
+    ret += pls[i+1]->generate(ind, &ctx);
   }
   if(ret=="")
     return "";
-  if(parallel)
+  if(ctx.here_document != nullptr)
+  {
+    if(parallel)
+      ret += '&';
+    ret += '\n';
+    ret += ctx.here_document->generate(0);
+    ret += '\n';
+  }
+  else if(parallel)
   {
     ret += opt_minify ? "&" : " &\n";
   }
@@ -123,12 +132,18 @@ std::string redirect::generate(int ind)
 
 // BLOCK
 
-std::string block::generate_redirs(int ind, std::string const& _str)
+std::string block::generate_redirs(int ind, std::string const& _str, generate_context* ctx=nullptr)
 {
   std::string ret=" ";
   bool previous_isnt_num = _str.size()>0 && !is_num(_str[_str.size()-1]);
   for(auto it: redirs)
   {
+    if(ctx != nullptr && it->here_document != nullptr)
+    {
+      if(ctx->here_document != nullptr)
+        throw std::runtime_error("Unsupported generation of concurrent here documents");
+      ctx->here_document = it->here_document;
+    }
     std::string _r = it->generate(0);
     if(opt_minify && _r.size() > 0 && !is_num(_r[0]) && previous_isnt_num)
       ret.pop_back(); // remove one space if possible
@@ -139,7 +154,7 @@ std::string block::generate_redirs(int ind, std::string const& _str)
   return ret;
 }
 
-std::string if_block::generate(int ind)
+std::string if_block::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -169,11 +184,11 @@ std::string if_block::generate(int ind)
 
   ret += indented("fi", ind);
 
-  ret += generate_redirs(ind, ret);
+  ret += generate_redirs(ind, ret, ctx);
   return ret;
 }
 
-std::string for_block::generate(int ind)
+std::string for_block::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -187,11 +202,11 @@ std::string for_block::generate(int ind)
 
   if(opt_minify && ret.size()>1 && !is_alpha(ret[ret.size()-2]))
     ret.pop_back();
-  ret += generate_redirs(ind, ret);
+  ret += generate_redirs(ind, ret, ctx);
   return ret;
 }
 
-std::string while_block::generate(int ind)
+std::string while_block::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -207,11 +222,11 @@ std::string while_block::generate(int ind)
 
   if(opt_minify && ret.size()>1 && !is_alpha(ret[ret.size()-2]))
     ret.pop_back();
-  ret += generate_redirs(ind, ret);
+  ret += generate_redirs(ind, ret, ctx);
   return ret;
 }
 
-std::string subshell::generate(int ind)
+std::string subshell::generate(int ind, generate_context* ctx)
 {
   std::string ret;
   // open subshell
@@ -224,11 +239,11 @@ std::string subshell::generate(int ind)
   // close subshell
   ret += indented(")", ind);
 
-  ret += generate_redirs(ind, ret);
+  ret += generate_redirs(ind, ret, ctx);
   return ret;
 }
 
-std::string shmain::generate(int ind)
+std::string shmain::generate(int ind, generate_context* ctx)
 {
   return this->generate(false, ind);
 }
@@ -241,11 +256,10 @@ std::string shmain::generate(bool print_shebang, int ind)
   if( opt_minify && ret[ret.size()-1] == '\n')
     ret.pop_back();
 
-  ret += generate_redirs(ind, ret);
   return ret;
 }
 
-std::string brace::generate(int ind)
+std::string brace::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -253,11 +267,11 @@ std::string brace::generate(int ind)
   ret += lst->generate(ind+1);
   ret += indented("}", ind);
 
-  ret += generate_redirs(ind, ret);
+  ret += generate_redirs(ind, ret, ctx);
   return ret;
 }
 
-std::string function::generate(int ind)
+std::string function::generate(int ind, generate_context* ctx)
 {
   std::string ret;
   // function definition
@@ -268,11 +282,11 @@ std::string function::generate(int ind)
   ret += lst->generate(ind+1);
   ret += indented("}", ind);
 
-  ret += generate_redirs(ind, ret);
+  ret += generate_redirs(ind, ret, ctx);
   return ret;
 }
 
-std::string case_block::generate(int ind)
+std::string case_block::generate(int ind, generate_context* ctx)
 {
   std::string ret;
   ret += "case " + carg->generate(ind) + " in\n";
@@ -292,27 +306,30 @@ std::string case_block::generate(int ind)
     // end of case: ;;
     if(opt_minify && ret[ret.size()-1] == '\n') // ;; can be right after command
       ret.pop_back();
-    ret += indented(";;\n", ind+1);
+    ret += indented(";;", ind+1);
+    if(!opt_minify)
+      ret+="\n";
   }
 
-  // remove ;; from last case
+  // replace ;; from last case with ;
   if(this->cases.size()>0 && opt_minify)
   {
-    ret.erase(ret.size()-3, 2);
+    ret.pop_back();
   }
 
   // close case
   ind--;
   ret += indented("esac", ind);
 
-  ret += generate_redirs(ind, ret);
+  ret += generate_redirs(ind, ret, ctx);
   return ret;
 }
 
-std::string cmd::generate(int ind)
+std::string cmd::generate(int ind, generate_context* ctx)
 {
   std::string ret;
-  // var assigns
+
+  // is a varassign cmd
   if(is_cmdvar)
   {
     ret += args->generate(ind) + ' ';
@@ -328,6 +345,7 @@ std::string cmd::generate(int ind)
     return ret;
   }
 
+  // pre-cmd var assigns
   for(auto it: var_assigns)
   {
     if(it.first != nullptr)
@@ -337,6 +355,7 @@ std::string cmd::generate(int ind)
     ret += ' ';
   }
 
+  // cmd itself
   if(args!=nullptr && args->size()>0)
   {
     // command
@@ -351,7 +370,7 @@ std::string cmd::generate(int ind)
       ret.pop_back();
   }
 
-  ret += generate_redirs(ind, ret);
+  ret += generate_redirs(ind, ret, ctx);
   return ret;
 }
 

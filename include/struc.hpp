@@ -62,6 +62,8 @@ subarg: can be one of
 
 */
 
+// pre-definitions
+
 #define AND_OP false
 #define OR_OP  true
 
@@ -71,6 +73,56 @@ class pipeline;
 class arg;
 class subarg;
 class cmd;
+class redirect;
+
+// structs
+
+struct parse_context {
+  const char* data=NULL;
+  uint64_t size=0;
+  uint64_t i=0;
+  const char* filename="";
+  bool bash=false;
+  const char* expecting="";
+  const char* here_delimiter="";
+  const char* here_doc="";
+  const char operator[](uint64_t a) { return data[a]; }
+  bool has_errored=false;
+  redirect* here_document=nullptr;
+  char* here_delimitor=NULL;
+};
+
+struct generate_context {
+  arg* here_document=nullptr;
+};
+
+// exceptions
+
+class format_error : public std::exception
+{
+public:
+  //! @brief Conctructor
+  inline format_error(const std::string& what, const std::string& origin, const std::string& data, int where, std::string level="error")  { desc=what; index=where; filename=origin; sdat=data; severity=level; }
+  inline format_error(const std::string& what, parse_context const& ctx, std::string level="error") { desc=what; index=ctx.i; filename=ctx.filename; sdat=ctx.data; severity=level; }
+  //! @brief Error message
+  inline const char * what () const throw () {return desc.c_str();}
+  //! @brief Origin of the data, name of imported file, otherwise empty if generated
+  inline const char * origin() const throw () {return filename.c_str();}
+  //! @brief Data causing the exception
+  inline const char * data() const throw () {return sdat.c_str();}
+  //! @brief Severity of the exception
+  inline const std::string level() const throw () {return severity.c_str();}
+  //! @brief Where the error is located in the data
+  inline const int where () const throw () {return index;}
+private:
+  std::string desc;
+  int index;
+  std::string filename;
+  std::string sdat;
+  std::string severity;
+};
+
+// objects
 
 // type pack of condlist
 typedef std::vector<arg*> arglist_t;
@@ -135,10 +187,14 @@ public:
 
   std::vector<subarg*> sa;
 
+  bool is_string();
   // return if is a string and only one subarg
   std::string string();
   // return if the first subarg is a string
   std::string first_sa_string();
+
+  // can expand into multiple arguments
+  bool can_expand();
 
   inline bool equals(std::string const& in) { return this->string() == in; }
 
@@ -179,6 +235,9 @@ public:
 
   std::vector<std::string> strargs(uint32_t start);
 
+  // potentially expands into more arguments than its size
+  bool can_expand();
+
   void insert(uint32_t i, arg* val);
   void insert(uint32_t i, arglist const& lst);
 
@@ -190,15 +249,20 @@ public:
 class redirect : public _obj
 {
 public:
-  redirect(std::string strop="") { type=_obj::_redirect; op=strop; target=nullptr; }
-  redirect(arg* in) { type=_obj::_redirect; target=in; }
-  redirect(std::string strop, arg* in) { type=_obj::_redirect; op=strop; target=in; }
-  ~redirect() { if(target != nullptr) delete target; }
+  redirect(std::string strop="") { type=_obj::_redirect; op=strop; target=nullptr; here_document=nullptr; }
+  redirect(arg* in) { type=_obj::_redirect; target=in; here_document=nullptr; }
+  redirect(std::string strop, arg* in) { type=_obj::_redirect; op=strop; target=in; here_document=nullptr; }
+  redirect(std::string strop, arg* in, arg* doc) { type=_obj::_redirect; op=strop; target=in; here_document=doc; }
+  ~redirect() {
+    if(target != nullptr) delete target;
+    if(here_document != nullptr) delete here_document;
+  }
 
   std::string generate(int ind);
 
   std::string op;
   arg* target;
+  arg* here_document;
 };
 
 // Meta block
@@ -213,9 +277,9 @@ public:
   // subshell: return the containing cmd, if it is a single command
   cmd* single_cmd();
 
-  std::string generate_redirs(int ind, std::string const& _str);
+  std::string generate_redirs(int ind, std::string const& _str, generate_context* ctx);
 
-  virtual std::string generate(int ind)=0;
+  virtual std::string generate(int ind, generate_context* ctx)=0;
 };
 
 // PL
@@ -230,7 +294,8 @@ public:
 
   bool negated; // negated return value (! at start)
 
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); };
 };
 
 // CL
@@ -331,7 +396,8 @@ public:
 
   arglist* args;
 
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
 class shmain : public block
@@ -349,7 +415,8 @@ public:
   list* lst;
 
   std::string generate(bool print_shebang=true, int ind=0);
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
 class subshell : public block
@@ -365,7 +432,8 @@ public:
 
   list* lst;
 
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
 class brace : public block
@@ -380,7 +448,8 @@ public:
 
   list* lst;
 
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
 class function : public block
@@ -394,7 +463,8 @@ public:
   std::string name;
   list* lst;
 
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
 class case_block : public block
@@ -414,7 +484,8 @@ public:
   arg* carg;
   std::vector< std::pair<std::vector<arg*>, list*> > cases;
 
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
 class if_block : public block
@@ -434,7 +505,8 @@ public:
 
   list* else_lst;
 
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
 class for_block : public block
@@ -452,7 +524,8 @@ public:
   arglist* iter;
   list* ops;
 
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
 class while_block : public block
@@ -469,7 +542,8 @@ public:
   list* cond;
   list* ops;
 
-  std::string generate(int ind);
+  std::string generate(int ind, generate_context* ctx);
+  std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
 // Subarg subtypes //

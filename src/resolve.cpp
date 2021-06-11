@@ -34,7 +34,6 @@ bool add_include(std::string const& file)
     if(it == truepath)
       return false;
   }
-  // std::cout << truepath << std::endl;
   included.push_back(truepath);
   return true;
 }
@@ -60,7 +59,7 @@ void _cd(std::string const& dir)
 // -- COMMANDS --
 
 // return <name, contents>[]
-std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, std::string const& filename, std::string* ex_dir)
+std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, parse_context ctx, std::string* ex_dir)
 {
   std::vector<std::pair<std::string, std::string>> ret;
 
@@ -68,7 +67,7 @@ std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, s
   std::vector<std::string> rargs;
   try
   {
-    rargs = opts.process(cmd->first_cmd()->args->strargs(1), false, true, false);
+    rargs = opts.process(cmd->first_cmd()->args->strargs(1), {.stop_on_argument=true});
   }
   catch(ztd::option_error& e)
   {
@@ -78,7 +77,7 @@ std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, s
   std::string dir;
   if(g_cd && !opts['C'])
   {
-    dir=_pre_cd(filename);
+    dir=_pre_cd(ctx.filename);
     if(ex_dir!=nullptr)
       *ex_dir=dir;
   }
@@ -106,7 +105,7 @@ std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, s
 }
 
 //
-std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, std::string const& filename, std::string* ex_dir)
+std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, parse_context ctx, std::string* ex_dir)
 {
   std::pair<std::string, std::string> ret;
 
@@ -114,7 +113,7 @@ std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, std::string co
   std::vector<std::string> rargs;
   try
   {
-    rargs = opts.process(cmd->first_cmd()->args->strargs(1), false, true, false);
+    rargs = opts.process(cmd->first_cmd()->args->strargs(1), {.stop_on_argument=true} );
   }
   catch(ztd::option_error& e)
   {
@@ -124,7 +123,7 @@ std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, std::string co
   std::string dir;
   if(g_cd && !opts['C'])
   {
-    dir=_pre_cd(filename);
+    dir=_pre_cd(ctx.filename);
     if(ex_dir!=nullptr)
       *ex_dir=dir;
   }
@@ -153,23 +152,33 @@ std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, std::string co
   return ret;
 }
 
-std::vector<condlist*> do_include_parse(condlist* cmd, std::string const& filename)
+std::vector<condlist*> do_include_parse(condlist* cmd, parse_context ctx)
 {
   std::vector<condlist*> ret;
 
   std::string dir;
-  auto incs=do_include_raw(cmd, filename, &dir);
+  auto incs=do_include_raw(cmd, ctx, &dir);
 
-  for(auto it: incs)
+  std::vector<shmain*> shs;
+  shs.resize(incs.size());
+
+  for(uint32_t i=0; i<incs.size(); i++)
   {
-    shmain* sh=parse_text(it.second, it.first);
-    resolve(sh);
+    parse_context newctx = make_context(ctx, incs[i].second, incs[i].first);
+    auto pp = parse_text(newctx);
+    shmain* sh = pp.first;
+    resolve(sh, pp.second);
+    shs[i] = sh;
+  }
+  for(auto sh: shs)
+  {
     // get the cls
     ret.insert(ret.end(), sh->lst->cls.begin(), sh->lst->cls.end());
     // safety and cleanup
     sh->lst->cls.resize(0);
     delete sh;
   }
+  shs.resize(0);
   // cd back
   _cd(dir);
 
@@ -177,7 +186,7 @@ std::vector<condlist*> do_include_parse(condlist* cmd, std::string const& filena
 }
 
 // if first is nullptr: is a string
-std::vector<condlist*> do_resolve_parse(condlist* cmd, std::string const& filename)
+std::vector<condlist*> do_resolve_parse(condlist* cmd, parse_context ctx)
 {
   std::vector<condlist*> ret;
 
@@ -186,10 +195,13 @@ std::vector<condlist*> do_resolve_parse(condlist* cmd, std::string const& filena
   {
     // get
     std::string dir;
-    p=do_resolve_raw(cmd, filename, &dir);
+    p=do_resolve_raw(cmd, ctx, &dir);
+
     // do parse
-    shmain* sh = parse_text(p.second);
-    resolve(sh);
+    parse_context newctx = make_context(ctx, p.second, '`'+p.first+'`');
+    auto pp = parse_text(newctx);
+    shmain* sh = pp.first;
+    resolve(sh, pp.second);
     // get the cls
     ret = sh->lst->cls;
     // safety and cleanup
@@ -198,9 +210,9 @@ std::vector<condlist*> do_resolve_parse(condlist* cmd, std::string const& filena
     // cd back
     _cd(dir);
   }
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
-    throw ztd::format_error(e.what(), '`'+p.first+'`', e.data(), e.where());
+    throw format_error(e.what(), '`'+p.first+'`', e.data(), e.where());
   }
 
   return ret;
@@ -208,7 +220,7 @@ std::vector<condlist*> do_resolve_parse(condlist* cmd, std::string const& filena
 
 // -- OBJECT CALLS --
 
-std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, std::string const& filename)
+std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, parse_context ctx)
 {
   cmd* tc = in->first_cmd();
   if(tc == nullptr)
@@ -217,14 +229,14 @@ std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, std::s
   std::string const& strcmd=tc->arg_string(0);
 
   if(g_include && strcmd == "%include")
-    return std::make_pair(do_include_parse(in, filename), true);
+    return std::make_pair(do_include_parse(in, ctx), true);
   else if(g_resolve && strcmd == "%resolve")
-    return std::make_pair(do_resolve_parse(in, filename), true);
+    return std::make_pair(do_resolve_parse(in, ctx), true);
   else
     return std::make_pair(std::vector<condlist*>(), false);
 }
 
-std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, std::string const& filename, bool forcequote=false)
+std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, parse_context ctx, bool forcequote=false)
 {
   std::vector<arg*> ret;
   if(in == nullptr)
@@ -250,12 +262,12 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, std::string const& fi
     std::string fulltext;
     if(g_include && strcmd == "%include")
     {
-      for(auto it: do_include_raw(tc, filename) )
+      for(auto it: do_include_raw(tc, ctx) )
         fulltext += it.second;
     }
     else if(g_resolve && strcmd == "%resolve")
     {
-      fulltext = do_resolve_raw(tc, filename).second;
+      fulltext = do_resolve_raw(tc, ctx).second;
     }
     else // skip
       continue;
@@ -321,10 +333,10 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, std::string const& fi
   return std::make_pair(ret, has_resolved);
 }
 
-
+void resolve(_obj* in, parse_context* ctx);
 // -- RECURSIVE CALL --
 
-bool r_resolve(_obj* o, std::string* filename)
+bool r_resolve(_obj* o, parse_context* ct)
 {
   switch(o->type)
   {
@@ -337,7 +349,7 @@ bool r_resolve(_obj* o, std::string* filename)
       auto t = dynamic_cast<list*>(o);
       for(uint32_t i=0 ; i<t->cls.size() ; i++)
       {
-        auto r=resolve_condlist(t->cls[i], *filename);
+        auto r=resolve_condlist(t->cls[i], *ct);
         if(r.second)
         {
           // add new cls after current
@@ -350,7 +362,7 @@ bool r_resolve(_obj* o, std::string* filename)
         }
         else
         {
-          resolve(t->cls[i], filename);
+          resolve(t->cls[i], ct);
         }
       }
       return false;
@@ -360,7 +372,7 @@ bool r_resolve(_obj* o, std::string* filename)
       auto t = dynamic_cast<arglist*>(o);
       for(uint32_t i=0 ; i<t->size() ; i++)
       {
-        auto r=resolve_arg(t->args[i], *filename);
+        auto r=resolve_arg(t->args[i], *ct);
         if(r.first.size()>0)
         {
           // add new args
@@ -372,7 +384,7 @@ bool r_resolve(_obj* o, std::string* filename)
         }
         else
         {
-          resolve(t->args[i], filename);
+          resolve(t->args[i], ct);
         }
       }
       return false;
@@ -382,12 +394,12 @@ bool r_resolve(_obj* o, std::string* filename)
       auto t = dynamic_cast<cmd*>(o);
       for(auto it: t->var_assigns) // var assigns
       {
-        resolve_arg(it.second, *filename, true); // force quoted
-        resolve(it.second, filename);
+        resolve_arg(it.second, *ct, true); // force quoted
+        resolve(it.second, ct);
       }
       for(auto it: t->redirs)
-        resolve(it, filename);
-      resolve(t->args, filename);
+        resolve(it, ct);
+      resolve(t->args, ct);
       return false;
     }; break;
     case _obj::block_case :
@@ -395,15 +407,15 @@ bool r_resolve(_obj* o, std::string* filename)
       auto t = dynamic_cast<case_block*>(o);
       for(auto sc: t->cases)
       {
-        resolve_arg(t->carg, *filename, true); // force quoted
-        resolve(t->carg, filename);
+        resolve_arg(t->carg, *ct, true); // force quoted
+        resolve(t->carg, ct);
 
         for(auto it: sc.first)
         {
-          resolve_arg(it, *filename, true); // force quoted
-          resolve(it, filename);
+          resolve_arg(it, *ct, true); // force quoted
+          resolve(it, ct);
         }
-        resolve(sc.second, filename);
+        resolve(sc.second, ct);
       }
     }; break;
     default: break;
@@ -412,12 +424,13 @@ bool r_resolve(_obj* o, std::string* filename)
 }
 
 // recursive call of resolve
-void resolve(_obj* in, std::string* filename)
+void resolve(_obj* in, parse_context* ctx)
 {
-  recurse(r_resolve, in, filename);
+  recurse(r_resolve, in, ctx);
 }
 
-void resolve(shmain* sh)
+// recursive call of resolve
+void resolve(_obj* in, parse_context ctx)
 {
-  recurse(r_resolve, sh, &sh->filename);
+  recurse(r_resolve, in, &ctx);
 }

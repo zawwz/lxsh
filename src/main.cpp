@@ -1,11 +1,12 @@
 #include <iostream>
 
 #include <string.h>
+#include <unistd.h>
+
+#include <fstream>
 
 #include <ztd/options.hpp>
 #include <ztd/shell.hpp>
-
-#include <unistd.h>
 
 #include "util.hpp"
 #include "struc.hpp"
@@ -29,6 +30,7 @@ int main(int argc, char* argv[])
 
   bool optstop=false;
 
+  shmain *sh=nullptr, *tsh=nullptr;
   try
   {
     args=options.process(argc, argv, {.stop_on_argument=true, .output_doubledash=true} );
@@ -37,53 +39,49 @@ int main(int argc, char* argv[])
       optstop=true;
       args.erase(args.begin());
     }
-  }
-  catch(std::exception& e)
-  {
-    std::cerr << e.what() << std::endl;
-    return ERR_OPT;
-  }
 
-  oneshot_opt_process(argv[0]);
 
-  // resolve input
-  std::string file;
-  if(args.size() > 0) // argument provided
-  {
-    if(args[0] == "-" || args[0] == "/dev/stdin") //stdin
+    oneshot_opt_process(argv[0]);
+
+    // resolve input
+    std::string file;
+    if(args.size() > 0) // argument provided
     {
-      file = "/dev/stdin";
+      if(args[0] == "-" || args[0] == "/dev/stdin") //stdin
+      {
+        file = "/dev/stdin";
+      }
+      else
+      {
+        file=args[0];
+      }
     }
     else
     {
-      file=args[0];
+      if(isatty(fileno(stdin))) // stdin is interactive
+      {
+        print_help(argv[0]);
+        return ERR_HELP;
+      }
+      else // is piped
+      {
+        file = "/dev/stdin";
+        args.push_back("/dev/stdin");
+      }
     }
-  }
-  else
-  {
-    if(isatty(fileno(stdin))) // stdin is interactive
-    {
-      print_help(argv[0]);
-      return ERR_HELP;
-    }
-    else // is piped
-    {
-      file = "/dev/stdin";
-      args.push_back("/dev/stdin");
-    }
-  }
 
-  // parsing
+    // parsing
 
-  shmain* sh = new shmain(new list);
-  shmain* tsh = nullptr;
-  try
-  {
+    sh = new shmain(new list);
+
     bool is_exec = false;
     bool first_run = true;
 
     // do parsing
     bool shebang_is_bin=false;
+    bool parse_bash=false;
+    parse_context ctx;
+    std::string binshebang;
     for(uint32_t i=0 ; i<args.size() ; i++)
     {
       std::string file = args[i];
@@ -96,7 +94,9 @@ int main(int argc, char* argv[])
       {
         first_run=false;
         // resolve shebang
-        shebang_is_bin = ( basename(argv[0]) == basename(shebang) );
+        binshebang = basename(shebang);
+        shebang_is_bin = ( basename(argv[0]) == binshebang );
+        parse_bash = (options["debashify"] || binshebang == "bash" || binshebang == "lxsh");
 
         // detect if need execution
         if(options['e'])
@@ -113,7 +113,10 @@ int main(int argc, char* argv[])
           throw std::runtime_error("Option -e must be before file");
 
         if(shebang_is_bin) // enable debashify option
+        {
+          shebang="#!/bin/sh";
           options["debashify"].activated=true;
+        }
 
         oneshot_opt_process(argv[0]);
         get_opts();
@@ -124,25 +127,27 @@ int main(int argc, char* argv[])
       if(!add_include(file))
         continue;
 
+      ctx.data=filecontents.data();
+
+
+      ctx = make_context(filecontents, file, parse_bash);
       if(is_exec)
       {
-        if(options["debashify"])
-          shebang = "#!/bin/sh";
-        if(options["debashify"] || basename(shebang) == "bash")
-          g_bash = true;
         args.erase(args.begin());
-        return exec_process(shebang.substr(2), args, filecontents, file);
+        return exec_process(shebang.substr(2), args, ctx);
       }
       else
       {
-        tsh = parse_text(filecontents, file);
+        auto pp = parse_text(ctx);
+        tsh = pp.first;
+        ctx = pp.second;
         if(shebang_is_bin) // resolve lxsh shebang to sh
           tsh->shebang="#!/bin/sh";
 
         /* mid processing */
         // resolve/include
         if(g_include || g_resolve)
-          resolve(tsh);
+          resolve(tsh, ctx);
 
         // concatenate to main
         sh->concat(tsh);
@@ -166,11 +171,13 @@ int main(int argc, char* argv[])
       list_fcts(sh, re_fct_exclude);
     else if(options["list-cmd"])
       list_cmds(sh, regex_null);
-    // output
+#ifdef DEBUG_MODE
     else if(options['J'])
     {
       std::cout << gen_json_struc(sh) << std::endl;
     }
+#endif
+    // output
     else
     {
       // post-listing modifiers
@@ -186,7 +193,10 @@ int main(int argc, char* argv[])
       // processing before output
       // minify
       if(options['m'])
+      {
         opt_minify=true;
+        string_processors(sh);
+      }
       if(options["minify-quotes"])
         minify_quotes(sh);
       if(options["minify-var"])
@@ -215,8 +225,7 @@ int main(int argc, char* argv[])
       }
     }
   }
-#ifndef NO_PARSE_CATCH
-  catch(ztd::format_error& e)
+  catch(format_error& e)
   {
     if(tsh != nullptr)
       delete tsh;
@@ -224,12 +233,17 @@ int main(int argc, char* argv[])
     printFormatError(e);
     return ERR_PARSE;
   }
-#endif
+  catch(ztd::option_error& e)
+  {
+    std::cerr << e.what() << std::endl;
+    return ERR_OPT;
+  }
   catch(std::runtime_error& e)
   {
     if(tsh != nullptr)
       delete tsh;
-    delete sh;
+    if(sh != nullptr)
+      delete sh;
     std::cerr << e.what() << std::endl;
     return ERR_RUNTIME;
   }

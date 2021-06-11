@@ -4,13 +4,14 @@
 #include "processing.hpp"
 #include "struc_helper.hpp"
 
-const std::map<const std::string, const struct lxsh_fct> lxsh_extend_fcts = {
-  { "_lxsh_random",         { "[K]", "Generate a random number between 0 and 2^(k*8). Default 2", RANDOM_SH} },
-  { "_lxsh_random_string",  { "[N]", "Generate a random alphanumeric string of length N. Default 20", RANDOM_STRING_SH} },
-  { "_lxsh_random_tmpfile", { "[N]", "Get a random TMP filepath, with N random chars. Default 20", RANDOM_TMPFILE_SH, {"_lxsh_random_string"} } }
+const std::map<const std::string, const lxsh_fct> lxsh_extend_fcts = {
+    { "_lxsh_random",         { "[K]", "Generate a random number between 0 and 2^(K*8). Default 2", RANDOM_SH} },
+    { "_lxsh_random_string",  { "[N]", "Generate a random alphanumeric string of length N. Default 20", RANDOM_STRING_SH} },
+    { "_lxsh_random_tmpfile", { "[N]", "Get a random TMP filepath, with N random chars. Default 20", RANDOM_TMPFILE_SH, {"_lxsh_random_string"} }
+  }
 };
 
-const std::map<const std::string, const struct lxsh_fct> lxsh_array_fcts = {
+const std::map<const std::string, const lxsh_fct> lxsh_array_fcts = {
   { "_lxsh_array_create",   { "<VAL...>", "Create an array out of input arguments", ARRAY_CREATE_SH} },
   { "_lxsh_array_get",      { "<ARRAY> <I>",    "Get value from array", ARRAY_GET_SH} },
   { "_lxsh_array_set",      { "<ARRAY> <I> <VAL>", "Set value of array", ARRAY_SET_SH} },
@@ -19,7 +20,7 @@ const std::map<const std::string, const struct lxsh_fct> lxsh_array_fcts = {
   { "_lxsh_map_set",        { "<MAP> <KEY> <VAL>", "Set value of map", MAP_SET_SH} }
 };
 
-std::map<const std::string, const struct lxsh_fct> create_allfcts()
+std::map<const std::string, const lxsh_fct> create_allfcts()
 {
   auto r = lxsh_array_fcts;
   for(auto it: lxsh_extend_fcts)
@@ -27,7 +28,7 @@ std::map<const std::string, const struct lxsh_fct> create_allfcts()
   return r;
 }
 
-const std::map<const std::string, const struct lxsh_fct> lxsh_allfcts = create_allfcts();
+const std::map<const std::string, const lxsh_fct> lxsh_allfcts = create_allfcts();
 
 void add_lxsh_fcts(shmain* sh, std::set<std::string> fcts)
 {

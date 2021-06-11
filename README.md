@@ -8,7 +8,7 @@ Extended shell linker for linking, processing and minifying shell code
 
 ### zpkg
 
-Available from the `zpkg` repository:
+Available from the [zpkg](https://github.com/zawwz/zpkg) repository:
 ```shell
 wget -qO- https://zpkg.zawz.net/install.sh | sh
 zpkg install lxsh
@@ -20,7 +20,7 @@ Download the `lxsh.tar.gz` archive, extract it,
 and move the `lxsh` binary in a PATH folder (`/usr/local/bin` is the recommended).
 
 ```shell
-wget https://github.com/zawwz/lxsh/releases/download/v1.1.0/lxsh.tar.gz
+wget https://github.com/zawwz/lxsh/releases/download/v1.2.0/lxsh-linux-amd64.tar.gz
 tar -xvf lxsh.tar.gz
 sudo mv lxsh /usr/local/bin
 ```
@@ -122,6 +122,23 @@ these features will continue working with undesired behavior.
 
 Array argument with `[@]` does not expand into the desired multiple arguments.
 
+## Extension commands
+
+If you use the `#!/usr/bin/lxsh` shebang, you can use special lxsh-defined commands.
+To list such commands, see `lxsh --help-extend-fcts`
+
+## String processors
+
+You can use prefixes in singlequote strings to apply processing to the string contents. <br>
+To use string processors, prefix the string content with a line in the form of `#<PROCESSOR>`.
+Example:
+```shell
+sh -c '#LXSH_PARSE_MINIFY
+printf "%s\n" "Hello world!"'
+```
+
+As of now only the processor `LXSH_PARSE_MINIFY` is implemented, but more may come later
+
 ## Other features
 
 ### Output generated code
@@ -154,7 +171,7 @@ Depends on [ztd](https://github.com/zawwz/ztd)
 
 ## Building
 
-Use `make -j13` to build.<br>
+Use `make -j` to build.<br>
 You can use environment variables to alter some aspects:
 - DEBUG: when set to `true` will generate a debug binary with profiling
 - RELEASE: when set to `true`, the version string will be generated for release format

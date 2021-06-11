@@ -15,9 +15,9 @@ struct lxsh_fct {
   std::vector<std::string> depends_on=std::vector<std::string>();
 };
 
-extern const std::map<const std::string, const struct lxsh_fct> lxsh_extend_fcts;
-extern const std::map<const std::string, const struct lxsh_fct> lxsh_array_fcts;
-extern const std::map<const std::string, const struct lxsh_fct> lxsh_allfcts;
+extern const std::map<const std::string, const lxsh_fct> lxsh_extend_fcts;
+extern const std::map<const std::string, const lxsh_fct> lxsh_array_fcts;
+extern const std::map<const std::string, const lxsh_fct> lxsh_allfcts;
 
 void add_lxsh_fcts(shmain* sh, std::set<std::string> fcts);
 

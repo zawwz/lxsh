@@ -7,8 +7,10 @@
 #include <tuple>
 
 #include <iostream>
+#include <fstream>
 
 #include <ztd/shell.hpp>
+#include <ztd/color.hpp>
 
 std::string indenting_string="\t";
 
@@ -210,16 +212,15 @@ std::string repeatString(std::string const& str, uint32_t n)
   return ret;
 }
 
-void printFormatError(ztd::format_error const& e, bool print_line)
+void printFormatError(format_error const& e, bool print_line)
 {
-  printErrorIndex(e.data(), e.where(), e.what(), e.origin(), print_line);
-}
+  const char* in = e.data();
 
-void printErrorIndex(const char* in, const int index, const std::string& message, const std::string& origin, bool print_line)
-{
-  int i=0, j=0; // j: last newline
-  int line=1; //n: line #
-  int in_size=strlen(in);
+  uint64_t index = e.where();
+
+  uint64_t i=0, j=0; // j: last newline
+  uint64_t line=1; //n: line #
+  uint64_t in_size=strlen(in);
   if(index >= 0)
   {
     while(i < in_size && i < index)
@@ -232,59 +233,25 @@ void printErrorIndex(const char* in, const int index, const std::string& message
       i++;
     }
     while(i < in_size && in[i]!='\n')
-    {
       i++;
-    }
   }
-  if(origin != "")
+  std::cerr << ztd::color::b_white;
+  fprintf(stderr, "%s:%lu:%lu: ", e.origin(), line, index-j+1);
+
+  ztd::color level_color;
+  const std::string& level = e.level();
+  if(level == "error")
+    level_color = ztd::color::b_red;
+  else if(level == "warning")
+    level_color = ztd::color::b_magenta;
+  else if(level == "info")
+    level_color = ztd::color::b_cyan;
+
+  std::cerr << level_color << e.level() << ztd::color::none;
+  fprintf(stderr, ": %s\n", e.what());
+  if(print_line)
   {
-    fprintf(stderr, "%s:%u:%u: %s\n", origin.c_str(), line, index-j+1, message.c_str());
-    if(print_line)
-    {
-      std::cerr << std::string(in+j, i-j) << std::endl;
-      std::cerr << repeatString(" ", index-j) << '^' << std::endl;
-    }
+    std::cerr << std::string(in+j, i-j) << std::endl;
+    std::cerr << repeatString(" ", index-j) << '^' << std::endl;
   }
-}
-
-
-int execute(shmain* sh, std::vector<std::string>& args)
-{
-  std::string data=sh->generate();
-
-  std::string filename = basename(args[0]);
-
-  // generate path
-  std::string tmpdir = (getenv("TMPDIR") != NULL) ? getenv("TMPDIR") : "/tmp" ;
-  std::string dirpath = tmpdir + "/lxsh_" + ztd::sh("tr -dc '[:alnum:]' < /dev/urandom | head -c10");
-  std::string filepath = dirpath+'/'+filename;
-
-  // create dir
-  if(ztd::exec("mkdir", "-p", dirpath).second)
-  {
-    throw std::runtime_error("Failed to create directory '"+dirpath+'\'');
-  }
-
-  // create stream
-  std::ofstream stream(filepath);
-  if(!stream)
-  {
-    ztd::exec("rm", "-rf", dirpath);
-    throw std::runtime_error("Failed to write to '"+filepath+'\'');
-  }
-
-  // output
-  stream << data;
-  stream.close();
-  if(ztd::exec("chmod", "+x", filepath).second != 0)
-  {
-    ztd::exec("rm", "-rf", dirpath);
-    throw std::runtime_error("Failed to make '"+filepath+"' executable");
-  }
-
-  // exec
-  int retval=_exec(filepath, args);
-  ztd::exec("rm", "-rf", dirpath);
-
-  return retval;
 }
