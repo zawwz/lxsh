@@ -103,17 +103,21 @@ std::string list::generate(int ind, bool first_indent)
   if(cls.size() <= 0)
     return "";
 
+  std::string next;
   for(uint32_t i=0; i<cls.size(); i++)
   {
     if(first_indent)
     {
-      ret += indented(cls[i]->generate(ind), ind);
+      next = indented(cls[i]->generate(ind), ind);
     }
     else
     {
       first_indent=true;
-      ret += cls[i]->generate(ind);
+      next = cls[i]->generate(ind);
     }
+    if(ret[ret.size()-1] == '&' && next.size()>0 && is_in(next[0], "<>"))
+      ret += '\n';
+    ret += next;
   }
   return ret;
 }
@@ -345,9 +349,12 @@ std::string cmd::generate(int ind, generate_context* ctx)
     return ret;
   }
 
+  bool has_args=false;
+
   // pre-cmd var assigns
   for(auto it: var_assigns)
   {
+    has_args=true;
     if(it.first != nullptr)
       ret += it.first->generate(ind);
     if(it.second != nullptr)
@@ -358,6 +365,7 @@ std::string cmd::generate(int ind, generate_context* ctx)
   // cmd itself
   if(args!=nullptr && args->size()>0)
   {
+    has_args=true;
     // command
     ret += args->generate(ind);
     // delete potential trailing space
@@ -370,7 +378,10 @@ std::string cmd::generate(int ind, generate_context* ctx)
       ret.pop_back();
   }
 
-  ret += generate_redirs(ind, ret, ctx);
+  std::string redirs = generate_redirs(ind, ret, ctx);
+  if(!has_args)
+    redirs.erase(redirs.begin());
+  ret += redirs;
   return ret;
 }
 
