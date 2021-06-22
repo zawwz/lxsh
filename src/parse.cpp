@@ -520,7 +520,7 @@ std::pair<arg*, parse_context> parse_arg(parse_context ctx, const char* end, con
 
   if(unexpected != NULL && is_in(ctx[ctx.i], unexpected))
   {
-    parse_error( unexpected_token(ctx[ctx.i]) , ctx);
+    parse_error( unexpected_token(ctx[ctx.i]), ctx);
   }
 
   while(ctx.i<ctx.size && !(end != NULL && is_in(ctx[ctx.i], end)) )
@@ -609,7 +609,9 @@ parse_context parse_heredocument(parse_context ctx)
     ctx.i = ctx.size;
   }
   // std::string tmpparse=std::string(ctx.data+j, ctx.i-j);
-  auto pval = parse_arg({ .data=ctx.data, .size=ctx.i, .i=j, .bash=ctx.bash} , NULL);
+  parse_context newctx = make_context(ctx, j);
+  newctx.size = ctx.i;
+  auto pval = parse_arg(newctx , NULL, NULL);
   ctx.here_document->here_document = pval.first;
 
   //
