@@ -239,7 +239,7 @@ std::pair<std::string, uint32_t> get_operator(parse_context ctx)
   std::string ret;
   uint32_t start=ctx.i;
 
-  while(!is_alphanum(ctx[ctx.i]) && !is_in(ctx[ctx.i], SEPARATORS) && ctx[ctx.i]!=')' )
+  while(!is_alphanum(ctx[ctx.i]) && !is_in(ctx[ctx.i], ARITHMETIC_OPERATOR_END))
     ctx.i++;
 
   ret = std::string(ctx.data+start, ctx.i-start);

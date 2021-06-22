@@ -21,16 +21,12 @@
 #define SPECIAL_TOKENS     "\n;#()&|"
 #define ALL_TOKENS         "\n;#()&|{}"
 
+#define ARITHMETIC_OPERATOR_END " \t\n$)"
+
 #define SPECIAL_VARS "!#*@$?"
 
 // bash specific
 #define ARRAY_ARG_END " \t\n;#()&|<>]"
-
-// macros
-// #define PARSE_ERROR_I(str, ctx, i) format_error(str, ctx.filename, ctx.data, i)
-// #define PARSE_ERROR(str, ctx) format_error(str, ctx.filename, ctx.data, ctx.i)
-// #define PARSE_ERROR_I(str, ctx, i)  { printFormatError(format_error(str, ctx.filename, ctx.data, i)); ctx.has_errored=true; }
-// #define PARSE_ERROR(str, ctx) { printFormatError(format_error(str, ctx.filename, ctx.data, ctx.i)); ctx.has_errored=true; }
 
 // structs
 
