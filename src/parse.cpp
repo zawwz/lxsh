@@ -612,6 +612,7 @@ parse_context parse_heredocument(parse_context ctx)
   parse_context newctx = make_context(ctx, j);
   newctx.size = ctx.i;
   auto pval = parse_arg(newctx , NULL, NULL);
+  ctx = pval.second;
   ctx.here_document->here_document = pval.first;
 
   //
