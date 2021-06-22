@@ -1414,6 +1414,10 @@ std::pair<if_block*, parse_context> parse_if(parse_context ctx)
       newctx.has_errored=true;
     }
     ctx = newctx;
+    if(ctx.i >= ctx.size)
+    {
+      return std::make_pair(ret, ctx);
+    }
 
     if(word == "fi")
       break;
@@ -1597,6 +1601,7 @@ std::pair<block*, parse_context> parse_block(parse_context ctx)
     else if(is_in_vector(word, out_reserved_words)) // is a reserved word
     {
       parse_error( strf("Unexpected '%s'", word.c_str())+expecting(ctx.expecting) , ctx);
+      ctx.i+=word.size();
     }
     // end reserved words
     else if( word == "function" ) // bash style function
@@ -1651,7 +1656,7 @@ std::pair<block*, parse_context> parse_block(parse_context ctx)
 
   }
 
-  if(ret->type != block::block_cmd)
+  if(ret!=nullptr && ret->type != block::block_cmd)
   {
     uint32_t j=skip_chars(ctx, SPACES);
     ctx.i=j;
