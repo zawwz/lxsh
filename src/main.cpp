@@ -94,9 +94,17 @@ int main(int argc, char* argv[])
       {
         first_run=false;
         // resolve shebang
-        binshebang = basename(shebang);
-        shebang_is_bin = ( basename(argv[0]) == binshebang );
-        parse_bash = (options["debashify"] || binshebang == "bash" || binshebang == "lxsh");
+        if(options["bash"])
+        {
+          parse_bash=true;
+          shebang = "#!/usr/bin/env bash";
+        }
+        else
+        {
+          binshebang = basename(shebang);
+          shebang_is_bin = ( basename(argv[0]) == binshebang );
+          parse_bash = (options["debashify"] || binshebang == "bash" || binshebang == "lxsh");
+        }
 
         // detect if need execution
         if(options['e'])
@@ -129,7 +137,6 @@ int main(int argc, char* argv[])
 
       ctx.data=filecontents.data();
 
-
       ctx = make_context(filecontents, file, parse_bash);
       if(is_exec)
       {
@@ -140,6 +147,8 @@ int main(int argc, char* argv[])
       {
         auto pp = parse_text(ctx);
         tsh = pp.first;
+        if(options["bash"])
+          tsh->shebang = "#!/usr/bin/env bash";
         ctx = pp.second;
         if(shebang_is_bin) // resolve lxsh shebang to sh
           tsh->shebang="#!/bin/sh";

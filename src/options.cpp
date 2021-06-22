@@ -32,6 +32,7 @@ ztd::option_set options( {
   ztd::option('I', "no-include",    false, "Don't resolve %include commands"),
   ztd::option('R', "no-resolve",    false, "Don't resolve %resolve commands"),
   ztd::option("no-extend",          false, "Don't add lxsh extension functions"),
+  ztd::option("bash",               false, "Force bash parsing"),
   ztd::option("debashify",          false, "Attempt to turn a bash-specific script into a POSIX shell script"),
   ztd::option("remove-unused",      false, "Remove unused functions and variables"),
   ztd::option("list-cmd",           false, "List all commands invoked in the script"),
