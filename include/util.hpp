@@ -146,6 +146,7 @@ std::string concatargs(std::vector<std::string> const& args);
 int _exec(std::string const& bin, std::vector<std::string> const& args);
 
 std::string stringReplace(std::string subject, const std::string& search, const std::string& replace);
+std::string escape_chars(std::string subject, const char* chars);
 
 void printFormatError(format_error const& e, bool print_line=true);
 

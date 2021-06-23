@@ -278,13 +278,16 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, parse_context ctx, bo
     if(tsh->quoted || forcequote)
     {
       fulltext = stringReplace(fulltext, "\\\"", "\\\\\"");
-      fulltext = stringReplace(fulltext, "\"", "\\\"");
+      fulltext = escape_chars(fulltext, "\"`$");
       fulltext = stringReplace(fulltext, "!", "\"\\!\"");
-      fulltext = stringReplace(fulltext, "$", "\\$");
-      fulltext = stringReplace(fulltext, "`", "\\`");
     }
+    else
+    {
+      fulltext = escape_chars(fulltext, "\\\"!$`#&|()';<>");
+    }
+
     if(!tsh->quoted && forcequote)
-      fulltext = '"' + fulltext + '"';
+     fulltext = '"' + fulltext + '"';
 
 
     if(tsh->quoted || forcequote)

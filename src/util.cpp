@@ -204,6 +204,19 @@ std::string stringReplace(std::string subject, const std::string& search, const 
   return subject;
 }
 
+std::string escape_chars(std::string subject, const char* chars)
+{
+  for(size_t i=0; i<subject.size(); i++)
+  {
+    if(is_in(subject[i], chars))
+    {
+      subject.insert(subject.begin()+i, '\\');
+      i++;
+    }
+  }
+  return subject;
+}
+
 std::string repeatString(std::string const& str, uint32_t n)
 {
   std::string ret;
