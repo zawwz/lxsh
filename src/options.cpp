@@ -81,7 +81,6 @@ ztd::option_set create_include_opts()
 {
   ztd::option_set opts;
   opts.add(
-    ztd::option('e', false, "Escape double quotes"),
     ztd::option('C', false, "Don't cd to folder the file is in"),
     ztd::option('f', false, "Force include even if already included. Don't count as included")
   );
