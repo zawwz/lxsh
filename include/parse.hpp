@@ -18,7 +18,6 @@
 #define CONTROL_END           "#)"
 #define PIPELINE_END       "\n;#()&"
 #define ARGLIST_END        "\n;#()&|"
-#define SPECIAL_TOKENS     "\n;#()&|"
 #define ALL_TOKENS         "\n;#()&|{}"
 
 #define ARITHMETIC_OPERATOR_END " \t\n$)"
@@ -93,7 +92,7 @@ std::pair<variable*, parse_context> parse_var(parse_context ct, bool specialvars
 std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ct);
 std::pair<variable*, parse_context> parse_manipulation(parse_context ct);
 // arg parser
-std::pair<arg*, parse_context> parse_arg(parse_context ct, const char* end=ARG_END, const char* unexpected=SPECIAL_TOKENS, bool doquote=true);
+std::pair<arg*, parse_context> parse_arg(parse_context ct, const char* end=ARG_END, const char* unexpected=ARGLIST_END, bool doquote=true);
 // redirect parser
 std::pair<redirect*, parse_context> parse_redirect(parse_context ct);
 // arglist parser

@@ -803,7 +803,7 @@ std::pair<arglist*, parse_context> parse_arglist(parse_context ctx, bool hard_er
       }
     }
   }
-  else if(is_in(ctx[ctx.i], SPECIAL_TOKENS) && !word_eq("&>", ctx))
+  else if(is_in(ctx[ctx.i], ARGLIST_END) && !word_eq("&>", ctx))
   {
     if(hard_error)
     {
@@ -861,7 +861,7 @@ std::pair<arglist*, parse_context> parse_arglist(parse_context ctx, bool hard_er
       }
       if(ctx.i>=ctx.size)
         return std::make_pair(ret, ctx);
-      if( is_in(ctx[ctx.i], SPECIAL_TOKENS) )
+      if( is_in(ctx[ctx.i], ARGLIST_END) )
         return std::make_pair(ret, ctx);
     }
 
@@ -1278,7 +1278,7 @@ std::pair<cmd*, parse_context> parse_cmd(parse_context ctx)
     ctx = parse_cmd_varassigns(ret, ctx, true, wp.first);
   }
 
-  if(!is_in(ctx[ctx.i], SPECIAL_TOKENS))
+  if(!is_in(ctx[ctx.i], ARGLIST_END))
   {
     auto pp=parse_arglist(ctx, true, &ret->redirs);
     ret->args = pp.first;
@@ -1342,7 +1342,7 @@ std::pair<case_block*, parse_context> parse_case(parse_context ctx)
       }
       if(ctx[ctx.i] == ')')
         break;
-      if(ctx[ctx.i] != '|' && is_in(ctx[ctx.i], SPECIAL_TOKENS))
+      if(is_in(ctx[ctx.i], PIPELINE_END))
       {
         parse_error( unexpected_token(ctx[ctx.i])+", expecting ')'", ctx );
       }
