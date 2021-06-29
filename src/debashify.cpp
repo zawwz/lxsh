@@ -653,8 +653,6 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       it->second = new arg("=");
       it->second->add(sb);
       has_replaced=true;
-
-      // throw std::runtime_error("Cannot debashify VAR+=()");
     }
   }
   return has_replaced;
@@ -827,8 +825,6 @@ bool debashify_var(variable* in, debashify_params* params)
 {
   if(in->is_manip && in->precedence && in->manip->string() == "!")
     throw std::runtime_error("Cannot debashify ${!VAR}");
-  if(in->varname == "RANDOM")
-    throw std::runtime_error("Cannot debashify $RANDOM");
   return false;
 }
 
