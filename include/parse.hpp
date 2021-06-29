@@ -79,6 +79,13 @@ uint32_t skip_unread(const char* in, uint32_t size, uint32_t start);
 inline uint32_t skip_unread(parse_context const& ct) {
   return skip_unread(ct.data, ct.size, ct.i);
 }
+uint32_t skip_unread_noline(const char* in, uint32_t size, uint32_t start);
+inline uint32_t skip_unread_noline(parse_context const& ct) {
+  return skip_unread_noline(ct.data, ct.size, ct.i);
+}
+
+// heredocument
+parse_context parse_heredocument(parse_context ctx);
 
 // list
 // std::pair<list*, parse_context> parse_list_until(parse_context ct, char end_c, const char* expecting=NULL);

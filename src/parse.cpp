@@ -167,6 +167,18 @@ uint32_t skip_unread(const char* in, uint32_t size, uint32_t start)
   }
 }
 
+uint32_t skip_unread_noline(const char* in, uint32_t size, uint32_t start)
+{
+  uint32_t i=start;
+  while(true)
+  {
+    i = skip_chars(in, size, i, SPACES);
+    if(in[i] != '#') // not a comment
+      return i;
+    i = skip_until(in, size, i, "\n"); //skip to endline
+  }
+}
+
 uint32_t word_eq(const char* word, const char* in, uint32_t size, uint32_t start, const char* end_set)
 {
   uint32_t i=start;
@@ -611,8 +623,9 @@ parse_context parse_heredocument(parse_context ctx)
   // std::string tmpparse=std::string(ctx.data+j, ctx.i-j);
   parse_context newctx = make_context(ctx, j);
   newctx.size = ctx.i;
-  auto pval = parse_arg(newctx , NULL, NULL);
+  auto pval = parse_arg(newctx , NULL, NULL, false);
   ctx.i = pval.second.i;
+  ctx.has_errored = pval.second.has_errored;
   ctx.here_document->here_document = pval.first;
 
   //
@@ -898,6 +911,14 @@ std::pair<pipeline*, parse_context> parse_pipeline(parse_context ctx)
       return std::make_pair(ret, ctx);
     }
     ctx.i++;
+    if(ctx.here_document != nullptr)
+    {
+      ctx.i = skip_unread_noline(ctx);
+      if(ctx[ctx.i] == '\n')
+        ctx = parse_heredocument(ctx+1);
+    }
+    else
+      ctx.i = skip_unread(ctx);
   }
   return std::make_pair(ret, ctx);
 }
@@ -942,7 +963,14 @@ std::pair<condlist*, parse_context> parse_condlist(parse_context ctx)
       parse_error( unexpected_token(ctx[ctx.i]), ctx);
       return std::make_pair(ret, ctx);
     }
-    ctx.i = skip_unread(ctx);
+    if(ctx.here_document != nullptr)
+    {
+      ctx.i = skip_unread_noline(ctx);
+      if(ctx[ctx.i] == '\n')
+        ctx = parse_heredocument(ctx+1);
+    }
+    else
+      ctx.i = skip_unread(ctx);
     if(ctx.i>=ctx.size)
     {
       parse_error( "Unexpected end of file", ctx );
