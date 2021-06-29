@@ -315,10 +315,12 @@ std::string case_block::generate(int ind, generate_context* ctx)
       ret+="\n";
   }
 
-  // replace ;; from last case with ;
+  // replace ;; from last case with \n
   if(this->cases.size()>0 && opt_minify)
   {
     ret.pop_back();
+    ret.pop_back();
+    ret+='\n';
   }
 
   // close case
