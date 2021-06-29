@@ -157,8 +157,6 @@ Directly execute an extended lxsh script with either
 > Direct execution introduces direct dependency on lxsh and code parsing overhead,
 > therefore it should be avoided in production environments.
 
-> stdin is known to not work properly on direct execution as of now
-
 ### Variable/Function/command listing
 
 You can list all calls of variables, functions or commands with `--list-*` options

@@ -194,15 +194,12 @@ void parse_exec(FILE* fd, parse_context ctx)
 pid_t forkexec(const char* bin, char *const args[])
 {
   pid_t child_pid;
-  // int tfd = dup(STDIN_FILENO);
-  // std::cout << tfd << std::endl;
   if((child_pid = vfork()) == -1)
   {
     throw std::runtime_error("fork() failed");
   }
   if (child_pid == 0) // child process
   {
-    setpgid(child_pid, child_pid); //Needed so negative PIDs can kill children of /bin/sh
     execv(bin, args);
     throw std::runtime_error("execv() failed");
   }
