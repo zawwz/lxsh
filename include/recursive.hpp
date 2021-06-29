@@ -30,6 +30,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     {
       redirect* t = dynamic_cast<redirect*>(o);
       recurse(fct, t->target, args...);
+      recurse(fct, t->here_document, args...);
       break;
     }
     case _obj::_arg :
