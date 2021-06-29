@@ -371,6 +371,10 @@ public:
       delete it.first;
       delete it.second;
     }
+    for(auto it: cmd_var_assigns) {
+      delete it.first;
+      delete it.second;
+    }
   }
 
   static const std::string empty_string;
@@ -387,6 +391,8 @@ public:
 
   // is a cmdvar type
   bool is_cmdvar;
+  // var assigns on cmdvar
+  std::vector<std::pair<variable*,arg*>> cmd_var_assigns;
 
   // check if cmd is this (ex: unset)
   bool is(std::string const& in);

@@ -126,6 +126,11 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
         recurse(fct, it.first, args...);
         recurse(fct, it.second, args...);
       }
+      for(auto it: t->cmd_var_assigns)
+      {
+        recurse(fct, it.first, args...);
+        recurse(fct, it.second, args...);
+      }
 
       for(auto it: t->redirs)
         recurse(fct, it, args...);

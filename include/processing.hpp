@@ -44,7 +44,9 @@ void fctmap_get(_obj* in, std::regex const& exclude);
 void cmdmap_get(_obj* in, std::regex const& exclude);
 
 /** util functions **/
+#ifdef DEBUG_MODE
 std::string gen_json_struc(_obj* in);
+#endif
 
 // gen regexes
 std::regex var_exclude_regex(std::string const& in, bool include_reserved);

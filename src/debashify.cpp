@@ -135,9 +135,9 @@ void warn(std::string const& in)
 
 std::string get_declare_opt(cmd* in)
 {
-  if(in->var_assigns[0].second!=nullptr)
+  if(in->cmd_var_assigns[0].second!=nullptr)
   {
-    return in->var_assigns[0].second->string();
+    return in->cmd_var_assigns[0].second->string();
   }
   return "";
 }
@@ -307,19 +307,19 @@ bool debashify_readonly(list* in)
     {
       has_found=true;
       c1->is_cmdvar=false;
-      for(uint32_t i=0; i<c1->var_assigns.size(); i++)
+      for(uint32_t i=0; i<c1->cmd_var_assigns.size(); i++)
       {
-        if(c1->var_assigns[i].first == nullptr || c1->var_assigns[i].second == nullptr)
+        if(c1->cmd_var_assigns[i].first == nullptr || c1->cmd_var_assigns[i].second == nullptr)
         {
-          if(c1->var_assigns[i].first != nullptr)
-            delete c1->var_assigns[i].first;
-          if(c1->var_assigns[i].second != nullptr)
-            delete c1->var_assigns[i].second;
-          c1->var_assigns.erase(c1->var_assigns.begin()+i);
+          if(c1->cmd_var_assigns[i].first != nullptr)
+            delete c1->cmd_var_assigns[i].first;
+          if(c1->cmd_var_assigns[i].second != nullptr)
+            delete c1->cmd_var_assigns[i].second;
+          c1->cmd_var_assigns.erase(c1->cmd_var_assigns.begin()+i);
           i--;
         }
       }
-      if(c1->var_assigns.size() == 0)
+      if(c1->cmd_var_assigns.size() == 0)
       {
         delete in->cls[i];
         in->cls.erase(in->cls.begin()+i);
@@ -329,6 +329,8 @@ bool debashify_readonly(list* in)
       {
         delete c1->args;
         c1->args = new arglist;
+        c1->var_assigns=c1->cmd_var_assigns;
+        c1->cmd_var_assigns.resize(0);
       }
     }
   }
@@ -351,7 +353,7 @@ bool debashify_declare(list* in, debashify_params* params)
       std::string const& op = get_declare_opt(c1);
       if(op == "-a")
       {
-        for(auto it: c1->var_assigns)
+        for(auto it: c1->cmd_var_assigns)
         {
           if(it.first != nullptr)
           params->arrays[it.first->varname] = false;
@@ -359,7 +361,7 @@ bool debashify_declare(list* in, debashify_params* params)
       }
       else if(op == "-A")
       {
-        for(auto it: c1->var_assigns)
+        for(auto it: c1->cmd_var_assigns)
         {
           if(it.first != nullptr)
           params->arrays[it.first->varname] = true;

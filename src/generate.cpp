@@ -333,22 +333,6 @@ std::string cmd::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
-  // is a varassign cmd
-  if(is_cmdvar)
-  {
-    ret += args->generate(ind) + ' ';
-    for(auto it: var_assigns)
-    {
-      if(it.first != nullptr)
-        ret += it.first->generate(ind);
-      if(it.second != nullptr)
-        ret += it.second->generate(ind);
-      ret += ' ';
-    }
-    ret.pop_back();
-    return ret;
-  }
-
   bool has_args=false;
 
   // pre-cmd var assigns
@@ -360,6 +344,22 @@ std::string cmd::generate(int ind, generate_context* ctx)
     if(it.second != nullptr)
       ret += it.second->generate(ind);
     ret += ' ';
+  }
+
+  // is a varassign cmd
+  if(is_cmdvar)
+  {
+    ret += args->generate(ind) + ' ';
+    for(auto it: cmd_var_assigns)
+    {
+      if(it.first != nullptr)
+        ret += it.first->generate(ind);
+      if(it.second != nullptr)
+        ret += it.second->generate(ind);
+      ret += ' ';
+    }
+    ret.pop_back();
+    return ret;
   }
 
   // cmd itself

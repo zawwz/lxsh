@@ -1174,7 +1174,7 @@ std::pair<function*, parse_context> parse_function(parse_context ctx, const char
 }
 
 // parse only var assigns
-parse_context parse_cmd_varassigns(cmd* ret, parse_context ctx, bool cmdassign=false, std::string const& cmd="")
+parse_context parse_cmd_varassigns(cmd* in, parse_context ctx, bool cmdassign=false, std::string const& cmd="")
 {
   bool forbid_assign=false;
   bool forbid_special=false;
@@ -1182,6 +1182,10 @@ parse_context parse_cmd_varassigns(cmd* ret, parse_context ctx, bool cmdassign=f
     forbid_assign=true;
   if(cmdassign && (forbid_special || cmd == "export") )
     forbid_special=true;
+
+  std::vector<std::pair<variable*,arg*>>* ret=&in->var_assigns;
+  if(cmdassign)
+    ret=&in->cmd_var_assigns;
 
   while(ctx.i<ctx.size && !is_in(ctx[ctx.i], ARGLIST_END))
   {
@@ -1245,7 +1249,7 @@ parse_context parse_cmd_varassigns(cmd* ret, parse_context ctx, bool cmdassign=f
         ctx=pp.second;
       }
       ta->insert(0, strop);
-      ret->var_assigns.push_back(std::make_pair(vp.first, ta));
+      ret->push_back(std::make_pair(vp.first, ta));
       ctx.i=skip_chars(ctx, SPACES);
     }
     else
@@ -1254,14 +1258,14 @@ parse_context parse_cmd_varassigns(cmd* ret, parse_context ctx, bool cmdassign=f
       {
         if(vp.first != nullptr && is_in(newct[newct.i], ARG_END) )
         {
-          ret->var_assigns.push_back(std::make_pair(vp.first, nullptr));
+          ret->push_back(std::make_pair(vp.first, nullptr));
           ctx=newct;
         }
         else
         {
           delete vp.first;
           auto pp=parse_arg(ctx);
-          ret->var_assigns.push_back(std::make_pair(nullptr, pp.first));
+          ret->push_back(std::make_pair(nullptr, pp.first));
           ctx=pp.second;
         }
         ctx.i=skip_chars(ctx, SPACES);
@@ -1281,7 +1285,6 @@ parse_context parse_cmd_varassigns(cmd* ret, parse_context ctx, bool cmdassign=f
 std::pair<cmd*, parse_context> parse_cmd(parse_context ctx)
 {
   cmd* ret = new cmd;
-  uint32_t start=ctx.i;
 
   ctx = parse_cmd_varassigns(ret, ctx);
 
@@ -1292,10 +1295,6 @@ std::pair<cmd*, parse_context> parse_cmd(parse_context ctx)
     {
       parse_error("bash specific: "+wp.first, ctx);
     }
-    if(ret->var_assigns.size()>0)
-    {
-      parse_error("Unallowed preceding variables on "+wp.first, ctx, start);
-    }
 
     ret->args = new arglist;
     ret->args->add(new arg(wp.first));
@@ -1305,14 +1304,13 @@ std::pair<cmd*, parse_context> parse_cmd(parse_context ctx)
 
     ctx = parse_cmd_varassigns(ret, ctx, true, wp.first);
   }
-
-  if(!is_in(ctx[ctx.i], ARGLIST_END))
+  else if(!is_in(ctx[ctx.i], ARGLIST_END))
   {
     auto pp=parse_arglist(ctx, true, &ret->redirs);
     ret->args = pp.first;
     ctx = pp.second;
   }
-  else if(ret->var_assigns.size() <= 0)
+  else if( ret->var_assigns.size() <= 0 )
   {
     parse_error( unexpected_token(ctx[ctx.i]), ctx );
     ctx.i++;

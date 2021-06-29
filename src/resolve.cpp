@@ -403,6 +403,11 @@ bool r_resolve(_obj* o, parse_context* ct)
         resolve_arg(it.second, *ct, true); // force quoted
         resolve(it.second, ct);
       }
+      for(auto it: t->cmd_var_assigns) // var assigns
+      {
+        resolve_arg(it.second, *ct, true); // force quoted
+        resolve(it.second, ct);
+      }
       for(auto it: t->redirs)
         resolve(it, ct);
       resolve(t->args, ct);

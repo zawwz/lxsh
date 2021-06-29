@@ -250,7 +250,7 @@ void add_unset_variables(shmain* sh, std::regex const& exclude)
     unset_cmd->is_cmdvar=true;
     for(auto it: m_vars)
     {
-      unset_cmd->var_assigns.push_back(std::make_pair(new variable(it.first), nullptr));
+      unset_cmd->cmd_var_assigns.push_back(std::make_pair(new variable(it.first), nullptr));
     }
     condlist* cl = new condlist(unset_cmd);
     sh->lst->cls.insert(sh->lst->cls.begin(), cl);
@@ -292,6 +292,11 @@ bool r_get_unsets(_obj* in, set_t* unsets)
       if(t->is("unset"))
       {
         for(auto it: t->var_assigns)
+        {
+          if(it.first != nullptr)
+            unsets->insert(it.first->varname);
+        }
+        for(auto it: t->cmd_var_assigns)
         {
           if(it.first != nullptr)
             unsets->insert(it.first->varname);
@@ -391,6 +396,22 @@ bool r_delete_var(_obj* in, set_t* vars)
           if(has_deleted && c->var_assigns.size()<=0 && (c->arglist_size()<=0 || c->is_cmdvar) )
             to_delete=true;
 
+          for(uint32_t j=0; j<c->cmd_var_assigns.size(); j++)
+          {
+            if( c->cmd_var_assigns[j].first != nullptr && vars->find(c->cmd_var_assigns[j].first->varname) != vars->end() )
+            {
+              if(c->cmd_var_assigns[j].first != nullptr)
+                delete c->cmd_var_assigns[j].first;
+              if(c->cmd_var_assigns[j].second != nullptr)
+                delete c->cmd_var_assigns[j].second;
+              c->cmd_var_assigns.erase(c->cmd_var_assigns.begin()+j);
+              has_deleted=true;
+              j--;
+            }
+          }
+          if(has_deleted && c->cmd_var_assigns.size()<=0 && (c->arglist_size()<=0 || c->is_cmdvar) )
+            to_delete=true;
+
         }
         if(to_delete)
         {
@@ -482,6 +503,8 @@ void string_processors(_obj* in)
 
 /** JSON **/
 
+#ifdef DEBUG_MODE
+
 std::string quote_string(std::string const& in)
 {
   return '"' + stringReplace(in, "\"", "\\\"") + '"';
@@ -519,7 +542,6 @@ std::string boolstring(bool in)
     return "false";
 }
 
-#ifdef DEBUG_MODE
 std::string gen_json_struc(_obj* o)
 {
   if(o==nullptr)
@@ -681,6 +703,15 @@ std::string gen_json_struc(_obj* o)
         aa.push_back(gen_json(ttvec));
       }
       vec.push_back(std::make_pair( quote_string("var_assigns"), gen_json(aa)));
+      std::vector<std::string> bb;
+      for(auto it: t->cmd_var_assigns)
+      {
+        std::vector<std::pair<std::string,std::string>> ttvec;
+        ttvec.push_back( std::make_pair(quote_string("var"), gen_json_struc(it.first)) );
+        ttvec.push_back( std::make_pair(quote_string("value"), gen_json_struc(it.second)) );
+        bb.push_back(gen_json(ttvec));
+      }
+      vec.push_back(std::make_pair( quote_string("cmd_var_assigns"), gen_json(bb)));
 
       std::vector<std::string> tvec;
       for(auto it: t->redirs)
