@@ -24,8 +24,6 @@ inline bool is_dev_file(std::string const& filename) { return filename.substr(0,
 
 std::string indent(int n);
 
-bool is_among(std::string const& in, std::vector<std::string> const& values);
-
 std::vector<std::string> split(std::string const& in, const char* splitters);
 std::vector<std::string> split(std::string const& in, char c);
 
@@ -135,6 +133,12 @@ bool is_in_vector(T el, std::vector<T> vec)
     if(it == el)
       return true;
   return false;
+}
+
+template <class T>
+bool is_in_set(T el, std::set<T> ss)
+{
+  return ss.find(el) != ss.end();
 }
 
 std::set<std::string> prune_matching(std::set<std::string>& in, std::regex re);

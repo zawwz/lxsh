@@ -160,7 +160,7 @@ std::string get_varname(arg* in)
 
 bool cmd_is_argvar(std::string const& in)
 {
-  return is_in_vector(in, posix_cmdvar) || is_in_vector(in, bash_cmdvar);
+  return is_in_set(in, posix_cmdvar) || is_in_set(in, bash_cmdvar);
 }
 
 bool cmd::is_argvar()

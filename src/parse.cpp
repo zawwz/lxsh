@@ -14,14 +14,14 @@
 // macro
 
 // constants
-const std::vector<std::string> posix_cmdvar = { "export", "unset", "local", "read", "getopts" };
-const std::vector<std::string> bash_cmdvar  = { "readonly", "declare", "typeset" };
+const std::set<std::string> posix_cmdvar = { "export", "unset", "local", "read", "getopts" };
+const std::set<std::string> bash_cmdvar  = { "readonly", "declare", "typeset" };
 
-const std::vector<std::string> arithmetic_precedence_operators = { "!", "~", "+", "-" };
-const std::vector<std::string> arithmetic_operators = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "=", "==", "!=", "&", "|", "^", "<<", ">>", "&&", "||" };
+const std::set<std::string> arithmetic_precedence_operators = { "!", "~", "+", "-" };
+const std::set<std::string> arithmetic_operators = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "=", "==", "!=", "&", "|", "^", "<<", ">>", "&&", "||" };
 
-const std::vector<std::string> all_reserved_words = { "if", "then", "else", "fi", "case", "esac", "for", "while", "do", "done", "{", "}" };
-const std::vector<std::string> out_reserved_words = { "then", "else", "fi", "esac", "do", "done", "}" };
+const std::set<std::string> all_reserved_words = { "if", "then", "else", "fi", "case", "esac", "for", "while", "do", "done", "{", "}" };
+const std::set<std::string> out_reserved_words = { "then", "else", "fi", "esac", "do", "done", "}" };
 
 // stuff
 
@@ -276,7 +276,7 @@ std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ctx)
   }
 
   auto po = get_operator(ctx);
-  if(is_among(po.first, arithmetic_precedence_operators))
+  if(is_in_set(po.first, arithmetic_precedence_operators))
   {
     ctx.i = po.second;
     auto pa = parse_arithmetic(ctx);
@@ -335,7 +335,7 @@ std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ctx)
     auto po = get_operator(ctx);
     if(po.first != "")
     {
-      if(!is_among(po.first, arithmetic_operators))
+      if(!is_in_set(po.first, arithmetic_operators))
       {
         parse_error( "Unknown arithmetic operator: "+po.first, ctx);
       }
@@ -1289,9 +1289,10 @@ std::pair<cmd*, parse_context> parse_cmd(parse_context ctx)
   ctx = parse_cmd_varassigns(ret, ctx);
 
   auto wp=get_word(ctx, ARG_END);
-  if(is_in_vector(wp.first, posix_cmdvar) || is_in_vector(wp.first, bash_cmdvar))
+  bool is_bash_cmdvar=false;
+  if(is_in_set(wp.first, posix_cmdvar) || (is_bash_cmdvar=is_in_set(wp.first, bash_cmdvar)) )
   {
-    if(!ctx.bash && is_in_vector(wp.first, bash_cmdvar))
+    if(!ctx.bash && (is_bash_cmdvar || is_in_set(wp.first, bash_cmdvar)))
     {
       parse_error("bash specific: "+wp.first, ctx);
     }
@@ -1627,7 +1628,7 @@ std::pair<block*, parse_context> parse_block(parse_context ctx)
       ret = pp.first;
       ctx = pp.second;
     }
-    else if(is_in_vector(word, out_reserved_words)) // is a reserved word
+    else if(is_in_set(word, out_reserved_words)) // is a reserved word
     {
       parse_error( strf("Unexpected '%s'", word.c_str())+expecting(ctx.expecting) , ctx);
       ctx.i+=word.size();

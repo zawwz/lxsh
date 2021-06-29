@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <set>
 #include <tuple>
 
 #define SPACES          " \t"
@@ -37,9 +38,9 @@ struct list_parse_options {
 };
 
 // globals
-
-extern const std::vector<std::string> posix_cmdvar;
-extern const std::vector<std::string> bash_cmdvar;
+extern const std::set<std::string> all_reserved_words;
+extern const std::set<std::string> posix_cmdvar;
+extern const std::set<std::string> bash_cmdvar;
 
 std::string import_file(std::string const& path);
 

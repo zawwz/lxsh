@@ -45,14 +45,6 @@ std::string dirname(std::string const& in)
     return ".";
 }
 
-bool is_among(std::string const& in, std::vector<std::string> const& values)
-{
-  for(auto it: values)
-    if(in == it)
-      return true;
-  return false;
-}
-
 std::vector<std::string> split(std::string const& in, const char* splitters)
 {
   uint32_t i=0,j=0;

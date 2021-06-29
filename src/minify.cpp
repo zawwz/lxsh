@@ -310,6 +310,7 @@ void minify_fct(_obj* in, std::regex const& exclude)
   concat_sets(allcmds, m_excluded_fct);
   concat_sets(allcmds, unsets);
   // create mapping
+  concat_sets(allcmds, all_reserved_words);
   fctmap=gen_minimal_map(m_fcts, allcmds);
   // perform replace
   recurse(r_replace_fct, in, &fctmap);
