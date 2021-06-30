@@ -289,8 +289,11 @@ void minify_var(_obj* in, std::regex const& exclude)
   strmap_t varmap;
   // get vars
   varmap_get(in, exclude);
+  // concatenate excluded and reserved
+  concat_sets(excluded, m_excluded_var);
+  concat_sets(excluded, all_reserved_words);
   // create mapping
-  varmap=gen_minimal_map(m_vars, m_excluded_var);
+  varmap=gen_minimal_map(m_vars, excluded);
   // perform replace
   recurse(r_replace_var, in, &varmap);
   require_rescan_var();
@@ -299,19 +302,20 @@ void minify_var(_obj* in, std::regex const& exclude)
 void minify_fct(_obj* in, std::regex const& exclude)
 {
   // countmap_t fcts, cmdmap;
-  set_t allcmds, excluded, unsets;
+  set_t excluded, unsets;
   strmap_t fctmap;
   // get fcts and cmds
   fctmap_get(in, exclude);
   cmdmap_get(in, regex_null);
   recurse(r_get_unsets, in, &unsets);
-  // concatenate cmds and excluded commands
-  allcmds=map_to_set(m_cmds);
-  concat_sets(allcmds, m_excluded_fct);
-  concat_sets(allcmds, unsets);
+  // concatenate cmds, excluded and reserved
+  excluded=map_to_set(m_cmds);
+  exclude_sets(excluded, map_to_set(m_fcts));
+  concat_sets(excluded, m_excluded_fct);
+  concat_sets(excluded, unsets);
+  concat_sets(excluded, all_reserved_words);
   // create mapping
-  concat_sets(allcmds, all_reserved_words);
-  fctmap=gen_minimal_map(m_fcts, allcmds);
+  fctmap=gen_minimal_map(m_fcts, excluded);
   // perform replace
   recurse(r_replace_fct, in, &fctmap);
   require_rescan_fct();
