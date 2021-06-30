@@ -541,7 +541,7 @@ std::pair<arg*, parse_context> parse_arg(parse_context ctx, const char* end, con
     {
       ctx.i += 2;
     }
-    else if(doquote && ctx[ctx.i]=='\\') // backslash: don't check next char
+    else if(ctx[ctx.i]=='\\') // backslash: don't check next char
     {
       ctx.i++;
       if(ctx.i>=ctx.size)
