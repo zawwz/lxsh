@@ -6,6 +6,9 @@
 #include "options.hpp"
 #include "parse.hpp"
 
+// global
+bool prev_is_heredoc=false;
+
 bool is_sub_special_cmd(std::string in)
 {
   return in == "%include_sub" || in == "%resolve_sub";
@@ -78,6 +81,7 @@ std::string condlist::generate(int ind)
       ret += opt_minify ? "&&" : " && ";
     ret += pls[i+1]->generate(ind, &ctx);
   }
+  prev_is_heredoc=false;
   if(ret=="")
     return "";
   if(ctx.here_document != nullptr)
@@ -87,6 +91,7 @@ std::string condlist::generate(int ind)
     ret += '\n';
     ret += ctx.here_document->generate(0);
     ret += '\n';
+    prev_is_heredoc=true;
   }
   else if(parallel)
   {
@@ -308,7 +313,7 @@ std::string case_block::generate(int ind, generate_context* ctx)
     // commands
     ret += cs.second->generate(ind+1);
     // end of case: ;;
-    if(opt_minify && ret[ret.size()-1] == '\n') // ;; can be right after command
+    if(opt_minify && !prev_is_heredoc && ret[ret.size()-1] == '\n') // ;; can be right after command
       ret.pop_back();
     ret += indented(";;", ind+1);
     if(!opt_minify)
