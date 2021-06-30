@@ -334,6 +334,8 @@ bool debashify_readonly(list* in)
       }
     }
   }
+  if(in->cls.size()<=0)
+    in->add(make_condlist("true"));
   return has_found;
 }
 

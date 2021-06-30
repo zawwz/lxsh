@@ -419,6 +419,8 @@ bool r_delete_var(_obj* in, set_t* vars)
           t->cls.erase(t->cls.begin()+i);
           i--;
         }
+        if(t->cls.size()<=0)
+          t->add(make_condlist("true"));
       }
     }
     default: break;
@@ -567,6 +569,7 @@ std::string gen_json_struc(_obj* o)
       vec.push_back(std::make_pair(quote_string("type"), quote_string("redirect") ) );
       vec.push_back(std::make_pair(quote_string("op"), quote_string(t->op)));
       vec.push_back(std::make_pair(quote_string("target"), gen_json_struc(t->target)));
+      vec.push_back(std::make_pair(quote_string("here_document"), gen_json_struc(t->here_document)));
       break;
     }
     case _obj::_arg :
