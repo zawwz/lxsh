@@ -63,16 +63,24 @@ void require_rescan_all()
 // type tools
 countmap_t combine_maps(countmap_t const& a, countmap_t const& b)
 {
-  countmap_t ret;
-  for(auto it: a)
-  {
-    if(!ret.insert( it ).second)
-      ret[it.first] += it.second;
-  }
+  countmap_t ret = a;
   for(auto it: b)
   {
     if(!ret.insert( it ).second)
       ret[it.first] += it.second;
+  }
+  return ret;
+}
+
+// add the values of b to a only if they are already present in a
+countmap_t combine_common(countmap_t const& a, countmap_t const& b)
+{
+  countmap_t ret = a;
+  for(auto it: a)
+  {
+    auto t=b.find(it.first);
+    if(t!=b.end())
+      ret[it.first] += t->second;
   }
   return ret;
 }

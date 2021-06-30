@@ -29,6 +29,10 @@ extern set_t m_excluded_var, m_excluded_fct, m_excluded_cmd;
 
 extern bool b_gotvar, b_gotfct, b_gotcmd;
 
+// tools
+countmap_t combine_maps(countmap_t const& a, countmap_t const& b);
+countmap_t combine_common(countmap_t const& a, countmap_t const& b);
+
 /** map get functions (optimizations) **/
 
 

@@ -127,6 +127,17 @@ void concat_sets(std::set<T>& a, std::set<T> const& b)
 }
 
 template <class T>
+void exclude_sets(std::set<T>& a, std::set<T> const& b)
+{
+  for(auto it: b)
+  {
+    auto t = a.find(it);
+    if(t != a.end())
+      a.erase(t);
+  }
+}
+
+template <class T>
 bool is_in_vector(T el, std::vector<T> vec)
 {
   for(auto it: vec)
