@@ -216,6 +216,21 @@ bool r_minify_useless_quotes(_obj* in)
         //if()
       }
     }; break;
+    case _obj::_redirect: {
+      redirect* t = dynamic_cast<redirect*>(in);
+      if(t->here_document != nullptr)
+      {
+        minify_quotes(t->target);
+        for(auto it: t->here_document->sa)
+        {
+          if(it->type!=_obj::subarg_string) {
+            minify_quotes(it);
+          }
+        }
+        // don't recurse on the rest
+        return false;
+      }
+    } break;
     default: break;
   }
   return true;
