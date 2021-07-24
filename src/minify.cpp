@@ -455,7 +455,7 @@ block* do_one_minify_single_block(block* in)
   ret = l->cls[0]->pls[0]->cmds[0];
 
   // if is a subshell and has some env set: don't remove it
-  if(in->type == _obj::block_subshell && has_env_set(in))
+  if(in->type == _obj::block_subshell && has_env_set(ret))
     return nullptr;
 
   return ret;
@@ -485,6 +485,9 @@ bool r_minify_single_block(_obj* in)
           // replace value
           delete t->cmds[i];
           t->cmds[i] = ret;
+
+          recurse(r_minify_single_block, in);
+          return false;
         }
       }
     }; break;

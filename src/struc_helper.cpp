@@ -140,7 +140,7 @@ bool possibly_expands(arglist* in)
 
 bool cmd::has_var_assign()
 {
-  if(this->args->size() == 0)
+  if(this->args == nullptr || this->args->size() == 0)
   {
     return this->var_assigns.size()>0;
   }
