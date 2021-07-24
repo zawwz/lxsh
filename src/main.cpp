@@ -215,8 +215,8 @@ int main(int argc, char* argv[])
       if(options['J'])
       {
         std::cout << gen_json_struc(sh) << std::endl;
-        goto end;
       }
+      else
   #endif
 
       if(options['o']) // file output
@@ -259,8 +259,6 @@ int main(int argc, char* argv[])
     std::cerr << e.what() << std::endl;
     return ERR_RUNTIME;
   }
-end:
-
   delete sh;
 
   return ret;

@@ -26,8 +26,7 @@ ztd::option_set options( {
 #endif
   ztd::option("\r  [Processing]"),
   ztd::option('m', "minify",        false, "Minify code without changing functionality"),
-  ztd::option('M', "minify-full",   false, "Enable all minifying features: -m --minify-quotes --minify-var --minify-fct --remove-unused"),
-  ztd::option("minify-quotes",      false, "Remove unnecessary quotes"),
+  ztd::option('M', "minify-full",   false, "Enable all minifying features: -m --minify-var --minify-fct --remove-unused"),
   ztd::option('C', "no-cd",         false, "Don't cd when doing %include and %resolve"),
   ztd::option('I', "no-include",    false, "Don't resolve %include commands"),
   ztd::option('R', "no-resolve",    false, "Don't resolve %resolve commands"),
@@ -72,7 +71,6 @@ void get_opts()
     options['m'].activated=true;
     options["minify-var"].activated=true;
     options["minify-fct"].activated=true;
-    options["minify-quotes"].activated=true;
     options["remove-unused"].activated=true;
   }
 }

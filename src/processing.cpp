@@ -511,8 +511,8 @@ bool r_do_string_processor(_obj* in)
         require_rescan_all();
         if(options["remove-unused"])
           delete_unused( tsh, re_var_exclude, re_fct_exclude );
-        if(options["minify-quotes"])
-          minify_quotes(tsh);
+        if(options["minify"])
+          minify_generic(tsh);
         if(options["minify-var"])
           minify_var( tsh, re_var_exclude );
         if(options["minify-fct"])

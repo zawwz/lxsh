@@ -500,4 +500,5 @@ void minify_generic(_obj* in)
 {
   recurse(r_minify_empty_manip, in);
   recurse(r_minify_single_block, in);
+  minify_quotes(in);
 }
