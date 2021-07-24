@@ -473,7 +473,7 @@ bool r_minify_single_block(_obj* in)
         if(ret != nullptr) {
           // concatenate redirects
           for(uint32_t i=0; i<t->cmds[i]->redirs.size(); i++)
-            ret->redirs.insert(ret->redirs.begin()+i, ret->redirs[i]);
+            ret->redirs.insert(ret->redirs.begin()+i, t->cmds[i]->redirs[i]);
 
           // deindex
           t->cmds[i]->redirs.resize(0);
