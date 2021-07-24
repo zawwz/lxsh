@@ -201,8 +201,6 @@ int main(int argc, char* argv[])
         string_processors(sh);
         minify_generic(sh);
       }
-      if(options["minify-quotes"])
-        minify_quotes(sh);
       if(options["minify-var"])
         minify_var( sh, re_var_exclude );
       if(options["minify-fct"])
