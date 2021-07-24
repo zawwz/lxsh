@@ -825,10 +825,34 @@ bool debashify_procsub(list* lst, debashify_params* params)
   return has_replaced;
 }
 
+bool debashify_variable_substitution(arg* in, debashify_params* params)
+{
+  bool has_replaced=false;
+  for(uint32_t i=0; i<in->sa.size(); i++)
+  {
+    if(in->sa[i]->type == _obj::subarg_variable)
+    {
+      variable* v = dynamic_cast<variable_subarg*>(in->sa[i])->var;
+      if(v->is_manip && v->precedence && v->manip->string() == "!")
+      {
+        arg* eval_arg = new arg;
+        eval_arg->add(new string_subarg("echo \\\"\\${"));
+        eval_arg->add(new variable_subarg(new variable(v->varname)));
+        eval_arg->add(new string_subarg("}\\\""));
+        cmd* eval_cmd = make_cmd(std::vector<arg*>({new arg("eval"), eval_arg}));
+        subshell_subarg* r = new subshell_subarg(new subshell(eval_cmd));
+        r->quoted = in->sa[i]->quoted;
+        delete in->sa[i];
+        in->sa[i] = r;
+        has_replaced=true;
+      }
+    }
+  }
+  return has_replaced;
+}
+
 bool debashify_var(variable* in, debashify_params* params)
 {
-  if(in->is_manip && in->precedence && in->manip->string() == "!")
-    throw std::runtime_error("Cannot debashify ${!VAR}");
   return false;
 }
 
@@ -845,6 +869,7 @@ bool r_debashify(_obj* o, debashify_params* params)
     case _obj::_arg: {
       arg* t = dynamic_cast<arg*>(o);
       debashify_subarg_replace(t, params);
+      debashify_variable_substitution(t, params);
     } break;
     case _obj::_list: {
       list* t = dynamic_cast<list*>(o);
