@@ -415,6 +415,8 @@ bool r_minify_empty_manip(_obj* in)
           if(ss->var->is_manip)
           {
             // if is a manip: possibility to skip it
+            if(ss->var->index != nullptr) // is a var bash array: skip
+              return true;
             if(i+1<t->sa.size() && t->sa[i+1]->type == _obj::subarg_string)
             {
               // if next subarg is a string: check its first char
@@ -422,7 +424,7 @@ bool r_minify_empty_manip(_obj* in)
               char c = ss->val[0];
               // if its first would extend the var name: skip
               if(is_alphanum(c) || c == '_')
-              return true;
+                return true;
             }
             // if has no actual manipulation operation: set it to not manip
             if(ss->var->manip == nullptr || ss->var->manip->sa.size() == 0)
