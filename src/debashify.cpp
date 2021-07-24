@@ -61,6 +61,7 @@ block* gen_bashtest_cmd(std::vector<arg*> args)
     // regex matcher: use expr
     delete args[1];
     args[1]=nullptr;
+    args[2]->insert(0, ".*");
     add_quotes(args[2]);
     ret = make_cmd( std::vector<arg*>({ new arg("expr"), args[0], new arg(":"), args[2] }) );
     ret->redirs.push_back(new redirect(">", new arg("/dev/null") ));
