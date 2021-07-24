@@ -15,4 +15,6 @@ void delete_unused(_obj* in, std::regex const& var_exclude, std::regex const& fc
 
 void minify_quotes(_obj* in);
 
+void minify_generic(_obj* in);
+
 #endif //MINIFY_HPP

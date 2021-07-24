@@ -205,6 +205,7 @@ int main(int argc, char* argv[])
       {
         opt_minify=true;
         string_processors(sh);
+        minify_generic(sh);
       }
       if(options["minify-quotes"])
         minify_quotes(sh);

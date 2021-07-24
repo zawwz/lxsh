@@ -69,7 +69,7 @@ bool r_replace_var(_obj* in, strmap_t* varmap)
   return true;
 }
 
-const char* escaped_char=" \\\t!\"()|&*?~><#";
+const char* singlequote_escape_char=" \\\t!\"()|&*?~><#";
 const char* doublequote_escape_char="  \t'|&\\*()?~><#";
 uint32_t count_escape_chars(std::string const& in, bool doublequote)
 {
@@ -78,7 +78,7 @@ uint32_t count_escape_chars(std::string const& in, bool doublequote)
   {
     if(doublequote && is_in(in[i], doublequote_escape_char))
       r++;
-    else if(!doublequote && is_in(in[i], escaped_char))
+    else if(!doublequote && is_in(in[i], singlequote_escape_char))
       r++;
     else if(in[i] == '\n') // \n: can't remove quotes
       return 2;
@@ -170,17 +170,17 @@ void do_one_minify_quotes(string_subarg* in, bool prev_is_var, bool start_quoted
         for(k=j; k<i-1; k++)
         {
           if( is_in(val[k], doublequote_escape_char) )
-          break;
+            break;
         }
       }
       else
       {
         for(k=j; k<i-1; k++)
         {
-          if( is_in(val[k], escaped_char) )
-          break;
+          if( is_in(val[k], singlequote_escape_char) )
+            break;
           if( k+1<val.size() && val[k] == '$' && ( is_in(val[k+1], SPECIAL_VARS) || is_alpha(val[k+1]) || val[k+1] == '_' ) )
-          break;
+            break;
         }
       }
       if(k<i-1)
@@ -199,12 +199,15 @@ bool r_minify_useless_quotes(_obj* in)
       arg* t = dynamic_cast<arg*>(in);
       for(uint32_t i=0; i<t->sa.size(); i++)
       {
+        // iterate subargs
         if(t->sa[i]->type == _obj::subarg_string)
         {
+          // has to be a string
           string_subarg* ss = dynamic_cast<string_subarg*>(t->sa[i]);
           bool prev_is_var=false;
           if(i>0 && t->sa[i-1]->type == _obj::subarg_variable)
           {
+            // previous subarg is a direct variable (removing a quote could change variable name)
             variable_subarg* vs = dynamic_cast<variable_subarg*>(t->sa[i-1]);
             if(vs->var != nullptr && vs->var->is_manip == false && vs->var->varname.size()>0 && !(is_in(vs->var->varname[0], SPECIAL_VARS) || is_alpha(vs->var->varname[0]) ) )
               prev_is_var=true;
@@ -217,6 +220,7 @@ bool r_minify_useless_quotes(_obj* in)
       }
     }; break;
     case _obj::_redirect: {
+      // for redirects: don't minify quotes on here documents
       redirect* t = dynamic_cast<redirect*>(in);
       if(t->here_document != nullptr)
       {
@@ -392,4 +396,47 @@ void delete_unused(_obj* in, std::regex const& var_exclude, std::regex const& fc
 {
   while(delete_unused_fct(in, fct_exclude) || delete_unused_var(in, var_exclude));
   // keep deleting until both no function and no variables were deleted
+}
+
+
+// minify ${var} to $var
+bool r_minify_empty_manip(_obj* in)
+{
+  switch(in->type)
+  {
+    case _obj::_arg: {
+      arg* t = dynamic_cast<arg*>(in);
+      for(uint32_t i=0; i<t->sa.size(); i++)
+      {
+        if(t->sa[i]->type == _obj::subarg_variable)
+        {
+          // has to be a variable
+          variable_subarg* ss = dynamic_cast<variable_subarg*>(t->sa[i]);
+          if(ss->var->is_manip)
+          {
+            // if is a manip: possibility to skip it
+            if(i+1<t->sa.size() && t->sa[i+1]->type == _obj::subarg_string)
+            {
+              // if next subarg is a string: check its first char
+              string_subarg* ss = dynamic_cast<string_subarg*>(t->sa[i+1]);
+              char c = ss->val[0];
+              // if its first would extend the var name: skip
+              if(is_alphanum(c) || c == '_')
+              return true;
+            }
+            // if has no actual manipulation operation: set it to not manip
+            if(ss->var->manip == nullptr || ss->var->manip->sa.size() == 0)
+              ss->var->is_manip = false;
+          }
+        }
+      }
+    }; break;
+    default: break;
+  }
+  return true;
+}
+
+void minify_generic(_obj* in)
+{
+  recurse(r_minify_empty_manip, in);
 }
