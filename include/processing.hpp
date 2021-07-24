@@ -70,6 +70,7 @@ void list_fcts(_obj* in, std::regex const& exclude);
 void list_cmds(_obj* in, std::regex const& exclude);
 
 // recursives
+bool r_has_env_set(_obj* in, bool* result);
 bool r_get_unsets(_obj* in, set_t* unsets);
 bool r_get_var(_obj* in, countmap_t* defmap, countmap_t* callmap);
 bool r_get_cmd(_obj* in, countmap_t* all_cmds);
@@ -81,6 +82,7 @@ bool r_delete_var(_obj* in, set_t* vars);
 
 std::set<std::string> find_lxsh_commands(shmain* sh);
 void add_unset_variables(shmain* sh, std::regex const& exclude);
+bool has_env_set(_obj* in);
 
 void string_processors(_obj* in);
 

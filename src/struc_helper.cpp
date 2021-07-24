@@ -138,6 +138,15 @@ bool possibly_expands(arglist* in)
 
 // property getters
 
+bool cmd::has_var_assign()
+{
+  if(this->args->size() == 0)
+  {
+    return this->var_assigns.size()>0;
+  }
+  return this->is_argvar();
+}
+
 size_t cmd::arglist_size()
 {
   if(args==nullptr)

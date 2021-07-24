@@ -180,12 +180,6 @@ int main(int argc, char* argv[])
       list_fcts(sh, re_fct_exclude);
     else if(options["list-cmd"])
       list_cmds(sh, regex_null);
-#ifdef DEBUG_MODE
-    else if(options['J'])
-    {
-      std::cout << gen_json_struc(sh) << std::endl;
-    }
-#endif
     // output
     else
     {
@@ -216,6 +210,14 @@ int main(int argc, char* argv[])
       // other processing
       if(options["unset-var"])
         add_unset_variables( sh, re_var_exclude );
+
+  #ifdef DEBUG_MODE
+      if(options['J'])
+      {
+        std::cout << gen_json_struc(sh) << std::endl;
+        goto end;
+      }
+  #endif
 
       if(options['o']) // file output
       {
@@ -257,6 +259,7 @@ int main(int argc, char* argv[])
     std::cerr << e.what() << std::endl;
     return ERR_RUNTIME;
   }
+end:
 
   delete sh;
 

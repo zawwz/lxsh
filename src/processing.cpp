@@ -265,7 +265,32 @@ void add_unset_variables(shmain* sh, std::regex const& exclude)
   }
 }
 
+bool has_env_set(_obj* in) {
+  bool r=false;
+  recurse(r_has_env_set, in, &r);
+  return r;
+}
+
 /** RECURSIVES **/
+
+// CHECK //
+
+bool r_has_env_set(_obj* in, bool* result)
+{
+  switch(in->type)
+  {
+    case _obj::block_subshell: {
+      return false;
+    }; break;
+    case _obj::block_cmd: {
+      cmd* t = dynamic_cast<cmd*>(in);
+      if(t->has_var_assign())
+        *result = true;
+    }
+    default: break;
+  }
+  return true;
+}
 
 // GET //
 

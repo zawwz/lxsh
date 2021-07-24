@@ -400,6 +400,9 @@ public:
   bool is_argvar();
   std::vector<subarg*> subarg_vars();
 
+  // returns true if command performs env var changes
+  bool has_var_assign();
+
   arglist* args;
 
   std::string generate(int ind, generate_context* ctx);

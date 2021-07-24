@@ -436,7 +436,65 @@ bool r_minify_empty_manip(_obj* in)
   return true;
 }
 
+block* do_one_minify_single_block(block* in)
+{
+  block* ret=nullptr;
+  list* l=nullptr;
+  if(in->type == _obj::block_brace)
+    l = dynamic_cast<brace*>(in)->lst;
+  else if(in->type == _obj::block_subshell)
+    l = dynamic_cast<subshell*>(in)->lst;
+
+  if(l == nullptr)
+    return nullptr;
+
+  // not a single cmd/block: not applicable
+  if(l->cls.size() != 1 || l->cls[0]->pls.size() != 1 || l->cls[0]->pls[0]->cmds.size() != 1)
+    return nullptr;
+
+  ret = l->cls[0]->pls[0]->cmds[0];
+
+  // if is a subshell and has some env set: don't remove it
+  if(in->type == _obj::block_subshell && has_env_set(in))
+    return nullptr;
+
+  return ret;
+}
+
+bool r_minify_single_block(_obj* in)
+{
+  switch(in->type)
+  {
+    case _obj::_pipeline: {
+      pipeline* t = dynamic_cast<pipeline*>(in);
+      for(uint32_t i=0; i<t->cmds.size(); i++)
+      {
+        block* ret = do_one_minify_single_block(t->cmds[i]);
+        if(ret != nullptr) {
+          // concatenate redirects
+          for(uint32_t i=0; i<t->cmds[i]->redirs.size(); i++)
+            ret->redirs.insert(ret->redirs.begin()+i, ret->redirs[i]);
+
+          // deindex
+          t->cmds[i]->redirs.resize(0);
+          if(t->cmds[i]->type == _obj::block_brace)
+            dynamic_cast<brace*>(t->cmds[i])->lst->cls[0]->pls[0] = nullptr;
+          else if(t->cmds[i]->type == _obj::block_subshell)
+            dynamic_cast<subshell*>(t->cmds[i])->lst->cls[0]->pls[0] = nullptr;
+
+          // replace value
+          delete t->cmds[i];
+          t->cmds[i] = ret;
+        }
+      }
+    }; break;
+    default: break;
+  }
+  return true;
+}
+
 void minify_generic(_obj* in)
 {
   recurse(r_minify_empty_manip, in);
+  recurse(r_minify_single_block, in);
 }
