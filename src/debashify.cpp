@@ -837,11 +837,50 @@ bool debashify_variable_substitution(arg* in, debashify_params* params)
       if(v->is_manip && v->precedence && v->manip->string() == "!")
       {
         arg* eval_arg = new arg;
-        eval_arg->add(new string_subarg("echo \\\"\\${"));
+        eval_arg->add(new string_subarg("\\\"\\${"));
         eval_arg->add(new variable_subarg(new variable(v->varname)));
         eval_arg->add(new string_subarg("}\\\""));
-        cmd* eval_cmd = make_cmd(std::vector<arg*>({new arg("eval"), eval_arg}));
+        cmd* eval_cmd = make_cmd({new arg("eval"), new arg("echo"), eval_arg});
         subshell_subarg* r = new subshell_subarg(new subshell(eval_cmd));
+        r->quoted = in->sa[i]->quoted;
+        delete in->sa[i];
+        in->sa[i] = r;
+        has_replaced=true;
+      }
+    }
+  }
+  return has_replaced;
+}
+
+bool debashify_manipulation(arg* in, debashify_params* params)
+{
+  bool has_replaced=false;
+  for(uint32_t i=0; i<in->sa.size(); i++)
+  {
+    if(in->sa[i]->type == _obj::subarg_variable)
+    {
+      variable* v = dynamic_cast<variable_subarg*>(in->sa[i])->var;
+      if(!v->is_manip || v->manip == nullptr)
+        return false;
+      std::string manip = v->manip->first_sa_string();
+      if(manip.size()>0 && manip[0] == '/')
+      {
+        cmd* prnt = make_cmd(std::vector<const char*>({"printf", "%s\\\\n"}));
+        arg* var = new arg(new variable_subarg(new variable(v->varname)));
+        force_quotes(var);
+        prnt->add(var);
+        // printf %s\\n "$var"
+        cmd* sed = make_cmd({std::string("sed")});
+        arg* sedarg=v->manip;
+        v->manip = nullptr;
+        sedarg->insert(0, new string_subarg("s"));
+        sedarg->add(new string_subarg("/"));
+        force_quotes(sedarg);
+        sed->add(sedarg);
+        // sed "s///g"
+        pipeline* pl = new pipeline(prnt);
+        pl->add(sed);
+        subshell_subarg* r = new subshell_subarg(new subshell(new list(new condlist(pl))));
         r->quoted = in->sa[i]->quoted;
         delete in->sa[i];
         in->sa[i] = r;
@@ -871,6 +910,7 @@ bool r_debashify(_obj* o, debashify_params* params)
       arg* t = dynamic_cast<arg*>(o);
       debashify_subarg_replace(t, params);
       debashify_variable_substitution(t, params);
+      debashify_manipulation(t, params);
     } break;
     case _obj::_list: {
       list* t = dynamic_cast<list*>(o);

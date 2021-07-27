@@ -12,13 +12,21 @@ arg* make_arg(std::string const& in)
   return parse_arg(make_context(in)).first;
 }
 
+cmd* make_cmd(std::vector<const char*> const& args)
+{
+  cmd* ret = new cmd;
+  ret->args = new arglist;
+  for(auto it: args)
+    ret->args->add(new arg(it));
+  return ret;
+}
+
 cmd* make_cmd(std::vector<std::string> const& args)
 {
   cmd* ret = new cmd;
   ret->args = new arglist;
   for(auto it: args)
     ret->args->add(new arg(it));
-
   return ret;
 }
 

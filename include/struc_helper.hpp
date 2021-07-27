@@ -6,6 +6,7 @@
 // makers
 arg* make_arg(std::string const& in);
 
+cmd* make_cmd(std::vector<const char*> const& args);
 cmd* make_cmd(std::vector<std::string> const& args);
 cmd* make_cmd(std::vector<arg*> const& args);
 cmd* make_cmd(std::string const& in);
