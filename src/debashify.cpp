@@ -826,30 +826,76 @@ bool debashify_procsub(list* lst, debashify_params* params)
   return has_replaced;
 }
 
-bool debashify_variable_substitution(arg* in, debashify_params* params)
+condlist* debashify_manipulation_substring(variable* v, debashify_params* params)
 {
-  bool has_replaced=false;
-  for(uint32_t i=0; i<in->sa.size(); i++)
+  string_subarg* first = dynamic_cast<string_subarg*>(v->manip->sa[0]);
+  first->val = first->val.substr(1);
+  if(first->val == "")
   {
-    if(in->sa[i]->type == _obj::subarg_variable)
+    delete v->manip->sa[0];
+    v->manip->sa.erase(v->manip->sa.begin());
+  }
+  std::string manip = v->manip->first_sa_string();
+  arg *arg1=nullptr, *arg2=nullptr;
+  size_t colon_pos = manip.find(':');
+  if(colon_pos != std::string::npos || v->manip->sa.size()>1)
+  {
+    for(uint32_t i=0; i<v->manip->sa.size(); i++)
     {
-      variable* v = dynamic_cast<variable_subarg*>(in->sa[i])->var;
-      if(v->is_manip && v->precedence && v->manip->string() == "!")
+      if(v->manip->sa[i]->type == _obj::subarg_string)
       {
-        arg* eval_arg = new arg;
-        eval_arg->add(new string_subarg("\\\"\\${"));
-        eval_arg->add(new variable_subarg(new variable(v->varname)));
-        eval_arg->add(new string_subarg("}\\\""));
-        cmd* eval_cmd = make_cmd({new arg("eval"), new arg("echo"), eval_arg});
-        subshell_subarg* r = new subshell_subarg(new subshell(eval_cmd));
-        r->quoted = in->sa[i]->quoted;
-        delete in->sa[i];
-        in->sa[i] = r;
-        has_replaced=true;
+        string_subarg* t = dynamic_cast<string_subarg*>(v->manip->sa[i]);
+        size_t colon_pos = t->val.find(':');
+        if(colon_pos != std::string::npos)
+        {
+          arg1 = new arg;
+          arg2 = new arg;
+          for(uint32_t j=0; j<i; j++)
+            arg1->add(v->manip->sa[j]);
+          std::string val=t->val.substr(0, colon_pos);
+          if(val != "")
+            arg1->add(new string_subarg(val));
+          val=t->val.substr(colon_pos+1);
+          if(val != "")
+            arg2->add(new string_subarg(val));
+          for(uint32_t j=i+1; j<v->manip->sa.size(); j++)
+            arg2->add(v->manip->sa[j]);
+          break;
+          // TODO
+        }
       }
     }
+    if(arg1 == nullptr)
+      arg1 = v->manip;
+    v->manip = nullptr;
   }
-  return has_replaced;
+  else
+  {
+    arg1 = v->manip;
+    v->manip = nullptr;
+  }
+
+  pipeline* pl = new pipeline(make_printf_variable(v->varname));
+  arg* retarg = new arg;
+  retarg->add(new arithmetic_subarg(make_arithmetic(arg1, "+", new arg("1"))));
+  retarg->add(new string_subarg("-"));
+  pl->add(make_cmd({new arg("cut"), new arg("-c"), retarg}));
+
+  if(arg2 != nullptr)
+  {
+    retarg = new arg;
+    retarg->add(new string_subarg("-"));
+    for(auto it: arg2->sa)
+    {
+      retarg->add(it);
+    }
+    arg2->sa.resize(0);
+    delete arg2;
+    arg2 = nullptr;
+    pl->add(make_cmd({new arg("cut"), new arg("-c"), retarg}));
+  }
+
+  return new condlist(pl);
 }
 
 bool debashify_manipulation(arg* in, debashify_params* params)
@@ -863,12 +909,19 @@ bool debashify_manipulation(arg* in, debashify_params* params)
       if(!v->is_manip || v->manip == nullptr)
         return false;
       std::string manip = v->manip->first_sa_string();
-      if(manip.size()>0 && manip[0] == '/')
+      subarg* r = nullptr;
+      if(v->is_manip && v->precedence && v->manip->string() == "!")
       {
-        cmd* prnt = make_cmd(std::vector<const char*>({"printf", "%s\\\\n"}));
-        arg* var = new arg(new variable_subarg(new variable(v->varname)));
-        force_quotes(var);
-        prnt->add(var);
+        arg* eval_arg = new arg;
+        eval_arg->add(new string_subarg("\\\"\\${"));
+        eval_arg->add(new variable_subarg(new variable(v->varname)));
+        eval_arg->add(new string_subarg("}\\\""));
+        cmd* eval_cmd = make_cmd({new arg("eval"), new arg("echo"), eval_arg});
+        r = new subshell_subarg(new subshell(eval_cmd));
+      }
+      else if(manip.size()>0 && manip[0] == '/')
+      {
+        cmd* prnt = make_printf_variable(v->varname);
         // printf %s\\n "$var"
         cmd* sed = make_cmd({std::string("sed")});
         arg* sedarg=v->manip;
@@ -880,7 +933,15 @@ bool debashify_manipulation(arg* in, debashify_params* params)
         // sed "s///g"
         pipeline* pl = new pipeline(prnt);
         pl->add(sed);
-        subshell_subarg* r = new subshell_subarg(new subshell(new list(new condlist(pl))));
+        r = new subshell_subarg(new subshell(new list(new condlist(pl))));
+      }
+      else if(manip.size()>0 && manip[0] == ':')
+      {
+        r = new subshell_subarg(new subshell(new list(debashify_manipulation_substring(v, params))));
+      }
+
+      if(r != nullptr)
+      {
         r->quoted = in->sa[i]->quoted;
         delete in->sa[i];
         in->sa[i] = r;
@@ -909,7 +970,6 @@ bool r_debashify(_obj* o, debashify_params* params)
     case _obj::_arg: {
       arg* t = dynamic_cast<arg*>(o);
       debashify_subarg_replace(t, params);
-      debashify_variable_substitution(t, params);
       debashify_manipulation(t, params);
     } break;
     case _obj::_list: {

@@ -75,6 +75,52 @@ block* make_block(std::string const& in)
   return parse_block(make_context(in)).first;
 }
 
+cmd* make_printf(arg* in)
+{
+  cmd* prnt = make_cmd(std::vector<const char*>({"printf", "%s\\\\n"}));
+  force_quotes(in);
+  prnt->add(in);
+  return prnt;
+}
+
+arithmetic* make_arithmetic(arg* a)
+{
+  if(a->sa.size() != 1)
+  {
+    cmd* prnt = make_printf(a);
+    return new subshell_arithmetic(new subshell(prnt));
+  }
+  arithmetic* ret=nullptr;
+  switch(a->sa[0]->type) {
+    case _obj::subarg_string : {
+      string_subarg* t = dynamic_cast<string_subarg*>(a->sa[0]);
+      ret = new number_arithmetic(t->val);
+    }; break;
+    case _obj::subarg_variable : {
+      variable_subarg* t = dynamic_cast<variable_subarg*>(a->sa[0]);
+      ret = new variable_arithmetic(t->var);
+      t->var = nullptr;
+    }; break;
+    case _obj::subarg_subshell : {
+      subshell_subarg* t = dynamic_cast<subshell_subarg*>(a->sa[0]);
+      ret = new subshell_arithmetic(t->sbsh);
+      t->sbsh = nullptr;
+    }; break;
+    case _obj::subarg_arithmetic : {
+      arithmetic_subarg* t = dynamic_cast<arithmetic_subarg*>(a->sa[0]);
+      ret = t->arith;
+      t->arith = nullptr;
+    }; break;
+    default: break;
+  }
+  return ret;
+}
+
+arithmetic* make_arithmetic(arg* arg1, std::string op, arg* arg2)
+{
+  return new operation_arithmetic(op, make_arithmetic(arg1), make_arithmetic(arg2));
+}
+
 
 // copy
 

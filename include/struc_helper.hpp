@@ -32,6 +32,14 @@ bool possibly_expands(arglist* in);
 void force_quotes(arg* in);
 void add_quotes(arg* in);
 
+cmd* make_printf(arg* in);
+inline cmd* make_printf_variable(std::string const& name) {
+  return make_printf(new arg(new variable_subarg(new variable(name))));
+}
+
+arithmetic* make_arithmetic(arg* a);
+arithmetic* make_arithmetic(arg* arg1, std::string op, arg* arg2);
+
 // operators
 inline bool operator==(arg a, std::string const& b) { return a.equals(b); }
 
