@@ -542,7 +542,7 @@ void string_processors(_obj* in)
 
 std::string quote_string(std::string const& in)
 {
-  return '"' + stringReplace(in, "\"", "\\\"") + '"';
+  return '"' + stringReplace(stringReplace(stringReplace(in, "\\", "\\\\"), "\"", "\\\""), "\n", "\\n") + '"';
 }
 
 std::string gen_json(std::vector<std::pair<std::string,std::string>> const& vec)

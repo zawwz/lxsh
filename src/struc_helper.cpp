@@ -113,6 +113,7 @@ arithmetic* make_arithmetic(arg* a)
     }; break;
     default: break;
   }
+  delete a;
   return ret;
 }
 
@@ -138,8 +139,8 @@ void force_quotes(arg* in)
     if(!in->sa[i]->quoted && (in->sa[i]->type == _obj::subarg_variable || in->sa[i]->type == _obj::subarg_subshell) )
     {
       in->sa[i]->quoted=true;
-      in->insert(i+1, new string_subarg("\""));
-      in->insert(i, new string_subarg("\""));
+      in->insert(i+1, "\"");
+      in->insert(i, "\"");
       i+=2;
     }
   }
@@ -151,7 +152,7 @@ void add_quotes(arg* in)
     in->sa[i]->quoted=true;
 
   in->insert(0, new string_subarg("\""));
-  in->add(new string_subarg("\""));
+  in->add("\"");
 }
 
 // ** TESTERS ** //
@@ -344,7 +345,7 @@ void condlist::prune_first_cmd()
 
 void arg::insert(uint32_t i, std::string const& in)
 {
-  if(i>0 && sa[i-1]->type == _obj::subarg_string)
+  if(i>0 && i<=sa.size() && sa[i-1]->type == _obj::subarg_string)
   {
     string_subarg* t = dynamic_cast<string_subarg*>(sa[i-1]);
     t->val += in;
@@ -367,15 +368,17 @@ void arg::insert(uint32_t i, subarg* val)
   if(val->type == _obj::subarg_string)
   {
     string_subarg* tval = dynamic_cast<string_subarg*>(val);
-    if(i>0 && sa[i-1]->type == _obj::subarg_string)
+    if(i>0 && i<=sa.size() && sa[i-1]->type == _obj::subarg_string)
     {
       string_subarg* t = dynamic_cast<string_subarg*>(sa[i-1]);
       t->val += tval->val;
+      delete val;
     }
     else if(i<sa.size() && sa[i]->type == _obj::subarg_string)
     {
       string_subarg* t = dynamic_cast<string_subarg*>(sa[i]);
       t->val = tval->val + t->val;
+      delete val;
     }
     else
       sa.insert(sa.begin()+i, val);

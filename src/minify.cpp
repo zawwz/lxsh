@@ -480,9 +480,9 @@ bool r_minify_single_block(_obj* in)
           // deindex
           t->cmds[i]->redirs.resize(0);
           if(t->cmds[i]->type == _obj::block_brace)
-            dynamic_cast<brace*>(t->cmds[i])->lst->cls[0]->pls[0] = nullptr;
+            dynamic_cast<brace*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
           else if(t->cmds[i]->type == _obj::block_subshell)
-            dynamic_cast<subshell*>(t->cmds[i])->lst->cls[0]->pls[0] = nullptr;
+            dynamic_cast<subshell*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
 
           // replace value
           delete t->cmds[i];

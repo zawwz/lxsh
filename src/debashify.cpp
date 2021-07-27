@@ -103,17 +103,21 @@ bool debashify_bashtest(pipeline* pl)
     arg *a=nullptr;
     uint32_t j=1;
     bool or_op=false;
+    std::string tmpstr;
     for(uint32_t i=1 ; i<in->args->size() ; i++)
     {
       a = in->args->args[i];
+      tmpstr = a->string();
+      bool logic_op = ( tmpstr == "&&" || tmpstr == "||" );
 
-      if(i >= in->args->size()-1 || a->string() == "&&" || a->string() == "||")
+      if(i >= in->args->size()-1 || logic_op)
       {
         block* tbl = gen_bashtest_cmd(std::vector<arg*>(in->args->args.begin()+j, in->args->args.begin()+i));
         cl->add(new pipeline(tbl), or_op);
-        or_op = a->string() == "||";
+        or_op = tmpstr == "||";
         j=i+1;
-
+        if(logic_op)
+          delete a;
       }
     }
 
@@ -814,7 +818,7 @@ bool debashify_procsub(list* lst, debashify_params* params)
         delete affected_args[i].first->sa[0];
         affected_args[i].first->sa[0] = new string_subarg("\"");
         affected_args[i].first->add( new variable_subarg( new variable(strf("_lxshfifo%u", i)) ) );
-        affected_args[i].first->add( new string_subarg("\"") );
+        affected_args[i].first->add( "\"" );
       }
       lst->insert(li, *lst_insert );
       li+= lst_insert->size();
@@ -854,20 +858,24 @@ condlist* debashify_manipulation_substring(variable* v, debashify_params* params
             arg1->add(v->manip->sa[j]);
           std::string val=t->val.substr(0, colon_pos);
           if(val != "")
-            arg1->add(new string_subarg(val));
+            arg1->add(val);
           val=t->val.substr(colon_pos+1);
           if(val != "")
-            arg2->add(new string_subarg(val));
+            arg2->add(val);
           for(uint32_t j=i+1; j<v->manip->sa.size(); j++)
             arg2->add(v->manip->sa[j]);
+          delete v->manip->sa[i];
+          v->manip->sa.resize(0);
           break;
           // TODO
         }
       }
     }
     if(arg1 == nullptr)
+    {
       arg1 = v->manip;
-    v->manip = nullptr;
+      v->manip = nullptr;
+    }
   }
   else
   {
@@ -878,13 +886,13 @@ condlist* debashify_manipulation_substring(variable* v, debashify_params* params
   pipeline* pl = new pipeline(make_printf_variable(v->varname));
   arg* retarg = new arg;
   retarg->add(new arithmetic_subarg(make_arithmetic(arg1, "+", new arg("1"))));
-  retarg->add(new string_subarg("-"));
+  retarg->add("-");
   pl->add(make_cmd({new arg("cut"), new arg("-c"), retarg}));
 
   if(arg2 != nullptr)
   {
     retarg = new arg;
-    retarg->add(new string_subarg("-"));
+    retarg->add("-");
     for(auto it: arg2->sa)
     {
       retarg->add(it);
@@ -894,6 +902,10 @@ condlist* debashify_manipulation_substring(variable* v, debashify_params* params
     arg2 = nullptr;
     pl->add(make_cmd({new arg("cut"), new arg("-c"), retarg}));
   }
+
+  if(v->manip != nullptr)
+    delete v->manip;
+  v->manip = nullptr;
 
   return new condlist(pl);
 }
@@ -913,9 +925,9 @@ bool debashify_manipulation(arg* in, debashify_params* params)
       if(v->is_manip && v->precedence && v->manip->string() == "!")
       {
         arg* eval_arg = new arg;
-        eval_arg->add(new string_subarg("\\\"\\${"));
+        eval_arg->add("\\\"\\${");
         eval_arg->add(new variable_subarg(new variable(v->varname)));
-        eval_arg->add(new string_subarg("}\\\""));
+        eval_arg->add("}\\\"");
         cmd* eval_cmd = make_cmd({new arg("eval"), new arg("echo"), eval_arg});
         r = new subshell_subarg(new subshell(eval_cmd));
       }
@@ -926,8 +938,8 @@ bool debashify_manipulation(arg* in, debashify_params* params)
         cmd* sed = make_cmd({std::string("sed")});
         arg* sedarg=v->manip;
         v->manip = nullptr;
-        sedarg->insert(0, new string_subarg("s"));
-        sedarg->add(new string_subarg("/"));
+        sedarg->insert(0, "s");
+        sedarg->add("/");
         force_quotes(sedarg);
         sed->add(sedarg);
         // sed "s///g"
