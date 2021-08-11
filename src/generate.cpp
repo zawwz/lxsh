@@ -202,8 +202,11 @@ std::string for_block::generate(int ind, generate_context* ctx)
   std::string ret;
 
   ret += "for "+var->generate(ind);
-  if(iter != nullptr)
-    ret += " in " + iter->generate(ind);
+  if(in_val) {
+    ret += " in";
+    if(iter != nullptr)
+      ret += " " + iter->generate(ind);
+  }
   ret += '\n';
   ret += indented("do\n", ind);
   ret += ops->generate(ind+1);

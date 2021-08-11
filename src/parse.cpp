@@ -1496,6 +1496,7 @@ std::pair<for_block*, parse_context> parse_for(parse_context ctx)
     auto pp = parse_arglist(ctx, false);
     ret->iter = pp.first;
     ctx = pp.second;
+    ret->in_val=true;
   }
   else if(wp.first != "")
   {

@@ -521,7 +521,7 @@ public:
 class for_block : public block
 {
 public:
-  for_block(variable* in=nullptr, arglist* args=nullptr, list* lst=nullptr) { type=_obj::block_for; var=in; iter=args; ops=lst; }
+  for_block(variable* in=nullptr, arglist* args=nullptr, list* lst=nullptr, bool ii=false) { type=_obj::block_for; var=in; iter=args; ops=lst; in_val=ii; }
   ~for_block() {
     if(iter!=nullptr) delete iter;
     if(ops!=nullptr) delete ops;
@@ -532,6 +532,8 @@ public:
 
   arglist* iter;
   list* ops;
+
+  bool in_val;
 
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); }
