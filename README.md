@@ -14,13 +14,13 @@ wget -qO- https://zpkg.zawz.net/install.sh | sh
 zpkg install lxsh
 ```
 
-### Binary
+### Binary amd64
 
-Download the `lxsh.tar.gz` archive, extract it,
+Download the `lxsh-linux-amd64.tar.gz` archive, extract it,
 and move the `lxsh` binary in a PATH folder (`/usr/local/bin` is the recommended).
 
 ```shell
-wget https://github.com/zawwz/lxsh/releases/download/v1.2.0/lxsh-linux-amd64.tar.gz
+wget https://github.com/zawwz/lxsh/releases/download/v1.3.0/lxsh-linux-amd64.tar.gz
 tar -xvf lxsh-linux-amd64.tar.gz
 sudo mv lxsh /usr/local/bin
 ```
@@ -45,6 +45,19 @@ These commands can be placed anywhere within the script like regular commands.
 
 Reduce code size to a minimum without changing functionality with the `-m` option.
 
+
+#### Behaviors of the minify option
+
+- removes any unnecessary separator character between arguments/commands
+- removes `;;` from the last value in a case
+- removes unnecessary quotes on arguments
+- transforms unnecessary manipulations (e.g. `${VAR}`) into simple variable call
+- Brace blocks or subshells with a single command will be replaced by said command
+
+> These features only apply if they won't change behavior, for instance
+removal of an unnecessary manipulation will not be made if the following character
+could expand the variable name
+
 ### Further minifying
 
 The script can be further minified by altering code elements.
@@ -55,8 +68,6 @@ use `--exclude-var` to exclude variables from being minified (for example enviro
 
 Function names can be minified with `--minify-fct`,
 use `--exclude-fct` to exclude functions from being minified.
-
-Unnecessary quotes can be removed with `--minify-quotes`.
 
 Unused functions and variables can be removed with `--remove-unused`.
 
@@ -73,6 +84,9 @@ The following bash features can be debashified:
 - `[[ ]]` conditions
 - indexed arrays and associative arrays (+ their `declare` and `typeset` definitions)
 - `$RANDOM`
+- substring variable manipulation (`${VAR:N:M}`)
+- variable substitution (`${!VAR}`)
+- search replace manipulation (`${VAR/s/a/b}` )
 
 ### Advantages
 
@@ -121,6 +135,10 @@ these features will continue working with undesired behavior.
 > To avoid this, make sure to never access incorrect values
 
 Array argument with `[@]` does not expand into the desired multiple arguments.
+
+#### Substring manipulation
+
+Debashifying a substring manipulation on a variable containing a newline will not work correctly
 
 ## Extension commands
 
