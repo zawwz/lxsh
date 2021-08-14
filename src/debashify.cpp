@@ -947,7 +947,7 @@ bool debashify_manipulation(arg* in, debashify_params* params)
         pl->add(sed);
         r = new subshell_subarg(new subshell(new list(new condlist(pl))));
       }
-      else if(manip.size()>0 && manip[0] == ':')
+      else if(manip.size()>0 && manip[0] == ':' && !(manip.size()>1 && is_in(manip[1], "+-") ) )
       {
         r = new subshell_subarg(new subshell(new list(debashify_manipulation_substring(v, params))));
       }
