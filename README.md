@@ -27,12 +27,6 @@ sudo mv lxsh /usr/local/bin
 
 ## Other
 
-Clone this repository then:
-```shell
-make -j
-sudo make install
-```
-
 See [Build](#build).
 
 # Features
