@@ -87,3 +87,10 @@ clean:
 
 clear:
 	rm $(BINDIR)/$(NAME)
+
+install:
+	cp lxsh /usr/local/bin
+	cp completion/lxsh.bash /etc/bash_completion.d
+
+uninstall:
+	rm /usr/local/bin/lxsh /etc/bash_completion.d/lxsh.bash

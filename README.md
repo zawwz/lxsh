@@ -27,6 +27,12 @@ sudo mv lxsh /usr/local/bin
 
 ## Other
 
+Clone this repository then:
+```shell
+make -j
+sudo make install
+```
+
 See [Build](#build).
 
 # Features
@@ -45,6 +51,7 @@ These commands can be placed anywhere within the script like regular commands.
 
 Reduce code size to a minimum without changing functionality with the `-m` option.
 
+> This option should be safe to use in any situation
 
 #### Behaviors of the minify option
 
