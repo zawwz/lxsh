@@ -284,7 +284,7 @@ bool r_has_env_set(_obj* in, bool* result)
     }; break;
     case _obj::block_cmd: {
       cmd* t = dynamic_cast<cmd*>(in);
-      if(t->has_var_assign())
+      if(t->has_var_assign() || t->arg_string(0) == "cd")
         *result = true;
     }
     default: break;
