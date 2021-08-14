@@ -231,7 +231,7 @@ std::pair<variable*, parse_context> parse_var(parse_context ctx, bool specialvar
     if(ctx.bash && array && ctx[ctx.i]=='[')
     {
       ctx.i++;
-      auto pp=parse_arg(ctx, ARRAY_ARG_END);
+      auto pp=parse_arg(ctx, ARRAY_ARG_END, ARGLIST_END, true, ARG_OPTIMIZE_ARRAY);
       ret->index=pp.first;
       ctx = pp.second;
       if(ctx[ctx.i] != ']')
@@ -409,7 +409,7 @@ std::pair<variable*, parse_context> parse_manipulation(parse_context ctx)
   }
   else if(ctx[ctx.i] != '}')
   {
-    auto pa = parse_arg(ctx, "}", NULL, false);
+    auto pa = parse_arg(ctx, "}", NULL, false, ARG_OPTIMIZE_MANIP);
     ret->manip=pa.first;
     ctx = pa.second;
   }
@@ -418,14 +418,13 @@ std::pair<variable*, parse_context> parse_manipulation(parse_context ctx)
   return std::make_pair(ret, ctx);
 }
 
-parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool is_quoted)
+inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool is_quoted)
 {
   if( ctx[ctx.i] == '`' )
   {
     // add previous subarg
-    std::string tmpstr=std::string(ctx.data+j, ctx.i-j);
-    if(tmpstr!="")
-      ret->add(tmpstr);
+    if(ctx.i-j>0)
+      ret->add(std::string(ctx.data+j, ctx.i-j));
 
     ctx.i++;
     uint32_t k=skip_until(ctx, "`");
@@ -451,9 +450,8 @@ parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool 
   else if( word_eq("$((", ctx) ) // arithmetic operation
   {
     // add previous subarg
-    std::string tmpstr=std::string(ctx.data+j, ctx.i-j);
-    if(tmpstr!="")
-      ret->add(tmpstr);
+    if(ctx.i-j>0)
+      ret->add(std::string(ctx.data+j, ctx.i-j));
     // get arithmetic
     ctx.i+=3;
     auto r=parse_arithmetic(ctx);
@@ -474,9 +472,8 @@ parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool 
   else if( word_eq("$(", ctx) ) // substitution
   {
     // add previous subarg
-    std::string tmpstr=std::string(ctx.data+j, ctx.i-j);
-    if(tmpstr!="")
-      ret->add(tmpstr);
+    if(ctx.i-j>0)
+      ret->add(std::string(ctx.data+j, ctx.i-j));
     // get subshell
     ctx.i+=2;
     auto r=parse_subshell(ctx);
@@ -487,9 +484,8 @@ parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool 
   else if( word_eq("${", ctx) ) // variable manipulation
   {
     // add previous subarg
-    std::string tmpstr=std::string(ctx.data+j, ctx.i-j);
-    if(tmpstr!="")
-      ret->add(tmpstr);
+    if(ctx.i-j>0)
+      ret->add(std::string(ctx.data+j, ctx.i-j));
     // get manipulation
     ctx.i+=2;
     auto r=parse_manipulation(ctx);
@@ -505,9 +501,8 @@ parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool 
     if(r.first !=nullptr)
     {
       // add previous subarg
-      std::string tmpstr=std::string(ctx.data+j, ctx.i-j);
-      if(tmpstr!="")
-        ret->add(tmpstr);
+      if(ctx.i-j>0)
+        ret->add(std::string(ctx.data+j, ctx.i-j));
       // add var
       ret->add(new variable_subarg(r.first, is_quoted));
       ctx = r.second;
@@ -521,10 +516,30 @@ parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool 
   return ctx;
 }
 
+uint64_t find_any(parse_context const& ctx, const char* chars, uint32_t nchar) {
+  uint64_t lowest=ctx.size;
+  uint64_t trank=0;
+  for(uint32_t i=0; i<nchar; i++) {
+    const char* tc = strchr(ctx.data+ctx.i, chars[i]);
+    if(tc != NULL) {
+      trank = tc-ctx.data;
+      if(trank < lowest)
+        lowest = trank;
+    }
+  }
+  return lowest;
+}
+
+bool _optimize_skip_arg(parse_context& ctx, const char* str) {
+  while(ctx.i<ctx.size && !is_in(ctx[ctx.i], str))
+    ctx.i++;
+  return true;
+}
+
 // parse one argument
 // must start at a read char
 // ends at either " \t|&;\n()"
-std::pair<arg*, parse_context> parse_arg(parse_context ctx, const char* end, const char* unexpected, bool doquote)
+std::pair<arg*, parse_context> parse_arg(parse_context ctx, const char* end, const char* unexpected, bool doquote, const char* optimize)
 {
   arg* ret = new arg;
   // j : start of subarg , q = start of quote
@@ -535,9 +550,9 @@ std::pair<arg*, parse_context> parse_arg(parse_context ctx, const char* end, con
     parse_error( unexpected_token(ctx[ctx.i]), ctx);
   }
 
-  while(ctx.i<ctx.size && !(end != NULL && is_in(ctx[ctx.i], end)) )
+  while(ctx.i<ctx.size && _optimize_skip_arg(ctx, optimize) && !(end != NULL && is_in(ctx[ctx.i], end)) )
   {
-    if(ctx.i+1<ctx.size && is_in(ctx[ctx.i], "<>") && ctx[ctx.i+1]=='&') // special case for <& and >&
+    if(ctx.i+1<ctx.size && ctx[ctx.i+1]=='&' && (ctx[ctx.i] == '<' || ctx[ctx.i] == '>')) // special case for <& and >&
     {
       ctx.i += 2;
     }
@@ -548,9 +563,8 @@ std::pair<arg*, parse_context> parse_arg(parse_context ctx, const char* end, con
         break;
       if(ctx[ctx.i] == '\n') // \ on \n : skip this char
       {
-        std::string tmpstr=std::string(ctx.data+j, ctx.i-1-j);
-        if(tmpstr!="")
-          ret->add(tmpstr);
+        if(ctx.i-1-j>0)
+          ret->add(std::string(ctx.data+j, ctx.i-1-j));
         ctx.i++;
         j=ctx.i;
       }
@@ -623,7 +637,7 @@ parse_context parse_heredocument(parse_context ctx)
   // std::string tmpparse=std::string(ctx.data+j, ctx.i-j);
   parse_context newctx = make_context(ctx, j);
   newctx.size = ctx.i;
-  auto pval = parse_arg(newctx , NULL, NULL, false);
+  auto pval = parse_arg(newctx , NULL, NULL, false, ARG_OPTIMIZE_NULL);
   ctx.i = pval.second.i;
   ctx.has_errored = pval.second.has_errored;
   ctx.here_document->here_document = pval.first;
@@ -792,8 +806,8 @@ std::pair<arglist*, parse_context> parse_arglist(parse_context ctx, bool hard_er
     while(true)
     {
       if(ret == nullptr)
-      ret = new arglist;
-      auto pp=parse_arg(ctx, SEPARATORS, NULL);
+        ret = new arglist;
+      auto pp=parse_arg(ctx, SEPARATORS, NULL, true, ARG_OPTIMIZE_BASHTEST);
       ret->add(pp.first);
       ctx = pp.second;
       ctx.i = skip_chars(ctx, SEPARATORS);
@@ -1231,7 +1245,7 @@ parse_context parse_cmd_varassigns(cmd* in, parse_context ctx, bool cmdassign=fa
           parse_error("Unallowed special assign", ctx);
         }
         ctx.i++;
-        auto pp=parse_arg(ctx, ")");
+        auto pp=parse_arg(ctx, ")", ARG_OPTIMIZE_DEFARR);
         ta=pp.first;
         ta->insert(0,"(");
         ta->add(")");

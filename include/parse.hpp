@@ -26,7 +26,15 @@
 #define SPECIAL_VARS "!#*@$?"
 
 // bash specific
-#define ARRAY_ARG_END " \t\n;#()&|<>]"
+#define ARRAY_ARG_END       " \t\n;#()&|<>]"
+// optimizations
+#define ARG_OPTIMIZE_NULL     "$\\`"
+#define ARG_OPTIMIZE_MANIP    "$\\`}"
+#define ARG_OPTIMIZE_DEFARR   "$\\`)"
+#define ARG_OPTIMIZE_BASHTEST "$\\`] \t\n"
+#define ARG_OPTIMIZE_ARG      "$\\` \t\n;#()&|<>\"'"
+#define ARG_OPTIMIZE_ARRAY    "$\\`\t\n&|}[]\"'"
+#define ARG_OPTIMIZE_ALL      "$\\` \t\n;#()&|<>}]\"'"
 
 // structs
 
@@ -100,7 +108,7 @@ std::pair<variable*, parse_context> parse_var(parse_context ct, bool specialvars
 std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ct);
 std::pair<variable*, parse_context> parse_manipulation(parse_context ct);
 // arg parser
-std::pair<arg*, parse_context> parse_arg(parse_context ct, const char* end=ARG_END, const char* unexpected=ARGLIST_END, bool doquote=true);
+std::pair<arg*, parse_context> parse_arg(parse_context ct, const char* end=ARG_END, const char* unexpected=ARGLIST_END, bool doquote=true, const char* optimize=ARG_OPTIMIZE_ARG);
 // redirect parser
 std::pair<redirect*, parse_context> parse_redirect(parse_context ct);
 // arglist parser
