@@ -27,7 +27,6 @@ set_t m_excluded_var, m_excluded_fct, m_excluded_cmd;
 
 bool b_gotvar=false, b_gotfct=false, b_gotcmd=false;
 
-
 // requires
 
 void require_rescan_var()
@@ -214,6 +213,39 @@ void cmdmap_get(_obj* in, std::regex const& exclude)
   }
 }
 
+void fctcmdmap_get(_obj* in, std::regex const& exclude_fct, std::regex const& exclude_cmd)
+{
+  if(!b_gotcmd && !b_gotfct) {
+    b_gotcmd = b_gotfct = true;
+    recurse(r_get_fctcmd, in, &m_cmds, &m_fcts);
+    m_excluded_fct = prune_matching(m_cmds, exclude_cmd);
+    concat_sets(m_excluded_fct, prune_matching(m_fcts, exclude_fct));
+  }
+  else {
+    cmdmap_get(in, exclude_fct);
+    fctmap_get(in, exclude_cmd);
+  }
+}
+
+void allmaps_get(_obj* in, std::regex const& exclude_var, std::regex const& exclude_fct, std::regex const& exclude_cmd)
+{
+  if(!b_gotvar && !b_gotcmd && !b_gotfct)
+  {
+    b_gotvar = b_gotcmd = b_gotfct = true;
+    recurse(r_get_all, in, &m_vardefs, &m_varcalls, &m_cmds, &m_fcts);
+    m_excluded_fct = prune_matching(m_cmds, exclude_cmd);
+    concat_sets(m_excluded_fct, prune_matching(m_fcts, exclude_fct));
+    m_vars = combine_maps(m_vardefs, m_varcalls);
+    m_excluded_var = prune_matching(m_vars, exclude_var);
+  }
+  else
+  {
+    varmap_get(in, exclude_var);
+    cmdmap_get(in, exclude_fct);
+    fctmap_get(in, exclude_fct);
+  }
+}
+
 /** OUTPUT **/
 
 void list_vars(_obj* in, std::regex const& exclude)
@@ -324,11 +356,6 @@ bool r_get_unsets(_obj* in, set_t* unsets)
       cmd* t = dynamic_cast<cmd*>(in);
       if(t->is("unset"))
       {
-        for(auto it: t->var_assigns)
-        {
-          if(it.first != nullptr)
-            unsets->insert(it.first->varname);
-        }
         for(auto it: t->cmd_var_assigns)
         {
           if(it.first != nullptr)
@@ -367,6 +394,21 @@ bool r_get_fct(_obj* in, countmap_t* fct_map)
     }; break;
     default: break;
   }
+  return true;
+}
+
+bool r_get_fctcmd(_obj* in, countmap_t* all_cmds, countmap_t* fct_map)
+{
+  r_get_cmd(in, all_cmds);
+  r_get_fct(in, fct_map);
+  return true;
+}
+
+bool r_get_all(_obj* in, countmap_t* defmap, countmap_t* callmap, countmap_t* all_cmds, countmap_t* fct_map)
+{
+  r_get_var(in, defmap, callmap);
+  r_get_cmd(in, all_cmds);
+  r_get_fct(in, fct_map);
   return true;
 }
 
@@ -461,6 +503,13 @@ bool r_delete_var(_obj* in, set_t* vars)
   return true;
 }
 
+bool r_delete_varfct(_obj* in, set_t* vars, set_t* fcts)
+{
+  r_delete_var(in, vars);
+  r_delete_fct(in, fcts);
+  return true;
+}
+
 std::set<std::string> find_lxsh_commands(shmain* sh)
 {
   std::set<std::string> ret;
@@ -533,7 +582,8 @@ bool r_do_string_processor(_obj* in)
 
 void string_processors(_obj* in)
 {
-  recurse(r_do_string_processor, in);
+  // recurse(r_do_string_processor, in);
+  ;
 }
 
 /** JSON **/

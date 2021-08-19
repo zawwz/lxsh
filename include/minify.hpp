@@ -9,11 +9,7 @@
 void minify_var(_obj* in, std::regex const& exclude);
 void minify_fct(_obj* in, std::regex const& exclude);
 
-bool delete_unused_fct(_obj* in, std::regex const& exclude);
-bool delete_unused_var(_obj* in, std::regex const& exclude);
 void delete_unused(_obj* in, std::regex const& var_exclude, std::regex const& fct_exclude);
-
-void minify_quotes(_obj* in);
 
 void minify_generic(_obj* in);
 

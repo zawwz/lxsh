@@ -35,7 +35,6 @@ countmap_t combine_common(countmap_t const& a, countmap_t const& b);
 
 /** map get functions (optimizations) **/
 
-
 // rescans
 void require_rescan_all();
 void require_rescan_var();
@@ -46,6 +45,8 @@ void require_rescan_cmd();
 void varmap_get(_obj* in, std::regex const& exclude);
 void fctmap_get(_obj* in, std::regex const& exclude);
 void cmdmap_get(_obj* in, std::regex const& exclude);
+void fctcmdmap_get(_obj* in, std::regex const& exclude_fct, std::regex const& exclude_cmd);
+void allmaps_get(_obj* in, std::regex const& exclude_var, std::regex const& exclude_fct, std::regex const& exclude_cmd);
 
 /** util functions **/
 #ifdef DEBUG_MODE
@@ -75,8 +76,12 @@ bool r_get_unsets(_obj* in, set_t* unsets);
 bool r_get_var(_obj* in, countmap_t* defmap, countmap_t* callmap);
 bool r_get_cmd(_obj* in, countmap_t* all_cmds);
 bool r_get_fct(_obj* in, countmap_t* fct_map);
+bool r_get_fctcmd(_obj* in, countmap_t* all_cmds, countmap_t* fct_map);
+bool r_get_all(_obj* in, countmap_t* defmap, countmap_t* callmap, countmap_t* all_cmds, countmap_t* fct_map);
 bool r_delete_fct(_obj* in, set_t* fcts);
 bool r_delete_var(_obj* in, set_t* vars);
+bool r_delete_varfct(_obj* in, set_t* vars, set_t* fcts);
+bool r_do_string_processor(_obj* in);
 
 /** Processing **/
 

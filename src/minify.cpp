@@ -224,11 +224,11 @@ bool r_minify_useless_quotes(_obj* in)
       redirect* t = dynamic_cast<redirect*>(in);
       if(t->here_document != nullptr)
       {
-        minify_quotes(t->target);
+        recurse(r_minify_useless_quotes, t->target);
         for(auto it: t->here_document->sa)
         {
           if(it->type!=_obj::subarg_string) {
-            minify_quotes(it);
+            recurse(r_minify_useless_quotes, it);
           }
         }
         // don't recurse on the rest
@@ -324,8 +324,7 @@ void minify_fct(_obj* in, std::regex const& exclude)
   set_t excluded, unsets;
   strmap_t fctmap;
   // get fcts and cmds
-  fctmap_get(in, exclude);
-  cmdmap_get(in, regex_null);
+  fctcmdmap_get(in, exclude, regex_null);
   recurse(r_get_unsets, in, &unsets);
   // concatenate cmds, excluded and reserved
   excluded=map_to_set(m_cmds);
@@ -346,8 +345,7 @@ bool delete_unused_fct(_obj* in, std::regex const& exclude)
 {
   set_t unused;
   // get fcts and cmds
-  fctmap_get(in, exclude);
-  cmdmap_get(in, regex_null);
+  fctcmdmap_get(in, exclude, regex_null);
   // find unused fcts
   for(auto it: m_fcts)
   {
@@ -387,15 +385,35 @@ bool delete_unused_var(_obj* in, std::regex const& exclude)
     return false;
 }
 
-void minify_quotes(_obj* in)
+bool delete_unused_both(_obj* in, std::regex const& var_exclude, std::regex const& fct_exclude)
 {
-  recurse(r_minify_useless_quotes, in);
+  set_t unused_var, unused_fct;
+  // get all
+  allmaps_get(in, var_exclude, fct_exclude, regex_null);
+  // find unused
+  for(auto it: m_vardefs)
+  {
+    if(it.first!="" && m_varcalls.find(it.first) == m_varcalls.end())
+      unused_var.insert(it.first);
+  }
+  for(auto it: m_fcts)
+  {
+    if(m_cmds.find(it.first) == m_cmds.end())
+      unused_fct.insert(it.first);
+  }
+  if(unused_var.size()>0 || unused_fct.size()>0)
+  {
+    recurse(r_delete_varfct, in, &unused_var, &unused_fct);
+    require_rescan_all();
+    return true;
+  }
+  return false;
 }
 
 void delete_unused(_obj* in, std::regex const& var_exclude, std::regex const& fct_exclude)
 {
-  while(delete_unused_fct(in, fct_exclude) || delete_unused_var(in, var_exclude));
-  // keep deleting until both no function and no variables were deleted
+  while(delete_unused_both(in, var_exclude, fct_exclude));
+  // keep deleting until both no deletion
 }
 
 
@@ -424,7 +442,7 @@ bool r_minify_empty_manip(_obj* in)
               char c = ss->val[0];
               // if its first would extend the var name: skip
               if(is_alphanum(c) || c == '_')
-                return true;
+                continue;
             }
             // if has no actual manipulation operation: set it to not manip
             if(ss->var->manip == nullptr || ss->var->manip->sa.size() == 0)
@@ -468,39 +486,53 @@ bool r_minify_single_block(_obj* in)
   switch(in->type)
   {
     case _obj::_pipeline: {
-      pipeline* t = dynamic_cast<pipeline*>(in);
-      for(uint32_t i=0; i<t->cmds.size(); i++)
+      bool has_operated=false;
+      do
       {
-        block* ret = do_one_minify_single_block(t->cmds[i]);
-        if(ret != nullptr) {
-          // concatenate redirects
-          for(uint32_t j=0; j<t->cmds[i]->redirs.size(); j++)
+        // loop operating on current
+        // (if has operated, current object has changed)
+        has_operated=false;
+        pipeline* t = dynamic_cast<pipeline*>(in);
+        for(uint32_t i=0; i<t->cmds.size(); i++)
+        {
+          block* ret = do_one_minify_single_block(t->cmds[i]);
+          if(ret != nullptr) {
+            // concatenate redirects
+            for(uint32_t j=0; j<t->cmds[i]->redirs.size(); j++)
             ret->redirs.insert(ret->redirs.begin()+j, t->cmds[i]->redirs[j]);
 
-          // deindex
-          t->cmds[i]->redirs.resize(0);
-          if(t->cmds[i]->type == _obj::block_brace)
+            // deindex
+            t->cmds[i]->redirs.resize(0);
+            if(t->cmds[i]->type == _obj::block_brace)
             dynamic_cast<brace*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
-          else if(t->cmds[i]->type == _obj::block_subshell)
+            else if(t->cmds[i]->type == _obj::block_subshell)
             dynamic_cast<subshell*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
 
-          // replace value
-          delete t->cmds[i];
-          t->cmds[i] = ret;
+            // replace value
+            delete t->cmds[i];
+            t->cmds[i] = ret;
 
-          recurse(r_minify_single_block, in);
-          return false;
+            has_operated=true;
+          }
         }
       }
+      while(has_operated);
     }; break;
     default: break;
   }
   return true;
 }
 
+bool r_minify(_obj* in)
+{
+  r_minify_empty_manip(in);
+  r_minify_single_block(in);
+  r_minify_useless_quotes(in);
+  r_do_string_processor(in);
+  return true;
+}
+
 void minify_generic(_obj* in)
 {
-  recurse(r_minify_empty_manip, in);
-  recurse(r_minify_single_block, in);
-  minify_quotes(in);
+  recurse(r_minify, in);
 }

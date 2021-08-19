@@ -198,13 +198,20 @@ int main(int argc, char* argv[])
       if(options['m'])
       {
         opt_minify=true;
-        string_processors(sh);
         minify_generic(sh);
       }
-      if(options["minify-var"])
+      if(options["minify-var"] && options["minify-fct"]) {
+        // optimization: get everything in one go
+        allmaps_get(sh, re_var_exclude, re_fct_exclude, regex_null);
         minify_var( sh, re_var_exclude );
-      if(options["minify-fct"])
         minify_fct( sh, re_fct_exclude );
+      }
+      else if(options["minify-var"]) {
+        minify_var( sh, re_var_exclude );
+      }
+      else if(options["minify-fct"]) {
+        minify_fct( sh, re_fct_exclude );
+      }
       // other processing
       if(options["unset-var"])
         add_unset_variables( sh, re_var_exclude );
