@@ -420,6 +420,8 @@ std::pair<variable*, parse_context> parse_manipulation(parse_context ctx)
 
 inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool is_quoted)
 {
+  if( ctx.i >= ctx.size)
+    return ctx;
   if( ctx[ctx.i] == '`' )
   {
     // add previous subarg
@@ -440,10 +442,12 @@ inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j
     }
     // get subshell
     parse_context newct = ctx;
-    ctx.size=k;
+    newct.size=k;
     auto r=parse_list_until(newct);
     ret->add(new subshell_subarg(new subshell(std::get<0>(r)), is_quoted));
+    uint64_t tsize=ctx.size;
     ctx = std::get<1>(r);
+    ctx.size = tsize;
     ctx.i++;
     j = ctx.i;
   }
