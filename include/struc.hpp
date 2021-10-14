@@ -599,10 +599,11 @@ public:
 class subshell_subarg : public subarg
 {
 public:
-  subshell_subarg(subshell* in=nullptr, bool inq=false) { type=_obj::subarg_subshell; sbsh=in; quoted=inq; }
+  subshell_subarg(subshell* in=nullptr, bool inq=false, bool is_backtick=false) { type=_obj::subarg_subshell; sbsh=in; quoted=inq; backtick=is_backtick; }
   ~subshell_subarg() { if(sbsh != nullptr) delete sbsh; }
 
   subshell* sbsh;
+  bool backtick;
 
   std::string generate(int ind);
 };

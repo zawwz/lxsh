@@ -398,7 +398,14 @@ std::string cmd::generate(int ind, generate_context* ctx)
 
 std::string subshell_subarg::generate(int ind)
 {
-  return '$' + sbsh->generate(ind);
+  std::string r = sbsh->generate(ind);
+  if(backtick) {
+    r[0] = '`';
+    r[r.size()-1] = '`';
+    return r;
+  }
+  else
+    return '$' + r;
 }
 
 std::string procsub_subarg::generate(int ind)

@@ -444,7 +444,7 @@ inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j
     parse_context newct = ctx;
     newct.size=k;
     auto r=parse_list_until(newct);
-    ret->add(new subshell_subarg(new subshell(std::get<0>(r)), is_quoted));
+    ret->add(new subshell_subarg(new subshell(std::get<0>(r)), is_quoted, true));
     uint64_t tsize=ctx.size;
     ctx = std::get<1>(r);
     ctx.size = tsize;

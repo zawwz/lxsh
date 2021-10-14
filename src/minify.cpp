@@ -523,6 +523,44 @@ bool r_minify_single_block(_obj* in)
   return true;
 }
 
+bool r_has_backtick(_obj* in, bool* r)
+{
+  if(*r)
+    return false;
+  switch(in->type)
+  {
+    case _obj::subarg_subshell: {
+      subshell_subarg* t = dynamic_cast<subshell_subarg*>(in);
+      if(t->backtick) {
+        *r = true;
+        return false;
+      }
+    }; break;
+    default: break;
+  }
+  return true;
+}
+
+bool r_minify_backtick(_obj* in)
+{
+  switch(in->type)
+  {
+    case _obj::subarg_subshell: {
+      subshell_subarg* t = dynamic_cast<subshell_subarg*>(in);
+      if(!t->backtick) {
+        bool has_backtick_child=false;
+        recurse(r_has_backtick, t->sbsh, &has_backtick_child);
+        if(has_backtick_child)
+          return false;
+        t->backtick = true;
+      }
+      return false;
+    }; break;
+    default: break;
+  }
+  return true;
+}
+
 bool r_minify(_obj* in)
 {
   r_minify_empty_manip(in);
@@ -535,4 +573,5 @@ bool r_minify(_obj* in)
 void minify_generic(_obj* in)
 {
   recurse(r_minify, in);
+  recurse(r_minify_backtick, in);
 }
