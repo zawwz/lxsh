@@ -9,7 +9,7 @@
 #include "struc.hpp"
 
 // constants
-#define RESERVED_VARIABLES "HOME", "PATH", "SHELL", "PWD", "OPTIND", "OPTARG", "LC_.*", "LANG", "TERM", "RANDOM", "TMPDIR"
+#define RESERVED_VARIABLES "HOME", "PATH", "SHELL", "PWD", "OPTIND", "OPTARG", "LC_.*", "LANG", "TERM", "RANDOM", "TMPDIR", "IFS"
 
 // types
 typedef std::map<std::string,uint32_t> countmap_t;
