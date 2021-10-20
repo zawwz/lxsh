@@ -90,6 +90,7 @@ std::string condlist::generate(int ind)
       ret += '&';
     ret += '\n';
     ret += ctx.here_document->generate(0);
+    ret += '\n';
     prev_is_heredoc=true;
   }
   else if(parallel)
