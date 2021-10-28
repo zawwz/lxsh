@@ -650,11 +650,11 @@ bool r_minify_backtick(_obj* in)
   return true;
 }
 
+// optimisation for processors that don't have recurse-cancellation
 bool r_minify(_obj* in)
 {
   r_minify_empty_manip(in);
   r_minify_single_block(in);
-  r_minify_useless_quotes(in);
   r_do_string_processor(in);
   return true;
 }
@@ -663,4 +663,5 @@ void minify_generic(_obj* in)
 {
   recurse(r_minify, in);
   recurse(r_minify_backtick, in);
+  recurse(r_minify_useless_quotes, in);
 }
