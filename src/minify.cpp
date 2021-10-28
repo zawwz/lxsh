@@ -276,6 +276,26 @@ void do_minify_quotes(arg* in)
 
 }
 
+void do_minify_dollar(string_subarg* in)
+{
+  std::string& val = in->val;
+  for(uint32_t i=0; i<val.size(); i++) {
+    // skip singlequote strings
+    if(val[i] == '\'') {
+      i++;
+      while(val[i] != '\'')
+        i++;
+    }
+    // has \$
+    if(i+1<val.size() && val[i] == '\\' && val[i+1] == '$') {
+      // char after $ is a varname
+      if(i+2<val.size() && (is_varname(val[i+2]) || is_in(val[i+2], SPECIAL_VARS)) )
+        continue;
+      val.erase(i, 1);
+    }
+  }
+}
+
 bool r_minify_useless_quotes(_obj* in)
 {
   switch(in->type)
@@ -283,6 +303,10 @@ bool r_minify_useless_quotes(_obj* in)
     case _obj::_arg: {
       arg* t = dynamic_cast<arg*>(in);
       do_minify_quotes(t);
+    }; break;
+    case _obj::subarg_string: {
+      string_subarg* t = dynamic_cast<string_subarg*>(in);
+      do_minify_dollar(t);
     }; break;
     case _obj::_redirect: {
       // for redirects: don't minify quotes on here documents
