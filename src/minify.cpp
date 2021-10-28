@@ -69,8 +69,20 @@ bool r_replace_var(_obj* in, strmap_t* varmap)
   return true;
 }
 
-const char* singlequote_escape_char=" \\\t!\"()|&*?~><#";
-const char* doublequote_escape_char="  \t'|&\\*()?~><#";
+const char* singlequote_escape_char=" \\\t!\"()|&*?~><#$";
+const char* doublequote_escape_char="  \t'|&\\*()?~><#$";
+uint32_t count_escape_char(std::string& in, uint32_t i, bool doublequote, std::string** estr, uint32_t* ei) {
+  if( (  doublequote && is_in(in[i], doublequote_escape_char) ) ||
+      ( !doublequote && is_in(in[i], singlequote_escape_char) ) ) {
+    *estr = &in;
+    *ei = i;
+    return 1;
+  }
+  else if(in[i] == '\n') // \n: can't remove quotes
+    return 2;
+  return 0;
+}
+
 uint32_t count_escape_chars(std::string const& in, bool doublequote)
 {
   uint32_t r=0;
@@ -105,88 +117,161 @@ bool is_this_quote(char c, bool is_doublequote)
     return c == '\'';
 }
 
-void do_one_minify_quotes(string_subarg* in, bool prev_is_var, bool start_quoted)
+bool is_varname(const char c) {
+  return is_alphanum(c) || c == '_';
+}
+
+void do_minify_quotes(arg* in)
 {
-  std::string& val = in->val;
-  if(val.size() <= 1)
-    return;
-  if(start_quoted) // don't handle start quoted for now
-    return;
-  if(val[0] == '"' && prev_is_var && (is_alphanum(val[1]) || val[1] == '_') ) // removing quote would change varname: skip
-    return;
-  if(val[0] == '\'' && prev_is_var && (is_alphanum(val[1]) || val[1] == '_') ) // removing quote would change varname: skip
-    return;
-
-  uint32_t i=0, j=0;
-  while( i < val.size() )
+  auto t = in->sa.begin();
+  // global loop
+  while(true)
   {
-    bool doublequote=false;
-    while(i<val.size() && !( val[i] == '\'' || val[i] == '"') )
+    uint32_t i=0;
+    // one iteration loop
+    while(true)
     {
-      if(val[i] == '\\')
-        i++;
-      i++;
-    }
-    if(i>=val.size()) // end before finding quote: exit
-      return;
-    if(val[i] == '"')
-      doublequote=true;
-
-    j=i;
-    i++;
-
-    if(doublequote)
-    {
-      while(i<val.size() && val[i] != '"')
+      bool doublequote=false;
+      bool prev_is_var=false;
+      bool end_is_var=false;
+      bool has_substitution=false;
+      std::string* strstart = nullptr;
+      uint32_t quotestart=0;
+      std::string* strend = nullptr;
+      uint32_t quoteend=0;
+      std::string* escapestr = nullptr;
+      uint32_t escapepos=0;
+      uint32_t ce=0;
+      // loop to find start of quote
+      while(true)
       {
-        if(val[i] == '\\')
+        // reached end: quit
+        if(t == in->sa.end())
+          return;
+        while((*t)->type != _obj::subarg_string)
+        {
+          // previous is alphanum var: removing quote can change varname
+          if((*t)->type == _obj::subarg_variable) {
+            variable_subarg* vs = dynamic_cast<variable_subarg*>(*t);
+            if(vs->var != nullptr && !vs->var->is_manip && vs->var->varname.size()>0 && !(is_in(vs->var->varname[0], SPECIAL_VARS) || is_num(vs->var->varname[0]) ) )
+              prev_is_var = true;
+          }
+          else
+            prev_is_var = false;
+          t++;
+          // quit when reached end of arg
+          if(t == in->sa.end())
+            return;
+          i=0;
+        }
+        std::string& val = dynamic_cast<string_subarg*>(*t)->val;
+        while(i<val.size() && !( val[i] == '\'' || val[i] == '"') )
+        {
+          if(val[i] == '\\')
+            i++;
           i++;
+        }
+        // if found: break and go to next step
+        if(i<val.size()) {
+          if(val[i] == '"')
+            doublequote=true;
+          strstart=&val;
+          quotestart=i;
+          i++;
+          break;
+        }
+        else {
+          t++;
+          i=0;
+        }
+      } // end of quote start loop
+      // loop to end of quote
+      while(true)
+      {
+        // reached end: quit
+        if(t == in->sa.end())
+          return;
+        while((*t)->type != _obj::subarg_string)
+        {
+          // previous is alphanum var: removing quote can change varname
+          if((*t)->type == _obj::subarg_variable) {
+            variable_subarg* vs = dynamic_cast<variable_subarg*>(*t);
+            if(vs->var != nullptr && !vs->var->is_manip && vs->var->varname.size()>0 && !(is_in(vs->var->varname[0], SPECIAL_VARS) || is_num(vs->var->varname[0]) ) )
+              end_is_var = true;
+          }
+          else
+            end_is_var = false;
+          has_substitution=true;
+          t++;
+          // quit when reached end of arg
+          if(t == in->sa.end())
+            return;
+          i=0;
+        }
+        std::string& val = dynamic_cast<string_subarg*>(*t)->val;
+        if(doublequote)
+        {
+          while(i<val.size() && val[i] != '"')
+          {
+            if(val[i] == '\\') {
+              ce += count_escape_char(val, i++, doublequote, &escapestr, &escapepos);
+            }
+            ce += count_escape_char(val, i++, doublequote, &escapestr, &escapepos);
+          }
+          if(i>=val.size()) { // end before finding quote: continue looping
+            t++;
+            i=0;
+            continue;
+          }
+        }
+        else
+        {
+          while(i<val.size() && val[i] != '\'')
+            ce += count_escape_char(val, i++, doublequote, &escapestr, &escapepos);
+          if(i>=val.size()) { // end before finding quote: continue looping
+            t++;
+            i=0;
+            continue;
+          }
+        }
+        strend=&val;
+        quoteend=i;
+        break;
+      } // end of quote end loop
+      // has a substitution that can expand: don't dequote
+      if(!in->forcequoted && has_substitution) {
         i++;
+        continue;
       }
-      if(i>=val.size()) // end before finding quote: exit
-        return;
-    }
-    else
-    {
-      while(i<val.size() && val[i] != '\'')
+      // too many escapes: don't dequote
+      if(ce > 1) {
         i++;
-      if(i>=val.size()) // end before finding quote: exit
-        return;
+        continue;
+      }
+      // removing quotes changes variable name: don't dequote
+      if( ( prev_is_var && quotestart == 0 && strstart->size()>1 && is_varname((*strstart)[1]) ) ||
+          ( end_is_var && quoteend == 0 && strend->size()>1 && is_varname((*strend)[1])) ) {
+        i++;
+        continue;
+      }
+
+      // prev char is a $ would create variable names: don't dequote
+      if( quotestart >= 1 && (*strstart)[quotestart-1] == '$' && (!doublequote ||
+            ( strstart->size()>2 && is_varname((*strstart)[quotestart+1])))
+          ) {
+        i++;
+        continue;
+      }
+
+      // do dequote
+      strend->erase(quoteend, 1);
+      // needs one escape
+      if(ce == 1) {
+        escapestr->insert(escapepos, "\\");
+      }
+      strstart->erase(quotestart, 1);
 
     }
-    uint32_t ce = count_escape_chars(val.substr(j+1, i-j-1), doublequote);
-    if(ce == 0)
-    {
-      val.erase(val.begin()+i);
-      val.erase(val.begin()+j);
-    }
-    else if(ce == 1) // only one char to escape: can save some space
-    {
-      val.erase(val.begin()+i);
-      val.erase(val.begin()+j);
-      uint32_t k;
-      if(doublequote)
-      {
-        for(k=j; k<i-1; k++)
-        {
-          if( is_in(val[k], doublequote_escape_char) )
-            break;
-        }
-      }
-      else
-      {
-        for(k=j; k<i-1; k++)
-        {
-          if( is_in(val[k], singlequote_escape_char) )
-            break;
-          if( k+1<val.size() && val[k] == '$' && ( is_in(val[k+1], SPECIAL_VARS) || is_alpha(val[k+1]) || val[k+1] == '_' ) )
-            break;
-        }
-      }
-      if(k<i-1)
-        val.insert(val.begin()+k, '\\');
-    }
-
   }
 
 }
@@ -197,27 +282,7 @@ bool r_minify_useless_quotes(_obj* in)
   {
     case _obj::_arg: {
       arg* t = dynamic_cast<arg*>(in);
-      for(uint32_t i=0; i<t->sa.size(); i++)
-      {
-        // iterate subargs
-        if(t->sa[i]->type == _obj::subarg_string)
-        {
-          // has to be a string
-          string_subarg* ss = dynamic_cast<string_subarg*>(t->sa[i]);
-          bool prev_is_var=false;
-          if(i>0 && t->sa[i-1]->type == _obj::subarg_variable)
-          {
-            // previous subarg is a direct variable (removing a quote could change variable name)
-            variable_subarg* vs = dynamic_cast<variable_subarg*>(t->sa[i-1]);
-            if(vs->var != nullptr && vs->var->is_manip == false && vs->var->varname.size()>0 && !(is_in(vs->var->varname[0], SPECIAL_VARS) || is_alpha(vs->var->varname[0]) ) )
-              prev_is_var=true;
-          }
-          if(t->sa.size()==1 && (ss->val=="\"\"" || ss->val=="''") ) // single argument as "" or '': don't minify
-            continue;
-          do_one_minify_quotes(ss, prev_is_var, i>0 && t->sa[i-1]->quoted);
-        }
-        //if()
-      }
+      do_minify_quotes(t);
     }; break;
     case _obj::_redirect: {
       // for redirects: don't minify quotes on here documents

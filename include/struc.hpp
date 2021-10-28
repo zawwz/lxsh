@@ -170,9 +170,9 @@ public:
 class arg : public _obj
 {
 public:
-  arg() { type=_obj::_arg; }
-  arg(std::string const& str) { type=_obj::_arg; this->set(str);}
-  arg(subarg* in) { type=_obj::_arg; sa.push_back(in); }
+  arg() { type=_obj::_arg; forcequoted=false; }
+  arg(std::string const& str, bool fquote=false) { type=_obj::_arg; this->set(str); forcequoted=fquote; }
+  arg(subarg* in, bool fquote=false) { type=_obj::_arg; sa.push_back(in); forcequoted=fquote; }
   ~arg() { for(auto it: sa) delete it; }
 
   void set(std::string const& str);
@@ -186,6 +186,9 @@ public:
   inline size_t size() { return sa.size(); }
 
   std::vector<subarg*> sa;
+
+  // is forcequoted: var assign
+  bool forcequoted;
 
   bool is_string();
   // return if is a string and only one subarg

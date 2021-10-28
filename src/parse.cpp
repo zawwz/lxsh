@@ -1267,6 +1267,7 @@ parse_context parse_cmd_varassigns(cmd* in, parse_context ctx, bool cmdassign=fa
         ctx=pp.second;
       }
       ta->insert(0, strop);
+      ta->forcequoted = !cmdassign;
       ret->push_back(std::make_pair(vp.first, ta));
       ctx.i=skip_chars(ctx, SPACES);
     }

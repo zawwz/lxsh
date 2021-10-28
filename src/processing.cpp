@@ -659,6 +659,7 @@ std::string gen_json_struc(_obj* o)
     {
       arg* t = dynamic_cast<arg*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("arg") ) );
+      vec.push_back(std::make_pair(quote_string("forcequoted"), boolstring(t->forcequoted)));
       std::vector<std::string> tvec;
       for(auto it: t->sa)
         tvec.push_back(gen_json_struc(it));
