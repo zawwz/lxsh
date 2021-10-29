@@ -45,7 +45,7 @@ These commands can be placed anywhere within the script like regular commands.
 
 Reduce code size to a minimum without changing functionality with the `-m` option.
 
-> This option should be safe to use in any situation
+> This option should be safe to use in any situation, if this option changes behavior please report a bug
 
 #### Behaviors of the minify option
 
@@ -53,7 +53,9 @@ Reduce code size to a minimum without changing functionality with the `-m` optio
 - removes `;;` from the last value in a case
 - removes unnecessary quotes on arguments
 - transforms unnecessary manipulations (e.g. `${VAR}`) into simple variable call
-- Brace blocks or subshells with a single command will be replaced by said command
+- brace blocks or subshells with a single command will be replaced by said command
+- reduces level 1 `$()` subshells to use backticks
+- escaped dollarsigns are un-escaped
 
 > These features only apply if they won't change behavior, for instance
 removal of an unnecessary manipulation will not be made if the following character
