@@ -22,7 +22,7 @@ std::string indented(std::string const& in, uint32_t ind)
     return in;
 }
 
-std::string arg::generate(int ind)
+std::string arg_t::generate(int ind)
 {
   std::string ret;
   for(auto it: sa)
@@ -32,7 +32,7 @@ std::string arg::generate(int ind)
   return ret;
 }
 
-std::string arglist::generate(int ind)
+std::string arglist_t::generate(int ind)
 {
   std::string ret;
 
@@ -47,7 +47,7 @@ std::string arglist::generate(int ind)
   return ret;
 }
 
-std::string pipeline::generate(int ind, generate_context* ctx)
+std::string pipeline_t::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -66,7 +66,7 @@ std::string pipeline::generate(int ind, generate_context* ctx)
   return ret;
 }
 
-std::string condlist::generate(int ind)
+std::string condlist_t::generate(int ind)
 {
   std::string ret;
   if(pls.size() <= 0)
@@ -102,7 +102,7 @@ std::string condlist::generate(int ind)
   return ret;
 }
 
-std::string list::generate(int ind, bool first_indent)
+std::string list_t::generate(int ind, bool first_indent)
 {
   std::string ret;
   if(cls.size() <= 0)
@@ -127,7 +127,7 @@ std::string list::generate(int ind, bool first_indent)
   return ret;
 }
 
-std::string redirect::generate(int ind)
+std::string redirect_t::generate(int ind)
 {
   std::string ret=op;
   if(target!=nullptr)
@@ -141,7 +141,7 @@ std::string redirect::generate(int ind)
 
 // BLOCK
 
-std::string block::generate_redirs(int ind, std::string const& _str, generate_context* ctx=nullptr)
+std::string block_t::generate_redirs(int ind, std::string const& _str, generate_context* ctx=nullptr)
 {
   std::string ret=" ";
   bool previous_isnt_num = _str.size()>0 && !is_num(_str[_str.size()-1]);
@@ -163,7 +163,7 @@ std::string block::generate_redirs(int ind, std::string const& _str, generate_co
   return ret;
 }
 
-std::string if_block::generate(int ind, generate_context* ctx)
+std::string if_t::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -197,7 +197,7 @@ std::string if_block::generate(int ind, generate_context* ctx)
   return ret;
 }
 
-std::string for_block::generate(int ind, generate_context* ctx)
+std::string for_t::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -218,7 +218,7 @@ std::string for_block::generate(int ind, generate_context* ctx)
   return ret;
 }
 
-std::string while_block::generate(int ind, generate_context* ctx)
+std::string while_t::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -238,7 +238,7 @@ std::string while_block::generate(int ind, generate_context* ctx)
   return ret;
 }
 
-std::string subshell::generate(int ind, generate_context* ctx)
+std::string subshell_t::generate(int ind, generate_context* ctx)
 {
   std::string ret;
   // open subshell
@@ -271,7 +271,7 @@ std::string shmain::generate(bool print_shebang, int ind)
   return ret;
 }
 
-std::string brace::generate(int ind, generate_context* ctx)
+std::string brace_t::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -283,7 +283,7 @@ std::string brace::generate(int ind, generate_context* ctx)
   return ret;
 }
 
-std::string function::generate(int ind, generate_context* ctx)
+std::string function_t::generate(int ind, generate_context* ctx)
 {
   std::string ret;
   // function definition
@@ -298,7 +298,7 @@ std::string function::generate(int ind, generate_context* ctx)
   return ret;
 }
 
-std::string case_block::generate(int ind, generate_context* ctx)
+std::string case_t::generate(int ind, generate_context* ctx)
 {
   std::string ret;
   ret += "case " + carg->generate(ind) + " in\n";
@@ -339,7 +339,7 @@ std::string case_block::generate(int ind, generate_context* ctx)
   return ret;
 }
 
-std::string cmd::generate(int ind, generate_context* ctx)
+std::string cmd_t::generate(int ind, generate_context* ctx)
 {
   std::string ret;
 
@@ -397,7 +397,7 @@ std::string cmd::generate(int ind, generate_context* ctx)
 
 // SUBARG
 
-std::string subshell_subarg::generate(int ind)
+std::string subarg_subshell_t::generate(int ind)
 {
   std::string r = sbsh->generate(ind);
   if(backtick) {
@@ -409,7 +409,7 @@ std::string subshell_subarg::generate(int ind)
     return '$' + r;
 }
 
-std::string procsub_subarg::generate(int ind)
+std::string subarg_procsub_t::generate(int ind)
 {
   if(is_output)
     return '>' + sbsh->generate(ind);
@@ -417,7 +417,7 @@ std::string procsub_subarg::generate(int ind)
     return '<' + sbsh->generate(ind);
 }
 
-std::string arithmetic_subarg::generate(int ind)
+std::string subarg_arithmetic_t::generate(int ind)
 {
   std::string ret;
   ret += "$((";
@@ -430,7 +430,7 @@ std::string arithmetic_subarg::generate(int ind)
 
 // ARITHMETIC
 
-std::string operation_arithmetic::generate(int ind)
+std::string arithmetic_operation_t::generate(int ind)
 {
   std::string ret;
   if(precedence)
@@ -450,7 +450,7 @@ std::string operation_arithmetic::generate(int ind)
   return ret;
 }
 
-std::string parenthesis_arithmetic::generate(int ind)
+std::string arithmetic_parenthesis_t::generate(int ind)
 {
   std::string ret;
   ret += '(';
@@ -461,12 +461,12 @@ std::string parenthesis_arithmetic::generate(int ind)
   return ret;
 }
 
-std::string subshell_arithmetic::generate(int ind)
+std::string arithmetic_subshell_t::generate(int ind)
 {
   return '$' + sbsh->generate(ind);
 }
 
-std::string variable_arithmetic::generate(int ind)
+std::string arithmetic_variable_t::generate(int ind)
 {
   std::string ret=var->generate(ind);
   if(is_num(ret[0]) || is_in(ret[0], SPECIAL_VARS) || var->is_manip)
@@ -474,7 +474,7 @@ std::string variable_arithmetic::generate(int ind)
   return ret;
 }
 
-std::string variable::generate(int ind)
+std::string variable_t::generate(int ind)
 {
   std::string ret;
   if(is_manip)

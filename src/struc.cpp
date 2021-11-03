@@ -5,13 +5,11 @@
 
 #include <unistd.h>
 
-std::string g_origin="";
+const std::string cmd_t::empty_string="";
 
-const std::string cmd::empty_string="";
-
-condlist::condlist(block* bl)
+condlist_t::condlist_t(block_t* bl)
 {
-  type=_obj::_condlist;
+  type=_obj::condlist;
   parallel=false;
-  this->add(new pipeline(bl));
+  this->add(new pipeline_t(bl));
 }

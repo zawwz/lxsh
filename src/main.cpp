@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 
     // parsing
 
-    sh = new shmain(new list);
+    sh = new shmain;
 
     bool is_exec = false;
     bool first_run = true;
@@ -131,7 +131,6 @@ int main(int argc, char* argv[])
 
       }
       // parse
-      g_origin=file;
       if(!add_include(file))
         continue;
 

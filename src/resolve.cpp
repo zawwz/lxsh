@@ -59,7 +59,7 @@ void _cd(std::string const& dir)
 // -- COMMANDS --
 
 // return <name, contents>[]
-std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, parse_context ctx, std::string* ex_dir)
+std::vector<std::pair<std::string, std::string>> do_include_raw(condlist_t* cmd, parse_context ctx, std::string* ex_dir)
 {
   std::vector<std::pair<std::string, std::string>> ret;
 
@@ -105,7 +105,7 @@ std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, p
 }
 
 //
-std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, parse_context ctx, std::string* ex_dir)
+std::pair<std::string, std::string> do_resolve_raw(condlist_t* cmd, parse_context ctx, std::string* ex_dir)
 {
   std::pair<std::string, std::string> ret;
 
@@ -152,9 +152,9 @@ std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, parse_context 
   return ret;
 }
 
-std::vector<condlist*> do_include_parse(condlist* cmd, parse_context ctx)
+std::vector<condlist_t*> do_include_parse(condlist_t* cmd, parse_context ctx)
 {
-  std::vector<condlist*> ret;
+  std::vector<condlist_t*> ret;
 
   std::string dir;
   auto incs=do_include_raw(cmd, ctx, &dir);
@@ -186,9 +186,9 @@ std::vector<condlist*> do_include_parse(condlist* cmd, parse_context ctx)
 }
 
 // if first is nullptr: is a string
-std::vector<condlist*> do_resolve_parse(condlist* cmd, parse_context ctx)
+std::vector<condlist_t*> do_resolve_parse(condlist_t* cmd, parse_context ctx)
 {
-  std::vector<condlist*> ret;
+  std::vector<condlist_t*> ret;
 
   std::pair<std::string,std::string> p;
   try
@@ -220,11 +220,11 @@ std::vector<condlist*> do_resolve_parse(condlist* cmd, parse_context ctx)
 
 // -- OBJECT CALLS --
 
-std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, parse_context ctx)
+std::pair< std::vector<condlist_t*> , bool > resolve_condlist(condlist_t* in, parse_context ctx)
 {
-  cmd* tc = in->first_cmd();
+  cmd_t* tc = in->first_cmd();
   if(tc == nullptr)
-    return std::make_pair(std::vector<condlist*>(), false);
+    return std::make_pair(std::vector<condlist_t*>(), false);
 
   std::string const& strcmd=tc->arg_string(0);
 
@@ -233,17 +233,17 @@ std::pair< std::vector<condlist*> , bool > resolve_condlist(condlist* in, parse_
   else if(g_resolve && strcmd == "%resolve")
     return std::make_pair(do_resolve_parse(in, ctx), true);
   else
-    return std::make_pair(std::vector<condlist*>(), false);
+    return std::make_pair(std::vector<condlist_t*>(), false);
 }
 
-std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, parse_context ctx, bool forcequote=false)
+std::pair< std::vector<arg_t*> , bool > resolve_arg(arg_t* in, parse_context ctx, bool forcequote=false)
 {
-  std::vector<arg*> ret;
+  std::vector<arg_t*> ret;
   if(in == nullptr)
   {
     return std::make_pair(ret, false);
   }
-  arg* ta=nullptr;
+  arg_t* ta=nullptr;
   bool has_resolved=false;
   uint32_t j=0;
   for(uint32_t i=0 ; i<in->size() ; i++)
@@ -251,11 +251,11 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, parse_context ctx, bo
     if(in->sa[i]->type != _obj::subarg_subshell) // skip if not subshell
       continue;
 
-    subshell_subarg* tsh = dynamic_cast<subshell_subarg*>(in->sa[i]);
+    subarg_subshell_t* tsh = dynamic_cast<subarg_subshell_t*>(in->sa[i]);
     if(tsh->sbsh->lst->cls.size() != 1) // skip if not one cl
       continue;
-    condlist* tc = tsh->sbsh->lst->cls[0];
-    cmd* c = tc->first_cmd();
+    condlist_t* tc = tsh->sbsh->lst->cls[0];
+    cmd_t* c = tc->first_cmd();
     if(c == nullptr) // skip if not cmd
       continue;
     std::string strcmd=c->arg_string(0);
@@ -294,7 +294,7 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, parse_context ctx, bo
     {
       // replace with new subarg
       delete in->sa[i];
-      in->sa[i] = new string_subarg(fulltext);
+      in->sa[i] = new subarg_string_t(fulltext);
     }
     else
     {
@@ -305,21 +305,21 @@ std::pair< std::vector<arg*> , bool > resolve_arg(arg* in, parse_context ctx, bo
         if(strargs.size() == 1)
           val = strargs[0];
         delete in->sa[i];
-        in->sa[i] = new string_subarg(val);
+        in->sa[i] = new subarg_string_t(val);
       }
       else // pack
       {
         if(ta == nullptr)
-          ta = new arg;
+          ta = new arg_t;
         ta->sa.insert(ta->sa.end(), in->sa.begin()+j, in->sa.begin()+i);
-        ta->add(new string_subarg(strargs[i]));
+        ta->add(new subarg_string_t(strargs[i]));
         j=i+1;
         delete in->sa[i];
         for(uint32_t li=1 ; li<strargs.size() ; li++)
         {
           ret.push_back(ta);
-          ta = new arg;
-          ta->add(new string_subarg(strargs[li]));
+          ta = new arg_t;
+          ta->add(new subarg_string_t(strargs[li]));
         }
 
       } // end pack
@@ -350,9 +350,9 @@ bool r_resolve(_obj* o, parse_context* ct)
     // check every sub-object
     // execute resolve manually
     // instruct parent resolve to not resolve
-    case _obj::_list :
+    case _obj::list :
     {
-      auto t = dynamic_cast<list*>(o);
+      auto t = dynamic_cast<list_t*>(o);
       for(uint32_t i=0 ; i<t->cls.size() ; i++)
       {
         auto r=resolve_condlist(t->cls[i], *ct);
@@ -373,9 +373,9 @@ bool r_resolve(_obj* o, parse_context* ct)
       }
       return false;
     } break;
-    case _obj::_arglist :
+    case _obj::arglist :
     {
-      auto t = dynamic_cast<arglist*>(o);
+      auto t = dynamic_cast<arglist_t*>(o);
       for(uint32_t i=0 ; i<t->size() ; i++)
       {
         auto r=resolve_arg(t->args[i], *ct);
@@ -397,7 +397,7 @@ bool r_resolve(_obj* o, parse_context* ct)
     } break;
     case _obj::block_cmd :
     {
-      auto t = dynamic_cast<cmd*>(o);
+      auto t = dynamic_cast<cmd_t*>(o);
       for(auto it: t->var_assigns) // var assigns
       {
         resolve_arg(it.second, *ct, true); // force quoted
@@ -415,7 +415,7 @@ bool r_resolve(_obj* o, parse_context* ct)
     }; break;
     case _obj::block_case :
     {
-      auto t = dynamic_cast<case_block*>(o);
+      auto t = dynamic_cast<case_t*>(o);
       for(auto sc: t->cases)
       {
         resolve_arg(t->carg, *ct, true); // force quoted

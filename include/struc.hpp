@@ -67,13 +67,13 @@ subarg: can be one of
 #define AND_OP false
 #define OR_OP  true
 
-class condlist;
-class block;
-class pipeline;
-class arg;
-class subarg;
-class cmd;
-class redirect;
+class condlist_t;
+class block_t;
+class pipeline_t;
+class arg_t;
+class subarg_t;
+class cmd_t;
+class redirect_t;
 
 // structs
 
@@ -88,12 +88,12 @@ struct parse_context {
   const char* here_doc="";
   const char operator[](uint64_t a) { return data[a]; }
   bool has_errored=false;
-  redirect* here_document=nullptr;
+  redirect_t* here_document=nullptr;
   char* here_delimitor=NULL;
 };
 
 struct generate_context {
-  arg* here_document=nullptr;
+  arg_t* here_document=nullptr;
 };
 
 // exceptions
@@ -124,24 +124,19 @@ private:
 
 // objects
 
-// type pack of condlist
-typedef std::vector<arg*> arglist_t;
-
-extern std::string g_origin;
-
 // meta object type
 class _obj
 {
 public:
   enum _objtype {
     subarg_string, subarg_variable, subarg_subshell, subarg_arithmetic, subarg_procsub,
-    _variable,
-    _redirect,
-    _arg,
-    _arglist,
-    _pipeline,
-    _condlist,
-    _list,
+    variable,
+    redirect,
+    arg,
+    arglist,
+    pipeline,
+    condlist,
+    list,
     arithmetic_operation, arithmetic_number, arithmetic_variable, arithmetic_parenthesis, arithmetic_subshell,
     block_subshell, block_brace, block_main, block_cmd, block_function, block_case, block_if, block_for, block_while };
   _objtype type;
@@ -151,41 +146,41 @@ public:
 };
 
 // meta arithmetic type
-class arithmetic : public _obj
+class arithmetic_t : public _obj
 {
 public:
   virtual std::string generate(int ind)=0;
 };
 
 // meta subarg type
-class subarg : public _obj
+class subarg_t : public _obj
 {
 public:
-  virtual ~subarg() {;}
+  virtual ~subarg_t() {;}
   virtual std::string generate(int ind)=0;
 
   bool quoted;
 };
 
-class arg : public _obj
+class arg_t : public _obj
 {
 public:
-  arg() { type=_obj::_arg; forcequoted=false; }
-  arg(std::string const& str, bool fquote=false) { type=_obj::_arg; this->set(str); forcequoted=fquote; }
-  arg(subarg* in, bool fquote=false) { type=_obj::_arg; sa.push_back(in); forcequoted=fquote; }
-  ~arg() { for(auto it: sa) delete it; }
+  arg_t() { type=_obj::arg; forcequoted=false; }
+  arg_t(std::string const& str, bool fquote=false) { type=_obj::arg; this->set(str); forcequoted=fquote; }
+  arg_t(subarg_t* in, bool fquote=false) { type=_obj::arg; sa.push_back(in); forcequoted=fquote; }
+  ~arg_t() { for(auto it: sa) delete it; }
 
   void set(std::string const& str);
 
-  void insert(uint32_t i, subarg* val);
-  void insert(uint32_t i, arg const& a);
+  void insert(uint32_t i, subarg_t* val);
+  void insert(uint32_t i, arg_t const& a);
   void insert(uint32_t i, std::string const& in);
 
-  inline void add(subarg* in) { sa.push_back(in); }
+  inline void add(subarg_t* in) { sa.push_back(in); }
   void add(std::string const& in);
   inline size_t size() { return sa.size(); }
 
-  std::vector<subarg*> sa;
+  std::vector<subarg_t*> sa;
 
   // is forcequoted: var assign
   bool forcequoted;
@@ -204,59 +199,59 @@ public:
   std::string generate(int ind);
 };
 
-class variable : public _obj
+class variable_t : public _obj
 {
 public:
-  variable(std::string const& in="", arg* i=nullptr, bool def=false, bool ismanip=false, arg* m=nullptr) { type=_obj::_variable; varname=in; index=i; definition=def; is_manip=ismanip; precedence=false; manip=m; }
-  ~variable() {
+  variable_t(std::string const& in="", arg_t* i=nullptr, bool def=false, bool ismanip=false, arg_t* m=nullptr) { type=_obj::variable; varname=in; index=i; definition=def; is_manip=ismanip; precedence=false; manip=m; }
+  ~variable_t() {
     if(index!=nullptr) delete index;
     if(manip!=nullptr) delete manip;
   }
 
   std::string varname;
   bool definition;
-  arg* index; // for bash specific
+  arg_t* index; // for bash specific
 
   bool is_manip;
   bool precedence;
-  arg* manip;
+  arg_t* manip;
 
   std::string generate(int ind);
 };
 
 // arglist
 
-class arglist : public _obj
+class arglist_t : public _obj
 {
 public:
-  arglist() { type=_obj::_arglist; }
-  arglist(arg* in) { type=_obj::_arglist; this->add(in); }
-  ~arglist() { for( auto it: args ) delete it; }
-  inline void add(arg* in) { args.push_back(in); }
+  arglist_t() { type=_obj::arglist; }
+  arglist_t(arg_t* in) { type=_obj::arglist; this->add(in); }
+  ~arglist_t() { for( auto it: args ) delete it; }
+  inline void add(arg_t* in) { args.push_back(in); }
 
-  std::vector<arg*> args;
+  std::vector<arg_t*> args;
 
   std::vector<std::string> strargs(uint32_t start);
 
   // potentially expands into more arguments than its size
   bool can_expand();
 
-  void insert(uint32_t i, arg* val);
-  void insert(uint32_t i, arglist const& lst);
+  void insert(uint32_t i, arg_t* val);
+  void insert(uint32_t i, arglist_t const& lst);
 
   inline size_t size() { return args.size(); }
 
   std::string generate(int ind);
 };
 
-class redirect : public _obj
+class redirect_t : public _obj
 {
 public:
-  redirect(std::string strop="") { type=_obj::_redirect; op=strop; target=nullptr; here_document=nullptr; }
-  redirect(arg* in) { type=_obj::_redirect; target=in; here_document=nullptr; }
-  redirect(std::string strop, arg* in) { type=_obj::_redirect; op=strop; target=in; here_document=nullptr; }
-  redirect(std::string strop, arg* in, arg* doc) { type=_obj::_redirect; op=strop; target=in; here_document=doc; }
-  ~redirect() {
+  redirect_t(std::string strop="") { type=_obj::redirect; op=strop; target=nullptr; here_document=nullptr; }
+  redirect_t(arg_t* in) { type=_obj::redirect; target=in; here_document=nullptr; }
+  redirect_t(std::string strop, arg_t* in) { type=_obj::redirect; op=strop; target=in; here_document=nullptr; }
+  redirect_t(std::string strop, arg_t* in, arg_t* doc) { type=_obj::redirect; op=strop; target=in; here_document=doc; }
+  ~redirect_t() {
     if(target != nullptr) delete target;
     if(here_document != nullptr) delete here_document;
   }
@@ -264,21 +259,21 @@ public:
   std::string generate(int ind);
 
   std::string op;
-  arg* target;
-  arg* here_document;
+  arg_t* target;
+  arg_t* here_document;
 };
 
 // Meta block
-class block : public _obj
+class block_t : public _obj
 {
 public:
-  block() { ; }
-  virtual ~block() { for(auto it: redirs) delete it; }
+  block_t() { ; }
+  virtual ~block_t() { for(auto it: redirs) delete it; }
   // cmd
-  std::vector<redirect*> redirs;
+  std::vector<redirect_t*> redirs;
 
   // subshell: return the containing cmd, if it is a single command
-  cmd* single_cmd();
+  cmd_t* single_cmd();
 
   std::string generate_redirs(int ind, std::string const& _str, generate_context* ctx);
 
@@ -287,13 +282,13 @@ public:
 
 // PL
 
-class pipeline : public _obj
+class pipeline_t : public _obj
 {
 public:
-  pipeline(block* bl=nullptr) { type=_obj::_pipeline; if(bl!=nullptr) cmds.push_back(bl); negated=false; }
-  ~pipeline() { for(auto it: cmds) delete it; }
-  inline void add(block* bl) { this->cmds.push_back(bl); }
-  std::vector<block*> cmds;
+  pipeline_t(block_t* bl=nullptr) { type=_obj::pipeline; if(bl!=nullptr) cmds.push_back(bl); negated=false; }
+  ~pipeline_t() { for(auto it: cmds) delete it; }
+  inline void add(block_t* bl) { this->cmds.push_back(bl); }
+  std::vector<block_t*> cmds;
 
   bool negated; // negated return value (! at start)
 
@@ -303,49 +298,49 @@ public:
 
 // CL
 
-class condlist : public _obj
+class condlist_t : public _obj
 {
 public:
-  condlist() { type=_obj::_condlist; parallel=false; }
-  condlist(pipeline* pl) { type=_obj::_condlist; parallel=false; this->add(pl); }
-  condlist(block* bl);
-  ~condlist() { for(auto it: pls) delete it; }
+  condlist_t() { type=_obj::condlist; parallel=false; }
+  condlist_t(pipeline_t* pl) { type=_obj::condlist; parallel=false; this->add(pl); }
+  condlist_t(block_t* bl);
+  ~condlist_t() { for(auto it: pls) delete it; }
 
   bool parallel; // & at the end
 
-  void add(pipeline* pl, bool or_op=false);
+  void add(pipeline_t* pl, bool or_op=false);
 
   // don't push_back here, use add() instead
-  std::vector<pipeline*> pls;
+  std::vector<pipeline_t*> pls;
   std::vector<bool> or_ops; // size of 1 less than pls, defines separator between pipelines
 
   void prune_first_cmd();
 
-  block* first_block();
-  cmd* first_cmd();
-  cmd* get_cmd(std::string const& cmdname);
+  block_t* first_block();
+  cmd_t* first_cmd();
+  cmd_t* get_cmd(std::string const& cmdname);
 
   void negate();
 
   std::string generate(int ind);
 };
 
-class list : public _obj
+class list_t : public _obj
 {
 public:
-  list() { type=_obj::_list; }
-  list(condlist* in) { type=_obj::_list; this->add(in); }
-  ~list() { for(auto it: cls) delete it; }
+  list_t() { type=_obj::list; }
+  list_t(condlist_t* in) { type=_obj::list; this->add(in); }
+  ~list_t() { for(auto it: cls) delete it; }
 
   void clear() { for(auto it: cls) delete it; cls.resize(0); }
 
-  std::vector<condlist*> cls;
-  inline void add(condlist* in) { cls.push_back(in); }
+  std::vector<condlist_t*> cls;
+  inline void add(condlist_t* in) { cls.push_back(in); }
 
-  condlist* last_cond() { return cls[cls.size()-1]; }
+  condlist_t* last_cond() { return cls[cls.size()-1]; }
 
-  void insert(uint32_t i, condlist* val);
-  void insert(uint32_t i, list const& lst);
+  void insert(uint32_t i, condlist_t* val);
+  void insert(uint32_t i, list_t const& lst);
 
   size_t size() { return cls.size(); }
 
@@ -353,22 +348,13 @@ public:
   std::string generate(int ind) { return this->generate(ind, true); }
 };
 
-// class redir
-// {
-// public:
-//   enum redirtype { none, write, append, read, raw } ;
-//   redir(redirtype in=none) { type=in; }
-//   redirtype type;
-//   arg val;
-// };
-
 // block subtypes //
 
-class cmd : public block
+class cmd_t : public block_t
 {
 public:
-  cmd(arglist* in=nullptr) { type=_obj::block_cmd; args=in; is_cmdvar=false; }
-  ~cmd() {
+  cmd_t(arglist_t* in=nullptr) { type=_obj::block_cmd; args=in; is_cmdvar=false; }
+  ~cmd_t() {
     if(args!=nullptr) delete args;
     for(auto it: var_assigns) {
       delete it.first;
@@ -386,36 +372,36 @@ public:
 
   size_t arglist_size();
 
-  void add(arg* in);
+  void add(arg_t* in);
 
 
   // preceding var assigns
-  std::vector<std::pair<variable*,arg*>> var_assigns;
+  std::vector<std::pair<variable_t*,arg_t*>> var_assigns;
 
   // is a cmdvar type
   bool is_cmdvar;
   // var assigns on cmdvar
-  std::vector<std::pair<variable*,arg*>> cmd_var_assigns;
+  std::vector<std::pair<variable_t*,arg_t*>> cmd_var_assigns;
 
   // check if cmd is this (ex: unset)
   bool is(std::string const& in);
   // for var assigns in special cmds (export, unset, read, local)
   bool is_argvar();
-  std::vector<subarg*> subarg_vars();
+  std::vector<subarg_t*> subarg_vars();
 
   // returns true if command performs env var changes
   bool has_var_assign();
 
-  arglist* args;
+  arglist_t* args;
 
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
-class shmain : public block
+class shmain : public block_t
 {
 public:
-  shmain(list* in=nullptr) { type=_obj::block_main; lst=in; }
+  shmain(list_t* in=nullptr) { type=_obj::block_main; if(in == nullptr) lst = new list_t; else lst=in; }
   ~shmain() {
     if(lst!=nullptr) delete lst;
   }
@@ -424,66 +410,66 @@ public:
 
   std::string filename;
   std::string shebang;
-  list* lst;
+  list_t* lst;
 
   std::string generate(bool print_shebang=true, int ind=0);
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
-class subshell : public block
+class subshell_t : public block_t
 {
 public:
-  subshell(list* in=nullptr) { type=_obj::block_subshell; lst=in; }
-  subshell(block* in) { type=_obj::block_subshell; lst=new list(new condlist(in)); }
-  ~subshell() {
+  subshell_t(list_t* in=nullptr) { type=_obj::block_subshell; lst=in; }
+  subshell_t(block_t* in) { type=_obj::block_subshell; lst=new list_t(new condlist_t(in)); }
+  ~subshell_t() {
     if(lst!=nullptr) delete lst;
   }
 
-  cmd* single_cmd();
+  cmd_t* single_cmd();
 
-  list* lst;
+  list_t* lst;
 
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
-class brace : public block
+class brace_t : public block_t
 {
 public:
-  brace(list* in=nullptr) { type=_obj::block_brace; lst=in; }
-  ~brace() {
+  brace_t(list_t* in=nullptr) { type=_obj::block_brace; lst=in; }
+  ~brace_t() {
     if(lst!=nullptr) delete lst;
   }
 
-  cmd* single_cmd();
+  cmd_t* single_cmd();
 
-  list* lst;
+  list_t* lst;
 
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
-class function : public block
+class function_t : public block_t
 {
 public:
-  function(list* in=nullptr) { type=_obj::block_function; lst=in; }
-  ~function() {
+  function_t(list_t* in=nullptr) { type=_obj::block_function; lst=in; }
+  ~function_t() {
     if(lst!=nullptr) delete lst;
   }
 
   std::string name;
-  list* lst;
+  list_t* lst;
 
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
-class case_block : public block
+class case_t : public block_t
 {
 public:
-  case_block(arg* in=nullptr) { type=_obj::block_case; carg=in; }
-  ~case_block() {
+  case_t(arg_t* in=nullptr) { type=_obj::block_case; carg=in; }
+  ~case_t() {
     if(carg!=nullptr) delete carg;
     for( auto cit : cases )
     {
@@ -493,18 +479,18 @@ public:
     }
   }
 
-  arg* carg;
-  std::vector< std::pair<std::vector<arg*>, list*> > cases;
+  arg_t* carg;
+  std::vector< std::pair<std::vector<arg_t*>, list_t*> > cases;
 
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
-class if_block : public block
+class if_t : public block_t
 {
 public:
-  if_block() { type=_obj::block_if; else_lst=nullptr; }
-  ~if_block() {
+  if_t() { type=_obj::block_if; else_lst=nullptr; }
+  ~if_t() {
     for(auto ifb: blocks)
     {
       if(ifb.first!=nullptr) delete ifb.first;
@@ -513,28 +499,28 @@ public:
     if(else_lst!=nullptr) delete else_lst;
   }
 
-  std::vector< std::pair<list*,list*> > blocks;
+  std::vector< std::pair<list_t*,list_t*> > blocks;
 
-  list* else_lst;
+  list_t* else_lst;
 
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
-class for_block : public block
+class for_t : public block_t
 {
 public:
-  for_block(variable* in=nullptr, arglist* args=nullptr, list* lst=nullptr, bool ii=false) { type=_obj::block_for; var=in; iter=args; ops=lst; in_val=ii; }
-  ~for_block() {
+  for_t(variable_t* in=nullptr, arglist_t* args=nullptr, list_t* lst=nullptr, bool ii=false) { type=_obj::block_for; var=in; iter=args; ops=lst; in_val=ii; }
+  ~for_t() {
     if(iter!=nullptr) delete iter;
     if(ops!=nullptr) delete ops;
     if(var!=nullptr) delete var;
   }
 
-  variable* var;
+  variable_t* var;
 
-  arglist* iter;
-  list* ops;
+  arglist_t* iter;
+  list_t* ops;
 
   bool in_val;
 
@@ -542,19 +528,19 @@ public:
   std::string generate(int ind) { return this->generate(ind, nullptr); }
 };
 
-class while_block : public block
+class while_t : public block_t
 {
 public:
-  while_block(list* a=nullptr, list* b=nullptr) { type=_obj::block_while; cond=a; ops=b; }
-  ~while_block() {
+  while_t(list_t* a=nullptr, list_t* b=nullptr) { type=_obj::block_while; cond=a; ops=b; }
+  ~while_t() {
     if(cond!=nullptr) delete cond;
     if(ops!=nullptr) delete ops;
   }
 
-  condlist* real_condition() { return cond->last_cond(); }
+  condlist_t* real_condition() { return cond->last_cond(); }
 
-  list* cond;
-  list* ops;
+  list_t* cond;
+  list_t* ops;
 
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); }
@@ -562,130 +548,130 @@ public:
 
 // Subarg subtypes //
 
-class string_subarg : public subarg
+class subarg_string_t : public subarg_t
 {
 public:
-  string_subarg(std::string const& in="") { type=_obj::subarg_string; val=in; }
-  ~string_subarg() {;}
+  subarg_string_t(std::string const& in="") { type=_obj::subarg_string; val=in; }
+  ~subarg_string_t() {;}
 
   std::string val;
 
   std::string generate(int ind) { return val; }
 };
 
-class variable_subarg : public subarg
+class subarg_variable_t : public subarg_t
 {
 public:
-  variable_subarg(variable* in=nullptr, bool inq=false) { type=_obj::subarg_variable; var=in; quoted=inq; }
-  ~variable_subarg() {
+  subarg_variable_t(variable_t* in=nullptr, bool inq=false) { type=_obj::subarg_variable; var=in; quoted=inq; }
+  ~subarg_variable_t() {
     if(var!=nullptr) delete var;
   }
 
-  variable* var;
+  variable_t* var;
 
   std::string generate(int ind) { return "$" + var->generate(ind); }
 };
 
-class arithmetic_subarg : public subarg
+class subarg_arithmetic_t : public subarg_t
 {
 public:
-  arithmetic_subarg(arithmetic* a=nullptr) { type=_obj::subarg_arithmetic; arith=a; }
-  ~arithmetic_subarg() {
+  subarg_arithmetic_t(arithmetic_t* a=nullptr) { type=_obj::subarg_arithmetic; arith=a; }
+  ~subarg_arithmetic_t() {
     if(arith!=nullptr) delete arith;
   }
 
-  arithmetic* arith;
+  arithmetic_t* arith;
 
   std::string generate(int ind);
 };
 
-class subshell_subarg : public subarg
+class subarg_subshell_t : public subarg_t
 {
 public:
-  subshell_subarg(subshell* in=nullptr, bool inq=false, bool is_backtick=false) { type=_obj::subarg_subshell; sbsh=in; quoted=inq; backtick=is_backtick; }
-  ~subshell_subarg() { if(sbsh != nullptr) delete sbsh; }
+  subarg_subshell_t(subshell_t* in=nullptr, bool inq=false, bool is_backtick=false) { type=_obj::subarg_subshell; sbsh=in; quoted=inq; backtick=is_backtick; }
+  ~subarg_subshell_t() { if(sbsh != nullptr) delete sbsh; }
 
-  subshell* sbsh;
+  subshell_t* sbsh;
   bool backtick;
 
   std::string generate(int ind);
 };
 
-class procsub_subarg : public subarg
+class subarg_procsub_t : public subarg_t
 {
 public:
-  procsub_subarg() { type=_obj::subarg_procsub; sbsh=nullptr; is_output=false; }
-  procsub_subarg(bool output, subshell* in) { type=_obj::subarg_procsub; sbsh=in; is_output=output; }
-  ~procsub_subarg() { if(sbsh!=nullptr) delete sbsh; }
+  subarg_procsub_t() { type=_obj::subarg_procsub; sbsh=nullptr; is_output=false; }
+  subarg_procsub_t(bool output, subshell_t* in) { type=_obj::subarg_procsub; sbsh=in; is_output=output; }
+  ~subarg_procsub_t() { if(sbsh!=nullptr) delete sbsh; }
 
   bool is_output;
-  subshell* sbsh;
+  subshell_t* sbsh;
 
   std::string generate(int ind);
 };
 
 // Arithmetic subtypes //
 
-class operation_arithmetic : public arithmetic
+class arithmetic_operation_t : public arithmetic_t
 {
 public:
-  operation_arithmetic(std::string op="", arithmetic* a=nullptr, arithmetic* b=nullptr, bool pre=false) { type=_obj::arithmetic_operation; oper=op; val1=a; val2=b; precedence=pre; }
-  ~operation_arithmetic() {
+  arithmetic_operation_t(std::string op="", arithmetic_t* a=nullptr, arithmetic_t* b=nullptr, bool pre=false) { type=_obj::arithmetic_operation; oper=op; val1=a; val2=b; precedence=pre; }
+  ~arithmetic_operation_t() {
     if(val1 != nullptr) delete val1;
     if(val2 != nullptr) delete val2;
   }
 
   std::string oper;
   bool precedence;
-  arithmetic *val1, *val2;
+  arithmetic_t *val1, *val2;
   std::string generate(int ind);
 };
 
-class subshell_arithmetic : public arithmetic
+class arithmetic_subshell_t : public arithmetic_t
 {
 public:
-  subshell_arithmetic(subshell* a=nullptr) { type=_obj::arithmetic_subshell; sbsh=a; }
-  ~subshell_arithmetic() {
+  arithmetic_subshell_t(subshell_t* a=nullptr) { type=_obj::arithmetic_subshell; sbsh=a; }
+  ~arithmetic_subshell_t() {
     if(sbsh!=nullptr) delete sbsh;
   }
 
-  subshell* sbsh;
+  subshell_t* sbsh;
 
   std::string generate(int ind);
 };
 
-class parenthesis_arithmetic : public arithmetic
+class arithmetic_parenthesis_t : public arithmetic_t
 {
 public:
-  parenthesis_arithmetic(arithmetic* a=nullptr) { type=_obj::arithmetic_parenthesis; val=a; }
-  ~parenthesis_arithmetic() {
+  arithmetic_parenthesis_t(arithmetic_t* a=nullptr) { type=_obj::arithmetic_parenthesis; val=a; }
+  ~arithmetic_parenthesis_t() {
     if(val!=nullptr) delete val;
   }
 
-  arithmetic* val;
+  arithmetic_t* val;
 
   std::string generate(int ind);
 };
 
-class number_arithmetic : public arithmetic
+class arithmetic_number_t : public arithmetic_t
 {
 public:
-  number_arithmetic(std::string const& a) { type=_obj::arithmetic_number; val=a; }
+  arithmetic_number_t(std::string const& a) { type=_obj::arithmetic_number; val=a; }
 
   std::string val;
 
   std::string generate(int ind) { return val; }
 };
 
-class variable_arithmetic : public arithmetic
+class arithmetic_variable_t : public arithmetic_t
 {
 public:
-  variable_arithmetic(variable* in=nullptr) { type=_obj::arithmetic_variable; var=in; }
-  ~variable_arithmetic() {
+  arithmetic_variable_t(variable_t* in=nullptr) { type=_obj::arithmetic_variable; var=in; }
+  ~arithmetic_variable_t() {
     if(var!=nullptr) delete var;
   }
 
-  variable* var;
+  variable_t* var;
 
   std::string generate(int ind);
 };

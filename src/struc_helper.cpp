@@ -7,107 +7,107 @@
 
 // makers
 
-arg* make_arg(std::string const& in)
+arg_t* make_arg(std::string const& in)
 {
   return parse_arg(make_context(in)).first;
 }
 
-cmd* make_cmd(std::vector<const char*> const& args)
+cmd_t* make_cmd(std::vector<const char*> const& args)
 {
-  cmd* ret = new cmd;
-  ret->args = new arglist;
+  cmd_t* ret = new cmd_t;
+  ret->args = new arglist_t;
   for(auto it: args)
-    ret->args->add(new arg(it));
+    ret->args->add(new arg_t(it));
   return ret;
 }
 
-cmd* make_cmd(std::vector<std::string> const& args)
+cmd_t* make_cmd(std::vector<std::string> const& args)
 {
-  cmd* ret = new cmd;
-  ret->args = new arglist;
+  cmd_t* ret = new cmd_t;
+  ret->args = new arglist_t;
   for(auto it: args)
-    ret->args->add(new arg(it));
+    ret->args->add(new arg_t(it));
   return ret;
 }
 
-cmd* make_cmd(std::vector<arg*> const& args)
+cmd_t* make_cmd(std::vector<arg_t*> const& args)
 {
-  cmd* ret = new cmd;
-  ret->args = new arglist;
+  cmd_t* ret = new cmd_t;
+  ret->args = new arglist_t;
   for(auto it: args)
     ret->args->add(it);
 
   return ret;
 }
 
-cmd* make_cmd(std::string const& in)
+cmd_t* make_cmd(std::string const& in)
 {
   return parse_cmd(make_context(in)).first;
 }
 
-pipeline* make_pipeline(std::vector<block*> const& bls)
+pipeline_t* make_pipeline(std::vector<block_t*> const& bls)
 {
-  pipeline* ret = new pipeline;
+  pipeline_t* ret = new pipeline_t;
   for(auto it: bls)
     ret->add(it);
 
   return ret;
 }
 
-pipeline* make_pipeline(std::string const& in)
+pipeline_t* make_pipeline(std::string const& in)
 {
   return parse_pipeline(make_context(in)).first;
 }
 
-condlist* make_condlist(std::string const& in)
+condlist_t* make_condlist(std::string const& in)
 {
   return parse_condlist(make_context(in)).first;
 }
 
-list* make_list(std::string const& in)
+list_t* make_list(std::string const& in)
 {
   auto t = parse_list_until(make_context(in));
   return std::get<0>(t);
 }
 
-block* make_block(std::string const& in)
+block_t* make_block(std::string const& in)
 {
   return parse_block(make_context(in)).first;
 }
 
-cmd* make_printf(arg* in)
+cmd_t* make_printf(arg_t* in)
 {
-  cmd* prnt = make_cmd(std::vector<const char*>({"printf", "%s\\\\n"}));
+  cmd_t* prnt = make_cmd(std::vector<const char*>({"printf", "%s\\\\n"}));
   force_quotes(in);
   prnt->add(in);
   return prnt;
 }
 
-arithmetic* make_arithmetic(arg* a)
+arithmetic_t* make_arithmetic(arg_t* a)
 {
   if(a->sa.size() != 1)
   {
-    cmd* prnt = make_printf(a);
-    return new subshell_arithmetic(new subshell(prnt));
+    cmd_t* prnt = make_printf(a);
+    return new arithmetic_subshell_t(new subshell_t(prnt));
   }
-  arithmetic* ret=nullptr;
+  arithmetic_t* ret=nullptr;
   switch(a->sa[0]->type) {
     case _obj::subarg_string : {
-      string_subarg* t = dynamic_cast<string_subarg*>(a->sa[0]);
-      ret = new number_arithmetic(t->val);
+      subarg_string_t* t = dynamic_cast<subarg_string_t*>(a->sa[0]);
+      ret = new arithmetic_number_t(t->val);
     }; break;
     case _obj::subarg_variable : {
-      variable_subarg* t = dynamic_cast<variable_subarg*>(a->sa[0]);
-      ret = new variable_arithmetic(t->var);
+      subarg_variable_t* t = dynamic_cast<subarg_variable_t*>(a->sa[0]);
+      ret = new arithmetic_variable_t(t->var);
       t->var = nullptr;
     }; break;
     case _obj::subarg_subshell : {
-      subshell_subarg* t = dynamic_cast<subshell_subarg*>(a->sa[0]);
-      ret = new subshell_arithmetic(t->sbsh);
+      subarg_subshell_t* t = dynamic_cast<subarg_subshell_t*>(a->sa[0]);
+      ret = new arithmetic_subshell_t(t->sbsh);
       t->sbsh = nullptr;
     }; break;
     case _obj::subarg_arithmetic : {
-      arithmetic_subarg* t = dynamic_cast<arithmetic_subarg*>(a->sa[0]);
+      subarg_arithmetic_t* t = dynamic_cast<subarg_arithmetic_t*>(a->sa[0]);
       ret = t->arith;
       t->arith = nullptr;
     }; break;
@@ -117,22 +117,22 @@ arithmetic* make_arithmetic(arg* a)
   return ret;
 }
 
-arithmetic* make_arithmetic(arg* arg1, std::string op, arg* arg2)
+arithmetic_t* make_arithmetic(arg_t* arg1, std::string op, arg_t* arg2)
 {
-  return new operation_arithmetic(op, make_arithmetic(arg1), make_arithmetic(arg2));
+  return new arithmetic_operation_t(op, make_arithmetic(arg1), make_arithmetic(arg2));
 }
 
 
 // copy
 
-arg* copy(arg* in) {
+arg_t* copy(arg_t* in) {
   std::string str = in->generate(0);
   return parse_arg(make_context(str)).first;
 }
 
 // modifiers
 
-void force_quotes(arg* in)
+void force_quotes(arg_t* in)
 {
   for(uint32_t i=0; i < in->sa.size() ; i++)
   {
@@ -146,24 +146,24 @@ void force_quotes(arg* in)
   }
 }
 
-void add_quotes(arg* in)
+void add_quotes(arg_t* in)
 {
   for(uint32_t i=0; i < in->sa.size() ; i++)
     in->sa[i]->quoted=true;
 
-  in->insert(0, new string_subarg("\""));
+  in->insert(0, new subarg_string_t("\""));
   in->add("\"");
 }
 
 // ** TESTERS ** //
 
-bool arg_has_char(char c, arg* in)
+bool arg_has_char(char c, arg_t* in)
 {
   for(auto it: in->sa)
   {
     if(it->type == _obj::subarg_string)
     {
-      string_subarg* t = dynamic_cast<string_subarg*>(it);
+      subarg_string_t* t = dynamic_cast<subarg_string_t*>(it);
       if(t->val.find(c) != std::string::npos)
         return true;
     }
@@ -171,7 +171,7 @@ bool arg_has_char(char c, arg* in)
   return false;
 }
 
-bool possibly_expands(arg* in)
+bool possibly_expands(arg_t* in)
 {
   for(auto it: in->sa)
     if( (it->type == _obj::subarg_subshell || it->type == _obj::subarg_variable ) && it->quoted == false)
@@ -179,7 +179,7 @@ bool possibly_expands(arg* in)
   return false;
 }
 
-bool possibly_expands(arglist* in)
+bool possibly_expands(arglist_t* in)
 {
   for(auto it: in->args)
     if(possibly_expands(it))
@@ -193,7 +193,7 @@ bool possibly_expands(arglist* in)
 
 // property getters
 
-bool cmd::has_var_assign()
+bool cmd_t::has_var_assign()
 {
   if(this->args == nullptr || this->args->size() == 0)
   {
@@ -202,7 +202,7 @@ bool cmd::has_var_assign()
   return this->is_argvar();
 }
 
-size_t cmd::arglist_size()
+size_t cmd_t::arglist_size()
 {
   if(args==nullptr)
     return 0;
@@ -212,26 +212,26 @@ size_t cmd::arglist_size()
 
 // string getters
 
-bool arg::is_string()
+bool arg_t::is_string()
 {
   return sa.size() == 1 && sa[0]->type == _obj::subarg_string;
 }
 
-std::string arg::string()
+std::string arg_t::string()
 {
   if(!this->is_string())
     return "";
-  return dynamic_cast<string_subarg*>(sa[0])->val;
+  return dynamic_cast<subarg_string_t*>(sa[0])->val;
 }
 
-std::string arg::first_sa_string()
+std::string arg_t::first_sa_string()
 {
   if(sa.size() <=0 || sa[0]->type != _obj::subarg_string)
   return "";
-  return dynamic_cast<string_subarg*>(sa[0])->val;
+  return dynamic_cast<subarg_string_t*>(sa[0])->val;
 }
 
-bool arg::can_expand()
+bool arg_t::can_expand()
 {
   for(auto it: sa)
   {
@@ -241,7 +241,7 @@ bool arg::can_expand()
   return false;
 }
 
-bool arglist::can_expand()
+bool arglist_t::can_expand()
 {
   bool arg_expands=false;
   for(auto it: args)
@@ -253,7 +253,7 @@ bool arglist::can_expand()
   return false;
 }
 
-std::vector<std::string> arglist::strargs(uint32_t start)
+std::vector<std::string> arglist_t::strargs(uint32_t start)
 {
   std::vector<std::string> ret;
   bool t=opt_minify;
@@ -266,16 +266,16 @@ std::vector<std::string> arglist::strargs(uint32_t start)
   return ret;
 }
 
-std::string const& cmd::arg_string(uint32_t n)
+std::string const& cmd_t::arg_string(uint32_t n)
 {
   if(args!=nullptr && args->args.size()>n && args->args[n]->sa.size() == 1 && args->args[n]->sa[0]->type == _obj::subarg_string)
-    return dynamic_cast<string_subarg*>(args->args[n]->sa[0])->val;
-  return cmd::empty_string;
+    return dynamic_cast<subarg_string_t*>(args->args[n]->sa[0])->val;
+  return cmd_t::empty_string;
 }
 
 // subobject getters
 
-block* condlist::first_block()
+block_t* condlist_t::first_block()
 {
   if(pls.size() > 0 && pls[0]->cmds.size() > 0)
     return (pls[0]->cmds[0]);
@@ -283,40 +283,40 @@ block* condlist::first_block()
     return nullptr;
 }
 
-cmd* condlist::first_cmd()
+cmd_t* condlist_t::first_cmd()
 {
   if(pls.size() > 0 && pls[0]->cmds.size() > 0 && pls[0]->cmds[0]->type == _obj::block_cmd)
-    return dynamic_cast<cmd*>(pls[0]->cmds[0]);
+    return dynamic_cast<cmd_t*>(pls[0]->cmds[0]);
   else
     return nullptr;
 }
 
-cmd* brace::single_cmd()
+cmd_t* brace_t::single_cmd()
 {
   if( lst->cls.size() == 1 && // only one condlist
       lst->cls[0]->pls.size() == 1 && // only one pipeline
       lst->cls[0]->pls[0]->cmds.size() == 1 && // only one block
       lst->cls[0]->pls[0]->cmds[0]->type == _obj::block_cmd) // block is a command
-    return dynamic_cast<cmd*>(lst->cls[0]->pls[0]->cmds[0]); // return command
+    return dynamic_cast<cmd_t*>(lst->cls[0]->pls[0]->cmds[0]); // return command
   return nullptr;
 }
 
-cmd* subshell::single_cmd()
+cmd_t* subshell_t::single_cmd()
 {
   if( lst->cls.size() == 1 && // only one condlist
       lst->cls[0]->pls.size() == 1 && // only one pipeline
       lst->cls[0]->pls[0]->cmds.size() == 1 && // only one block
       lst->cls[0]->pls[0]->cmds[0]->type == _obj::block_cmd) // block is a command
-    return dynamic_cast<cmd*>(lst->cls[0]->pls[0]->cmds[0]); // return command
+    return dynamic_cast<cmd_t*>(lst->cls[0]->pls[0]->cmds[0]); // return command
   return nullptr;
 }
 
-cmd* block::single_cmd()
+cmd_t* block_t::single_cmd()
 {
   if(this->type == _obj::block_subshell)
-    return dynamic_cast<subshell*>(this)->single_cmd();
+    return dynamic_cast<subshell_t*>(this)->single_cmd();
   if(this->type == _obj::block_brace)
-    return dynamic_cast<brace*>(this)->single_cmd();
+    return dynamic_cast<brace_t*>(this)->single_cmd();
   return nullptr;
 }
 
@@ -324,15 +324,15 @@ cmd* block::single_cmd()
 
 // simple setters
 
-void arg::set(std::string const& str)
+void arg_t::set(std::string const& str)
 {
   for(auto it: sa)
     delete it;
   sa.resize(0);
-  sa.push_back(new string_subarg(str));
+  sa.push_back(new subarg_string_t(str));
 }
 
-void condlist::prune_first_cmd()
+void condlist_t::prune_first_cmd()
 {
   if(pls.size()>0 && pls[0]->cmds.size()>0)
   {
@@ -343,40 +343,40 @@ void condlist::prune_first_cmd()
 
 // add/extend
 
-void arg::insert(uint32_t i, std::string const& in)
+void arg_t::insert(uint32_t i, std::string const& in)
 {
   if(i>0 && i<=sa.size() && sa[i-1]->type == _obj::subarg_string)
   {
-    string_subarg* t = dynamic_cast<string_subarg*>(sa[i-1]);
+    subarg_string_t* t = dynamic_cast<subarg_string_t*>(sa[i-1]);
     t->val += in;
   }
   else if(i<sa.size() && sa[i]->type == _obj::subarg_string)
   {
-    string_subarg* t = dynamic_cast<string_subarg*>(sa[i]);
+    subarg_string_t* t = dynamic_cast<subarg_string_t*>(sa[i]);
     t->val = in + t->val;
   }
   else
-    sa.insert(sa.begin()+i, new string_subarg(in));
+    sa.insert(sa.begin()+i, new subarg_string_t(in));
 }
-void arg::add(std::string const& in)
+void arg_t::add(std::string const& in)
 {
   this->insert(this->size(), in);
 }
 
-void arg::insert(uint32_t i, subarg* val)
+void arg_t::insert(uint32_t i, subarg_t* val)
 {
   if(val->type == _obj::subarg_string)
   {
-    string_subarg* tval = dynamic_cast<string_subarg*>(val);
+    subarg_string_t* tval = dynamic_cast<subarg_string_t*>(val);
     if(i>0 && i<=sa.size() && sa[i-1]->type == _obj::subarg_string)
     {
-      string_subarg* t = dynamic_cast<string_subarg*>(sa[i-1]);
+      subarg_string_t* t = dynamic_cast<subarg_string_t*>(sa[i-1]);
       t->val += tval->val;
       delete val;
     }
     else if(i<sa.size() && sa[i]->type == _obj::subarg_string)
     {
-      string_subarg* t = dynamic_cast<string_subarg*>(sa[i]);
+      subarg_string_t* t = dynamic_cast<subarg_string_t*>(sa[i]);
       t->val = tval->val + t->val;
       delete val;
     }
@@ -386,43 +386,43 @@ void arg::insert(uint32_t i, subarg* val)
   else
     sa.insert(sa.begin()+i, val);
 }
-void arg::insert(uint32_t i, arg const& a)
+void arg_t::insert(uint32_t i, arg_t const& a)
 {
   sa.insert(sa.begin()+i, a.sa.begin(), a.sa.end());
 }
 
-void arglist::insert(uint32_t i, arg* val)
+void arglist_t::insert(uint32_t i, arg_t* val)
 {
   args.insert(args.begin()+i, val);
 }
-void arglist::insert(uint32_t i, arglist const& lst)
+void arglist_t::insert(uint32_t i, arglist_t const& lst)
 {
   args.insert(args.begin()+i, lst.args.begin(), lst.args.end());
 }
 
-void cmd::add(arg* in)
+void cmd_t::add(arg_t* in)
 {
   if(args==nullptr)
-    args = new arglist;
+    args = new arglist_t;
 
   args->add(in);
 }
 
-void condlist::add(pipeline* pl, bool or_op)
+void condlist_t::add(pipeline_t* pl, bool or_op)
 {
   if(pls.size() > 0)
     or_ops.push_back(or_op);
   pls.push_back(pl);
 }
 
-void list::insert(uint32_t i, condlist* val)
+void list_t::insert(uint32_t i, condlist_t* val)
 {
   if(i<0)
     cls.insert(cls.end(), val);
   else
     cls.insert(cls.begin()+i, val);
 }
-void list::insert(uint32_t i, list const& lst)
+void list_t::insert(uint32_t i, list_t const& lst)
 {
   if(i<0)
     cls.insert(cls.end(), lst.cls.begin(), lst.cls.end());
@@ -440,7 +440,7 @@ void shmain::concat(shmain* in)
 
 // special modifiers
 
-void condlist::negate()
+void condlist_t::negate()
 {
   // invert commands
   for(uint32_t i=0; i<pls.size(); i++)

@@ -77,22 +77,18 @@ void get_opts()
 
 ztd::option_set create_include_opts()
 {
-  ztd::option_set opts;
-  opts.add(
+  return std::vector<ztd::option>({
     ztd::option('C', false, "Don't cd to folder the file is in"),
     ztd::option('f', false, "Force include even if already included. Don't count as included")
-  );
-  return opts;
+  });
 }
 
 ztd::option_set create_resolve_opts()
 {
-  ztd::option_set opts;
-  opts.add(
+  return std::vector<ztd::option>({
     ztd::option('C', false, "Don't cd to folder this file is in"),
     ztd::option('f', false, "Ignore non-zero return values")
-  );
-  return opts;
+  });
 }
 
 void print_help(const char* arg0)
@@ -125,7 +121,7 @@ void print_resolve_help()
   printf("Execute shell command and substitute output, from folder of current file\n");
   printf(" - Default behaviour is to parse contents as shell code\n");
   printf(" - Fails if return value is not 0. Can be ignored with -f\n");
-  printf(" - `%%include` inside substitutions replaces the substitution and puts raw response\n");
+  printf(" - `%%resolve` inside substitutions replaces the substitution and puts raw response\n");
   printf("\n");
 
   ztd::option_set opts=create_resolve_opts();

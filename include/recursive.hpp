@@ -19,59 +19,59 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
   // recursive calls
   switch(o->type)
   {
-    case _obj::_variable :
+    case _obj::variable :
     {
-      variable* t = dynamic_cast<variable*>(o);
+      variable_t* t = dynamic_cast<variable_t*>(o);
       recurse(fct, t->index, args...);
       recurse(fct, t->manip, args...);
       break;
     }
-    case _obj::_redirect :
+    case _obj::redirect :
     {
-      redirect* t = dynamic_cast<redirect*>(o);
+      redirect_t* t = dynamic_cast<redirect_t*>(o);
       recurse(fct, t->target, args...);
       recurse(fct, t->here_document, args...);
       break;
     }
-    case _obj::_arg :
+    case _obj::arg :
     {
-      arg* t = dynamic_cast<arg*>(o);
+      arg_t* t = dynamic_cast<arg_t*>(o);
       for(auto it: t->sa)
       {
         recurse(fct, it, args...);
       }
       break;
     }
-    case _obj::_arglist :
+    case _obj::arglist :
     {
-      arglist* t = dynamic_cast<arglist*>(o);
+      arglist_t* t = dynamic_cast<arglist_t*>(o);
       for(auto it: t->args)
       {
         recurse(fct, it, args...);
       }
       break;
     }
-    case _obj::_pipeline :
+    case _obj::pipeline :
     {
-      pipeline* t = dynamic_cast<pipeline*>(o);
+      pipeline_t* t = dynamic_cast<pipeline_t*>(o);
       for(auto it: t->cmds)
       {
         recurse(fct, it, args...);
       }
       break;
     }
-    case _obj::_condlist :
+    case _obj::condlist :
     {
-      condlist* t = dynamic_cast<condlist*>(o);
+      condlist_t* t = dynamic_cast<condlist_t*>(o);
       for(auto it: t->pls)
       {
         recurse(fct, it, args...);
       }
       break;
     }
-    case _obj::_list :
+    case _obj::list :
     {
-      list* t = dynamic_cast<list*>(o);
+      list_t* t = dynamic_cast<list_t*>(o);
       for(auto it: t->cls)
       {
         recurse(fct, it, args...);
@@ -80,7 +80,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     }
     case _obj::block_subshell :
     {
-      subshell* t = dynamic_cast<subshell*>(o);
+      subshell_t* t = dynamic_cast<subshell_t*>(o);
       recurse(fct, t->lst, args...);
 
       for(auto it: t->redirs)
@@ -90,7 +90,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     }
     case _obj::block_brace :
     {
-      brace* t = dynamic_cast<brace*>(o);
+      brace_t* t = dynamic_cast<brace_t*>(o);
       recurse(fct, t->lst, args...);
 
       for(auto it: t->redirs)
@@ -110,7 +110,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     }
     case _obj::block_function :
     {
-      function* t = dynamic_cast<function*>(o);
+      function_t* t = dynamic_cast<function_t*>(o);
       recurse(fct, t->lst, args...);
 
       for(auto it: t->redirs)
@@ -120,7 +120,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     }
     case _obj::block_cmd :
     {
-      cmd* t = dynamic_cast<cmd*>(o);
+      cmd_t* t = dynamic_cast<cmd_t*>(o);
       recurse(fct, t->args, args...);
       for(auto it: t->var_assigns)
       {
@@ -140,7 +140,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     }
     case _obj::block_case :
     {
-      case_block* t = dynamic_cast<case_block*>(o);
+      case_t* t = dynamic_cast<case_t*>(o);
       // carg
       recurse(fct, t->carg, args...);
       // cases
@@ -160,7 +160,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     }
     case _obj::block_if :
     {
-      if_block* t = dynamic_cast<if_block*>(o);
+      if_t* t = dynamic_cast<if_t*>(o);
       // ifs
       for(auto sc: t->blocks)
       {
@@ -179,7 +179,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     }
     case _obj::block_for :
     {
-      for_block* t = dynamic_cast<for_block*>(o);
+      for_t* t = dynamic_cast<for_t*>(o);
       // variable
       recurse(fct, t->var, args...);
       // iterations
@@ -194,7 +194,7 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     }
     case _obj::block_while :
     {
-      while_block* t = dynamic_cast<while_block*>(o);
+      while_t* t = dynamic_cast<while_t*>(o);
       // condition
       recurse(fct, t->cond, args...);
       // operations
@@ -207,50 +207,50 @@ void recurse(bool (&fct)(_obj*, Args...), _obj* o, Args... args)
     }
     case _obj::subarg_variable :
     {
-      variable_subarg* t = dynamic_cast<variable_subarg*>(o);
+      subarg_variable_t* t = dynamic_cast<subarg_variable_t*>(o);
       recurse(fct, t->var, args...);
       break;
     }
     case _obj::subarg_subshell :
     {
-      subshell_subarg* t = dynamic_cast<subshell_subarg*>(o);
+      subarg_subshell_t* t = dynamic_cast<subarg_subshell_t*>(o);
       recurse(fct, t->sbsh, args...);
       break;
     }
     case _obj::subarg_procsub :
     {
-      procsub_subarg* t = dynamic_cast<procsub_subarg*>(o);
+      subarg_procsub_t* t = dynamic_cast<subarg_procsub_t*>(o);
       recurse(fct, t->sbsh, args...);
       break;
     }
     case _obj::subarg_arithmetic :
     {
-      arithmetic_subarg* t = dynamic_cast<arithmetic_subarg*>(o);
+      subarg_arithmetic_t* t = dynamic_cast<subarg_arithmetic_t*>(o);
       recurse(fct, t->arith, args...);
       break;
     }
     case _obj::arithmetic_variable :
     {
-      variable_arithmetic* t = dynamic_cast<variable_arithmetic*>(o);
+      arithmetic_variable_t* t = dynamic_cast<arithmetic_variable_t*>(o);
       recurse(fct, t->var, args...);
       break;
     }
     case _obj::arithmetic_subshell :
     {
-      subshell_arithmetic* t = dynamic_cast<subshell_arithmetic*>(o);
+      arithmetic_subshell_t* t = dynamic_cast<arithmetic_subshell_t*>(o);
       recurse(fct, t->sbsh, args...);
       break;
     }
     case _obj::arithmetic_operation :
     {
-      operation_arithmetic* t = dynamic_cast<operation_arithmetic*>(o);
+      arithmetic_operation_t* t = dynamic_cast<arithmetic_operation_t*>(o);
       recurse(fct, t->val1, args...);
       recurse(fct, t->val2, args...);
       break;
     }
     case _obj::arithmetic_parenthesis :
     {
-      parenthesis_arithmetic* t = dynamic_cast<parenthesis_arithmetic*>(o);
+      arithmetic_parenthesis_t* t = dynamic_cast<arithmetic_parenthesis_t*>(o);
       recurse(fct, t->val, args...);
       break;
     }

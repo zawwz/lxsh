@@ -60,7 +60,7 @@ std::regex fct_exclude_regex(std::string const& in);
 // varnames
 bool is_varname(std::string const& in);
 std::string get_varname(std::string const& in);
-std::string get_varname(arg* in);
+std::string get_varname(arg_t* in);
 
 // list objects
 void list_map(countmap_t const& map);

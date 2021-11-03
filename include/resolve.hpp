@@ -6,8 +6,8 @@
 
 extern std::vector<std::string> included;
 
-std::vector<std::pair<std::string, std::string>> do_include_raw(condlist* cmd, parse_context ctx, std::string* ex_dir=nullptr);
-std::pair<std::string, std::string> do_resolve_raw(condlist* cmd, parse_context ctx, std::string* ex_dir=nullptr);
+std::vector<std::pair<std::string, std::string>> do_include_raw(condlist_t* cmd, parse_context ctx, std::string* ex_dir=nullptr);
+std::pair<std::string, std::string> do_resolve_raw(condlist_t* cmd, parse_context ctx, std::string* ex_dir=nullptr);
 
 bool add_include(std::string const& file);
 

@@ -18,9 +18,9 @@
 #define PIPE_READ  0
 #define PIPE_WRITE 1
 
-std::vector<condlist*> do_include_exec(condlist* cmd, parse_context ctx, FILE* fd)
+std::vector<condlist_t*> do_include_exec(condlist_t* cmd, parse_context ctx, FILE* fd)
 {
-  std::vector<condlist*> ret;
+  std::vector<condlist_t*> ret;
 
   std::string dir;
   auto incs=do_include_raw(cmd, ctx, &dir);
@@ -36,9 +36,9 @@ std::vector<condlist*> do_include_exec(condlist* cmd, parse_context ctx, FILE* f
 }
 
 // if first is nullptr: is a string
-std::vector<condlist*> do_resolve_exec(condlist* cmd, parse_context ctx, FILE* fd)
+std::vector<condlist_t*> do_resolve_exec(condlist_t* cmd, parse_context ctx, FILE* fd)
 {
-  std::vector<condlist*> ret;
+  std::vector<condlist_t*> ret;
 
   std::pair<std::string,std::string> p;
   try
@@ -61,9 +61,9 @@ std::vector<condlist*> do_resolve_exec(condlist* cmd, parse_context ctx, FILE* f
 
 // -- OBJECT CALLS --
 
-bool resolve_condlist_exec(condlist* in, parse_context ctx, FILE* fd)
+bool resolve_condlist_exec(condlist_t* in, parse_context ctx, FILE* fd)
 {
-  cmd* tc = in->first_cmd();
+  cmd_t* tc = in->first_cmd();
   if(tc == nullptr)
     return false;
 
@@ -83,7 +83,7 @@ bool resolve_condlist_exec(condlist* in, parse_context ctx, FILE* fd)
 }
 
 
-bool resolve_exec(condlist* in, parse_context ctx, FILE* fd)
+bool resolve_exec(condlist_t* in, parse_context ctx, FILE* fd)
 {
   if(!resolve_condlist_exec(in, ctx, fd))
   {
@@ -143,7 +143,7 @@ void parse_exec(FILE* fd, parse_context ctx)
   ctx.i=skip_unread(ctx);
 
   debashify_params debash_params;
-  list* t_lst=new list;
+  list_t* t_lst=new list_t;
   if(t_lst == nullptr)
     throw std::runtime_error("Alloc error");
   while(ctx.i<ctx.size)

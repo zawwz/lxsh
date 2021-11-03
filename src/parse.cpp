@@ -207,9 +207,9 @@ std::pair<std::string,uint32_t> get_word(parse_context ctx, const char* end_set)
 
 // parse fcts
 
-std::pair<variable*, parse_context> parse_var(parse_context ctx, bool specialvars, bool array)
+std::pair<variable_t*, parse_context> parse_var(parse_context ctx, bool specialvars, bool array)
 {
-  variable* ret=nullptr;
+  variable_t* ret=nullptr;
   std::string varname;
   uint32_t start=ctx.i;
 
@@ -227,7 +227,7 @@ std::pair<variable*, parse_context> parse_var(parse_context ctx, bool specialvar
   }
   if(varname != "")
   {
-    ret = new variable(varname);
+    ret = new variable_t(varname);
     if(ctx.bash && array && ctx[ctx.i]=='[')
     {
       ctx.i++;
@@ -264,9 +264,9 @@ std::pair<std::string, uint32_t> get_operator(parse_context ctx)
 // parse an arithmetic
 // ends at ))
 // temporary, to improve
-std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ctx)
+std::pair<arithmetic_t*, parse_context> parse_arithmetic(parse_context ctx)
 {
-  arithmetic* ret = nullptr;
+  arithmetic_t* ret = nullptr;
 
   ctx.i = skip_chars(ctx, SEPARATORS);
   if(ctx.i>ctx.size || ctx[ctx.i] == ')')
@@ -280,12 +280,12 @@ std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ctx)
   {
     ctx.i = po.second;
     auto pa = parse_arithmetic(ctx);
-    ret = new operation_arithmetic(po.first, pa.first, nullptr, true);
+    ret = new arithmetic_operation_t(po.first, pa.first, nullptr, true);
     ctx=pa.second;
   }
   else
   {
-    variable_arithmetic* ttvar=nullptr; // for categorizing definitions
+    arithmetic_variable_t* ttvar=nullptr; // for categorizing definitions
     if(ctx[ctx.i]=='-' || is_num(ctx[ctx.i]))
     {
       uint32_t j=ctx.i;
@@ -293,20 +293,20 @@ std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ctx)
         ctx.i++;
       while(is_num(ctx[ctx.i]))
         ctx.i++;
-      ret = new number_arithmetic( std::string(ctx.data+j, ctx.i-j) );
+      ret = new arithmetic_number_t( std::string(ctx.data+j, ctx.i-j) );
     }
     else if(word_eq("$(", ctx))
     {
       ctx.i+=2;
       auto ps = parse_subshell(ctx);
-      ret = new subshell_arithmetic(ps.first);
+      ret = new arithmetic_subshell_t(ps.first);
       ctx=ps.second;
     }
     else if(word_eq("${", ctx))
     {
       ctx.i+=2;
       auto pm = parse_manipulation(ctx);
-      ret = new variable_arithmetic(pm.first);
+      ret = new arithmetic_variable_t(pm.first);
       ctx=pm.second;
     }
     else if(ctx[ctx.i] == '(')
@@ -326,7 +326,7 @@ std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ctx)
         ctx.i++;
       }
       auto pp = parse_var(ctx, specialvars, true);
-      ttvar = new variable_arithmetic(pp.first);
+      ttvar = new arithmetic_variable_t(pp.first);
       ret = ttvar;
       ctx=pp.second;
     }
@@ -339,12 +339,12 @@ std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ctx)
       {
         parse_error( "Unknown arithmetic operator: "+po.first, ctx);
       }
-      arithmetic* val1 = ret;
+      arithmetic_t* val1 = ret;
       ctx.i=po.second;
       auto pa = parse_arithmetic(ctx);
-      arithmetic* val2 = pa.first;
+      arithmetic_t* val2 = pa.first;
       ctx = pa.second;
-      ret = new operation_arithmetic(po.first, val1, val2);
+      ret = new arithmetic_operation_t(po.first, val1, val2);
       ctx.i = skip_chars(ctx, SEPARATORS);
     }
 
@@ -366,10 +366,10 @@ std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ctx)
   return std::make_pair(ret, ctx);
 }
 
-std::pair<variable*, parse_context> parse_manipulation(parse_context ctx)
+std::pair<variable_t*, parse_context> parse_manipulation(parse_context ctx)
 {
-  variable* ret = nullptr;
-  arg* precede = nullptr;
+  variable_t* ret = nullptr;
+  arg_t* precede = nullptr;
   uint32_t start=ctx.i;
 
 
@@ -382,7 +382,7 @@ std::pair<variable*, parse_context> parse_manipulation(parse_context ctx)
     }
     std::string t;
     t+=ctx[ctx.i];
-    precede = new arg( t );
+    precede = new arg_t( t );
     ctx.i++;
   }
 
@@ -418,7 +418,7 @@ std::pair<variable*, parse_context> parse_manipulation(parse_context ctx)
   return std::make_pair(ret, ctx);
 }
 
-inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j, bool is_quoted)
+inline parse_context do_one_subarg_step(arg_t* ret, parse_context ctx, uint32_t& j, bool is_quoted)
 {
   if( ctx.i >= ctx.size)
     return ctx;
@@ -444,7 +444,7 @@ inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j
     parse_context newct = ctx;
     newct.size=k;
     auto r=parse_list_until(newct);
-    ret->add(new subshell_subarg(new subshell(std::get<0>(r)), is_quoted, true));
+    ret->add(new subarg_subshell_t(new subshell_t(std::get<0>(r)), is_quoted, true));
     uint64_t tsize=ctx.size;
     ctx = std::get<1>(r);
     ctx.size = tsize;
@@ -459,7 +459,7 @@ inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j
     // get arithmetic
     ctx.i+=3;
     auto r=parse_arithmetic(ctx);
-    arithmetic_subarg* tt = new arithmetic_subarg(r.first);
+    subarg_arithmetic_t* tt = new subarg_arithmetic_t(r.first);
     tt->quoted=is_quoted;
     ret->add(tt);
     ctx = r.second;
@@ -481,7 +481,7 @@ inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j
     // get subshell
     ctx.i+=2;
     auto r=parse_subshell(ctx);
-    ret->add(new subshell_subarg(r.first, is_quoted));
+    ret->add(new subarg_subshell_t(r.first, is_quoted));
     ctx = r.second;
     j = ctx.i;
   }
@@ -493,7 +493,7 @@ inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j
     // get manipulation
     ctx.i+=2;
     auto r=parse_manipulation(ctx);
-    ret->add(new variable_subarg(r.first, is_quoted));
+    ret->add(new subarg_variable_t(r.first, is_quoted));
     ctx = r.second;
     j = ctx.i;
   }
@@ -508,7 +508,7 @@ inline parse_context do_one_subarg_step(arg* ret, parse_context ctx, uint32_t& j
       if(ctx.i-j>0)
         ret->add(std::string(ctx.data+j, ctx.i-j));
       // add var
-      ret->add(new variable_subarg(r.first, is_quoted));
+      ret->add(new subarg_variable_t(r.first, is_quoted));
       ctx = r.second;
       j = ctx.i;
     }
@@ -543,9 +543,9 @@ bool _optimize_skip_arg(parse_context& ctx, const char* str) {
 // parse one argument
 // must start at a read char
 // ends at either " \t|&;\n()"
-std::pair<arg*, parse_context> parse_arg(parse_context ctx, const char* end, const char* unexpected, bool doquote, const char* optimize)
+std::pair<arg_t*, parse_context> parse_arg(parse_context ctx, const char* end, const char* unexpected, bool doquote, const char* optimize)
 {
-  arg* ret = new arg;
+  arg_t* ret = new arg_t;
   // j : start of subarg , q = start of quote
   uint32_t j=ctx.i,q=ctx.i;
 
@@ -638,7 +638,6 @@ parse_context parse_heredocument(parse_context ctx)
   {
     ctx.i = ctx.size;
   }
-  // std::string tmpparse=std::string(ctx.data+j, ctx.i-j);
   parse_context newctx = make_context(ctx, j);
   newctx.size = ctx.i;
   auto pval = parse_arg(newctx , NULL, NULL, false, ARG_OPTIMIZE_NULL);
@@ -654,7 +653,7 @@ parse_context parse_heredocument(parse_context ctx)
   return ctx;
 }
 
-std::pair<redirect*, parse_context> parse_redirect(parse_context ctx)
+std::pair<redirect_t*, parse_context> parse_redirect(parse_context ctx)
 {
   bool is_redirect=false;
   bool needs_arg=false;
@@ -741,9 +740,9 @@ std::pair<redirect*, parse_context> parse_redirect(parse_context ctx)
 
   if(is_redirect)
   {
-    redirect* ret=nullptr;
+    redirect_t* ret=nullptr;
 
-    ret = new redirect;
+    ret = new redirect_t;
     ret->op = std::string(ctx.data+start, ctx.i-start);
     if(needs_arg)
     {
@@ -797,9 +796,9 @@ std::pair<redirect*, parse_context> parse_redirect(parse_context ctx)
 // must start at a read char
 // first char has to be read
 // ends at either &|;\n#()
-std::pair<arglist*, parse_context> parse_arglist(parse_context ctx, bool hard_error, std::vector<redirect*>* redirs)
+std::pair<arglist_t*, parse_context> parse_arglist(parse_context ctx, bool hard_error, std::vector<redirect_t*>* redirs)
 {
-  arglist* ret = nullptr;
+  arglist_t* ret = nullptr;
 
   if(word_eq("[[", ctx, ARG_END) ) // [[ bash specific parsing
   {
@@ -810,14 +809,14 @@ std::pair<arglist*, parse_context> parse_arglist(parse_context ctx, bool hard_er
     while(true)
     {
       if(ret == nullptr)
-        ret = new arglist;
+        ret = new arglist_t;
       auto pp=parse_arg(ctx, SEPARATORS, NULL, true, ARG_OPTIMIZE_BASHTEST);
       ret->add(pp.first);
       ctx = pp.second;
       ctx.i = skip_chars(ctx, SEPARATORS);
       if(word_eq("]]", ctx, ARG_END))
       {
-        ret->add(new arg("]]"));
+        ret->add(new arg_t("]]"));
         ctx.i+=2;
         ctx.i = skip_chars(ctx, SPACES);
         if( !is_in(ctx[ctx.i], ARGLIST_END) )
@@ -857,9 +856,9 @@ std::pair<arglist*, parse_context> parse_arglist(parse_context ctx, bool hard_er
         bool is_output = ctx[ctx.i] == '>';
         ctx.i+=2;
         if(ret == nullptr)
-          ret = new arglist;
+          ret = new arglist_t;
         auto ps = parse_subshell(ctx);
-        ret->add(new arg(new procsub_subarg(is_output, ps.first)));
+        ret->add(new arg_t(new subarg_procsub_t(is_output, ps.first)));
         ctx=ps.second;
       }
       else if(redirs!=nullptr)
@@ -877,7 +876,7 @@ std::pair<arglist*, parse_context> parse_arglist(parse_context ctx, bool hard_er
       {
       argparse:
         if(ret == nullptr)
-          ret = new arglist;
+          ret = new arglist_t;
         auto pp=parse_arg(ctx);
         ret->add(pp.first);
         ctx = pp.second;
@@ -905,9 +904,9 @@ std::pair<arglist*, parse_context> parse_arglist(parse_context ctx, bool hard_er
 // must start at a read char
 // separated by |
 // ends at either &;\n#)
-std::pair<pipeline*, parse_context> parse_pipeline(parse_context ctx)
+std::pair<pipeline_t*, parse_context> parse_pipeline(parse_context ctx)
 {
-  pipeline* ret = new pipeline;
+  pipeline_t* ret = new pipeline_t;
 
   if(ctx[ctx.i] == '!' && ctx.i+1<ctx.size && is_in(ctx[ctx.i+1], SPACES))
   {
@@ -945,9 +944,9 @@ std::pair<pipeline*, parse_context> parse_pipeline(parse_context ctx)
 // must start at a read char
 // separated by && or ||
 // ends at either ;\n)#
-std::pair<condlist*, parse_context> parse_condlist(parse_context ctx)
+std::pair<condlist_t*, parse_context> parse_condlist(parse_context ctx)
 {
-  condlist* ret = new condlist;
+  condlist_t* ret = new condlist_t;
   ctx.i = skip_unread(ctx);
 
   bool optype=AND_OP;
@@ -998,9 +997,9 @@ std::pair<condlist*, parse_context> parse_condlist(parse_context ctx)
   return std::make_pair(ret, ctx);
 }
 
-std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ctx, list_parse_options opts)
+std::tuple<list_t*, parse_context, std::string> parse_list_until(parse_context ctx, list_parse_options opts)
 {
-  list* ret = new list;
+  list_t* ret = new list_t;
   ctx.i=skip_unread(ctx);
   std::string found_end_word;
 
@@ -1120,9 +1119,9 @@ std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ctx
 // parse a subshell
 // must start right after the opening (
 // ends at ) and nothing else
-std::pair<subshell*, parse_context> parse_subshell(parse_context ctx)
+std::pair<subshell_t*, parse_context> parse_subshell(parse_context ctx)
 {
-  subshell* ret = new subshell;
+  subshell_t* ret = new subshell_t;
   uint32_t start=ctx.i;
   ctx.i = skip_unread(ctx);
 
@@ -1142,9 +1141,9 @@ std::pair<subshell*, parse_context> parse_subshell(parse_context ctx)
 // parse a brace block
 // must start right after the opening {
 // ends at } and nothing else
-std::pair<brace*, parse_context> parse_brace(parse_context ctx)
+std::pair<brace_t*, parse_context> parse_brace(parse_context ctx)
 {
-  brace* ret = new brace;
+  brace_t* ret = new brace_t;
   uint32_t start=ctx.i;
   ctx.i = skip_unread(ctx);
 
@@ -1164,9 +1163,9 @@ std::pair<brace*, parse_context> parse_brace(parse_context ctx)
 // parse a function
 // must start right after the ()
 // then parses a brace block
-std::pair<function*, parse_context> parse_function(parse_context ctx, const char* after)
+std::pair<function_t*, parse_context> parse_function(parse_context ctx, const char* after)
 {
-  function* ret = new function;
+  function_t* ret = new function_t;
 
   ctx.i=skip_unread(ctx);
   if(ctx[ctx.i] != '{')
@@ -1192,7 +1191,7 @@ std::pair<function*, parse_context> parse_function(parse_context ctx, const char
 }
 
 // parse only var assigns
-parse_context parse_cmd_varassigns(cmd* in, parse_context ctx, bool cmdassign=false, std::string const& cmd="")
+parse_context parse_cmd_varassigns(cmd_t* in, parse_context ctx, bool cmdassign=false, std::string const& cmd="")
 {
   bool forbid_assign=false;
   bool forbid_special=false;
@@ -1201,7 +1200,7 @@ parse_context parse_cmd_varassigns(cmd* in, parse_context ctx, bool cmdassign=fa
   if(cmdassign && (forbid_special || cmd == "export") )
     forbid_special=true;
 
-  std::vector<std::pair<variable*,arg*>>* ret=&in->var_assigns;
+  std::vector<std::pair<variable_t*,arg_t*>>* ret=&in->var_assigns;
   if(cmdassign)
     ret=&in->cmd_var_assigns;
 
@@ -1237,7 +1236,7 @@ parse_context parse_cmd_varassigns(cmd* in, parse_context ctx, bool cmdassign=fa
       else
         ctx.i++;
 
-      arg* ta=nullptr;
+      arg_t* ta=nullptr;
       if(ctx[ctx.i] == '(') // bash var=()
       {
         if(!ctx.bash)
@@ -1258,7 +1257,7 @@ parse_context parse_cmd_varassigns(cmd* in, parse_context ctx, bool cmdassign=fa
       }
       else if( is_in(ctx[ctx.i], ARG_END) ) // no value : give empty value
       {
-        ta = new arg;
+        ta = new arg_t;
       }
       else
       {
@@ -1301,9 +1300,9 @@ parse_context parse_cmd_varassigns(cmd* in, parse_context ctx, bool cmdassign=fa
 }
 
 // must start at read char
-std::pair<cmd*, parse_context> parse_cmd(parse_context ctx)
+std::pair<cmd_t*, parse_context> parse_cmd(parse_context ctx)
 {
-  cmd* ret = new cmd;
+  cmd_t* ret = new cmd_t;
 
   ctx = parse_cmd_varassigns(ret, ctx);
 
@@ -1316,8 +1315,8 @@ std::pair<cmd*, parse_context> parse_cmd(parse_context ctx)
       parse_error("bash specific: "+wp.first, ctx);
     }
 
-    ret->args = new arglist;
-    ret->args->add(new arg(wp.first));
+    ret->args = new arglist_t;
+    ret->args->add(new arg_t(wp.first));
     ret->is_cmdvar=true;
     ctx.i = wp.second;
     ctx.i = skip_chars(ctx, SPACES);
@@ -1342,9 +1341,9 @@ std::pair<cmd*, parse_context> parse_cmd(parse_context ctx)
 // parse a case block
 // must start right after the case
 // ends at } and nothing else
-std::pair<case_block*, parse_context> parse_case(parse_context ctx)
+std::pair<case_t*, parse_context> parse_case(parse_context ctx)
 {
-  case_block* ret = new case_block;
+  case_t* ret = new case_t;
   ctx.i=skip_chars(ctx, SPACES);
 
   // get the treated argument
@@ -1366,7 +1365,7 @@ std::pair<case_block*, parse_context> parse_case(parse_context ctx)
   while(ctx.i<ctx.size && !word_eq("esac", ctx, ARG_END) )
   {
     // add one element
-    ret->cases.push_back( std::make_pair(std::vector<arg*>(), nullptr) );
+    ret->cases.push_back( std::make_pair(std::vector<arg_t*>(), nullptr) );
     // iterator to last element
     auto cc = ret->cases.end()-1;
 
@@ -1432,9 +1431,9 @@ std::pair<case_block*, parse_context> parse_case(parse_context ctx)
   return std::make_pair(ret, ctx);
 }
 
-std::pair<if_block*, parse_context> parse_if(parse_context ctx)
+std::pair<if_t*, parse_context> parse_if(parse_context ctx)
 {
-  if_block* ret = new if_block;
+  if_t* ret = new if_t;
 
   while(true)
   {
@@ -1491,9 +1490,9 @@ std::pair<if_block*, parse_context> parse_if(parse_context ctx)
   return std::make_pair(ret, ctx);
 }
 
-std::pair<for_block*, parse_context> parse_for(parse_context ctx)
+std::pair<for_t*, parse_context> parse_for(parse_context ctx)
 {
-  for_block* ret = new for_block;
+  for_t* ret = new for_t;
   ctx.i = skip_chars(ctx, SPACES);
 
   auto wp = get_word(ctx, ARG_END);
@@ -1502,7 +1501,7 @@ std::pair<for_block*, parse_context> parse_for(parse_context ctx)
   {
     parse_error( strf("Bad variable name in for clause: '%s'", wp.first.c_str()), ctx );
   }
-  ret->var = new variable(wp.first, nullptr, true);
+  ret->var = new variable_t(wp.first, nullptr, true);
   ctx.i = wp.second;
   ctx.i=skip_chars(ctx, SPACES);
 
@@ -1555,9 +1554,9 @@ std::pair<for_block*, parse_context> parse_for(parse_context ctx)
   return std::make_pair(ret, ctx);
 }
 
-std::pair<while_block*, parse_context> parse_while(parse_context ctx)
+std::pair<while_t*, parse_context> parse_while(parse_context ctx)
 {
-  while_block* ret = new while_block;
+  while_t* ret = new while_t;
 
   // cond
   parse_context oldctx = ctx;
@@ -1587,10 +1586,10 @@ std::pair<while_block*, parse_context> parse_while(parse_context ctx)
 }
 
 // detect if brace, subshell, case or other
-std::pair<block*, parse_context> parse_block(parse_context ctx)
+std::pair<block_t*, parse_context> parse_block(parse_context ctx)
 {
   ctx.i = skip_chars(ctx, SEPARATORS);
-  block* ret = nullptr;
+  block_t* ret = nullptr;
 
   if(ctx.i>=ctx.size)
   {
@@ -1706,7 +1705,7 @@ std::pair<block*, parse_context> parse_block(parse_context ctx)
 
   }
 
-  if(ret!=nullptr && ret->type != block::block_cmd)
+  if(ret!=nullptr && ret->type != block_t::block_cmd)
   {
     uint32_t j=skip_chars(ctx, SPACES);
     ctx.i=j;

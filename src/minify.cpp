@@ -6,9 +6,9 @@
 #include "processing.hpp"
 #include "util.hpp"
 
-std::vector<subarg*> cmd::subarg_vars()
+std::vector<subarg_t*> cmd_t::subarg_vars()
 {
-  std::vector<subarg*> ret;
+  std::vector<subarg_t*> ret;
   if(args==nullptr || args->size()<=0)
     return ret;
 
@@ -16,7 +16,7 @@ std::vector<subarg*> cmd::subarg_vars()
   {
     for(uint32_t i=1; i<args->size(); i++)
     {
-      arg* ta = args->args[i];
+      arg_t* ta = args->args[i];
       if(ta->sa.size() < 1 || ta->sa[0]->type != _obj::subarg_string)
         continue;
       if(ta->sa.size() >= 1 && is_varname(ta->sa[0]->generate(0)))
@@ -34,19 +34,19 @@ bool r_replace_fct(_obj* in, strmap_t* fctmap)
   switch(in->type)
   {
     case _obj::block_function: {
-      function* t = dynamic_cast<function*>(in);
+      function_t* t = dynamic_cast<function_t*>(in);
       auto el=fctmap->find(t->name);
       if(el!=fctmap->end())
         t->name = el->second;
     }; break;
     case _obj::block_cmd: {
-      cmd* t = dynamic_cast<cmd*>(in);
+      cmd_t* t = dynamic_cast<cmd_t*>(in);
       std::string cmdname = t->arg_string(0);
       auto el=fctmap->find(cmdname);
       if(el!=fctmap->end())
       {
         delete t->args->args[0];
-        t->args->args[0] = new arg(el->second);
+        t->args->args[0] = new arg_t(el->second);
       }
     }; break;
     default: break;
@@ -58,8 +58,8 @@ bool r_replace_var(_obj* in, strmap_t* varmap)
 {
   switch(in->type)
   {
-    case _obj::_variable: {
-      variable* t = dynamic_cast<variable*>(in);
+    case _obj::variable: {
+      variable_t* t = dynamic_cast<variable_t*>(in);
       auto el=varmap->find(t->varname);
       if(el!=varmap->end())
         t->varname = el->second;
@@ -121,7 +121,7 @@ bool is_varname(const char c) {
   return is_alphanum(c) || c == '_';
 }
 
-void do_minify_quotes(arg* in)
+void do_minify_quotes(arg_t* in)
 {
   auto t = in->sa.begin();
   // global loop
@@ -152,7 +152,7 @@ void do_minify_quotes(arg* in)
         {
           // previous is alphanum var: removing quote can change varname
           if((*t)->type == _obj::subarg_variable) {
-            variable_subarg* vs = dynamic_cast<variable_subarg*>(*t);
+            subarg_variable_t* vs = dynamic_cast<subarg_variable_t*>(*t);
             if(vs->var != nullptr && !vs->var->is_manip && vs->var->varname.size()>0 && !(is_in(vs->var->varname[0], SPECIAL_VARS) || is_num(vs->var->varname[0]) ) )
               prev_is_var = true;
           }
@@ -164,7 +164,7 @@ void do_minify_quotes(arg* in)
             return;
           i=0;
         }
-        std::string& val = dynamic_cast<string_subarg*>(*t)->val;
+        std::string& val = dynamic_cast<subarg_string_t*>(*t)->val;
         while(i<val.size() && !( val[i] == '\'' || val[i] == '"') )
         {
           if(val[i] == '\\')
@@ -195,7 +195,7 @@ void do_minify_quotes(arg* in)
         {
           // previous is alphanum var: removing quote can change varname
           if((*t)->type == _obj::subarg_variable) {
-            variable_subarg* vs = dynamic_cast<variable_subarg*>(*t);
+            subarg_variable_t* vs = dynamic_cast<subarg_variable_t*>(*t);
             if(vs->var != nullptr && !vs->var->is_manip && vs->var->varname.size()>0 && !(is_in(vs->var->varname[0], SPECIAL_VARS) || is_num(vs->var->varname[0]) ) )
               end_is_var = true;
           }
@@ -208,7 +208,7 @@ void do_minify_quotes(arg* in)
             return;
           i=0;
         }
-        std::string& val = dynamic_cast<string_subarg*>(*t)->val;
+        std::string& val = dynamic_cast<subarg_string_t*>(*t)->val;
         if(doublequote)
         {
           while(i<val.size() && val[i] != '"')
@@ -276,7 +276,7 @@ void do_minify_quotes(arg* in)
 
 }
 
-void do_minify_dollar(string_subarg* in)
+void do_minify_dollar(subarg_string_t* in)
 {
   std::string& val = in->val;
   for(uint32_t i=0; i<val.size(); i++) {
@@ -300,17 +300,17 @@ bool r_minify_useless_quotes(_obj* in)
 {
   switch(in->type)
   {
-    case _obj::_arg: {
-      arg* t = dynamic_cast<arg*>(in);
+    case _obj::arg: {
+      arg_t* t = dynamic_cast<arg_t*>(in);
       do_minify_quotes(t);
     }; break;
     case _obj::subarg_string: {
-      string_subarg* t = dynamic_cast<string_subarg*>(in);
+      subarg_string_t* t = dynamic_cast<subarg_string_t*>(in);
       do_minify_dollar(t);
     }; break;
-    case _obj::_redirect: {
+    case _obj::redirect: {
       // for redirects: don't minify quotes on here documents
-      redirect* t = dynamic_cast<redirect*>(in);
+      redirect_t* t = dynamic_cast<redirect_t*>(in);
       if(t->here_document != nullptr)
       {
         recurse(r_minify_useless_quotes, t->target);
@@ -511,14 +511,14 @@ bool r_minify_empty_manip(_obj* in)
 {
   switch(in->type)
   {
-    case _obj::_arg: {
-      arg* t = dynamic_cast<arg*>(in);
+    case _obj::arg: {
+      arg_t* t = dynamic_cast<arg_t*>(in);
       for(uint32_t i=0; i<t->sa.size(); i++)
       {
         if(t->sa[i]->type == _obj::subarg_variable)
         {
           // has to be a variable
-          variable_subarg* ss = dynamic_cast<variable_subarg*>(t->sa[i]);
+          subarg_variable_t* ss = dynamic_cast<subarg_variable_t*>(t->sa[i]);
           if(ss->var->is_manip)
           {
             // if is a manip: possibility to skip it
@@ -527,7 +527,7 @@ bool r_minify_empty_manip(_obj* in)
             if(i+1<t->sa.size() && t->sa[i+1]->type == _obj::subarg_string)
             {
               // if next subarg is a string: check its first char
-              string_subarg* ss = dynamic_cast<string_subarg*>(t->sa[i+1]);
+              subarg_string_t* ss = dynamic_cast<subarg_string_t*>(t->sa[i+1]);
               char c = ss->val[0];
               // if its first would extend the var name: skip
               if(is_alphanum(c) || c == '_')
@@ -545,14 +545,14 @@ bool r_minify_empty_manip(_obj* in)
   return true;
 }
 
-block* do_one_minify_single_block(block* in)
+block_t* do_one_minify_single_block(block_t* in)
 {
-  block* ret=nullptr;
-  list* l=nullptr;
+  block_t* ret=nullptr;
+  list_t* l=nullptr;
   if(in->type == _obj::block_brace)
-    l = dynamic_cast<brace*>(in)->lst;
+    l = dynamic_cast<brace_t*>(in)->lst;
   else if(in->type == _obj::block_subshell)
-    l = dynamic_cast<subshell*>(in)->lst;
+    l = dynamic_cast<subshell_t*>(in)->lst;
 
   if(l == nullptr)
     return nullptr;
@@ -574,17 +574,17 @@ bool r_minify_single_block(_obj* in)
 {
   switch(in->type)
   {
-    case _obj::_pipeline: {
+    case _obj::pipeline: {
       bool has_operated=false;
       do
       {
         // loop operating on current
         // (if has operated, current object has changed)
         has_operated=false;
-        pipeline* t = dynamic_cast<pipeline*>(in);
+        pipeline_t* t = dynamic_cast<pipeline_t*>(in);
         for(uint32_t i=0; i<t->cmds.size(); i++)
         {
-          block* ret = do_one_minify_single_block(t->cmds[i]);
+          block_t* ret = do_one_minify_single_block(t->cmds[i]);
           if(ret != nullptr) {
             // concatenate redirects
             for(uint32_t j=0; j<t->cmds[i]->redirs.size(); j++)
@@ -593,9 +593,9 @@ bool r_minify_single_block(_obj* in)
             // deindex
             t->cmds[i]->redirs.resize(0);
             if(t->cmds[i]->type == _obj::block_brace)
-            dynamic_cast<brace*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
+            dynamic_cast<brace_t*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
             else if(t->cmds[i]->type == _obj::block_subshell)
-            dynamic_cast<subshell*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
+            dynamic_cast<subshell_t*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
 
             // replace value
             delete t->cmds[i];
@@ -619,7 +619,7 @@ bool r_has_backtick(_obj* in, bool* r)
   switch(in->type)
   {
     case _obj::subarg_subshell: {
-      subshell_subarg* t = dynamic_cast<subshell_subarg*>(in);
+      subarg_subshell_t* t = dynamic_cast<subarg_subshell_t*>(in);
       if(t->backtick) {
         *r = true;
         return false;
@@ -635,7 +635,7 @@ bool r_minify_backtick(_obj* in)
   switch(in->type)
   {
     case _obj::subarg_subshell: {
-      subshell_subarg* t = dynamic_cast<subshell_subarg*>(in);
+      subarg_subshell_t* t = dynamic_cast<subarg_subshell_t*>(in);
       if(!t->backtick) {
         bool has_backtick_child=false;
         recurse(r_has_backtick, t->sbsh, &has_backtick_child);

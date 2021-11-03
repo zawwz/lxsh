@@ -97,35 +97,32 @@ inline uint32_t skip_unread_noline(parse_context const& ct) {
 parse_context parse_heredocument(parse_context ctx);
 
 // list
-// std::pair<list*, parse_context> parse_list_until(parse_context ct, char end_c, const char* expecting=NULL);
-// std::pair<list*, parse_context> parse_list_until(parse_context ct, std::string const& end_word);
-// std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ct, std::vector<std::string> const& end_words, const char* expecting=NULL);
-std::tuple<list*, parse_context, std::string> parse_list_until(parse_context ct, list_parse_options opts={});
+std::tuple<list_t*, parse_context, std::string> parse_list_until(parse_context ct, list_parse_options opts={});
 // name
-std::pair<variable*, parse_context> parse_var(parse_context ct, bool specialvars=true, bool array=false);
+std::pair<variable_t*, parse_context> parse_var(parse_context ct, bool specialvars=true, bool array=false);
 
 // subarg parsers
-std::pair<arithmetic*, parse_context> parse_arithmetic(parse_context ct);
-std::pair<variable*, parse_context> parse_manipulation(parse_context ct);
+std::pair<arithmetic_t*, parse_context> parse_arithmetic(parse_context ct);
+std::pair<variable_t*, parse_context> parse_manipulation(parse_context ct);
 // arg parser
-std::pair<arg*, parse_context> parse_arg(parse_context ct, const char* end=ARG_END, const char* unexpected=ARGLIST_END, bool doquote=true, const char* optimize=ARG_OPTIMIZE_ARG);
+std::pair<arg_t*, parse_context> parse_arg(parse_context ct, const char* end=ARG_END, const char* unexpected=ARGLIST_END, bool doquote=true, const char* optimize=ARG_OPTIMIZE_ARG);
 // redirect parser
-std::pair<redirect*, parse_context> parse_redirect(parse_context ct);
+std::pair<redirect_t*, parse_context> parse_redirect(parse_context ct);
 // arglist parser
-std::pair<arglist*, parse_context> parse_arglist(parse_context ct, bool hard_error=false, std::vector<redirect*>* redirs=nullptr);
+std::pair<arglist_t*, parse_context> parse_arglist(parse_context ct, bool hard_error=false, std::vector<redirect_t*>* redirs=nullptr);
 // block parsers
-std::pair<block*, parse_context> parse_block(parse_context ct);
-std::pair<cmd*, parse_context> parse_cmd(parse_context ct);
-std::pair<function*, parse_context> parse_function(parse_context ct, const char* after="()");
-std::pair<subshell*, parse_context> parse_subshell(parse_context ct);
-std::pair<brace*, parse_context> parse_brace(parse_context ct);
-std::pair<case_block*, parse_context> parse_case(parse_context ct);
-std::pair<if_block*, parse_context> parse_if(parse_context ct);
-std::pair<for_block*, parse_context> parse_for(parse_context ct);
-std::pair<while_block*, parse_context> parse_while(parse_context ct);
+std::pair<block_t*, parse_context> parse_block(parse_context ct);
+std::pair<cmd_t*, parse_context> parse_cmd(parse_context ct);
+std::pair<function_t*, parse_context> parse_function(parse_context ct, const char* after="()");
+std::pair<subshell_t*, parse_context> parse_subshell(parse_context ct);
+std::pair<brace_t*, parse_context> parse_brace(parse_context ct);
+std::pair<case_t*, parse_context> parse_case(parse_context ct);
+std::pair<if_t*, parse_context> parse_if(parse_context ct);
+std::pair<for_t*, parse_context> parse_for(parse_context ct);
+std::pair<while_t*, parse_context> parse_while(parse_context ct);
 // pipeline parser
-std::pair<pipeline*, parse_context> parse_pipeline(parse_context ct);
+std::pair<pipeline_t*, parse_context> parse_pipeline(parse_context ct);
 // condlist parser
-std::pair<condlist*, parse_context> parse_condlist(parse_context ct);
+std::pair<condlist_t*, parse_context> parse_condlist(parse_context ct);
 
 #endif //PARSE_HPP

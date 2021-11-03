@@ -155,7 +155,7 @@ std::string get_varname(std::string const& in)
     return in;
 }
 
-std::string get_varname(arg* in)
+std::string get_varname(arg_t* in)
 {
   if(in->sa.size() < 1 || in->sa[0]->type != _obj::subarg_string)
     return "";
@@ -170,12 +170,12 @@ bool cmd_is_argvar(std::string const& in)
   return is_in_set(in, posix_cmdvar) || is_in_set(in, bash_cmdvar);
 }
 
-bool cmd::is_argvar()
+bool cmd_t::is_argvar()
 {
   return is_cmdvar;
 }
 
-bool cmd::is(std::string const& in)
+bool cmd_t::is(std::string const& in)
 {
   return in == this->arg_string(0);
 }
@@ -285,14 +285,14 @@ void add_unset_variables(shmain* sh, std::regex const& exclude)
   varmap_get(sh, exclude);
   if(m_vars.size()>0)
   {
-    cmd* unset_cmd = new cmd;
-    unset_cmd->add(new arg("unset"));
+    cmd_t* unset_cmd = new cmd_t;
+    unset_cmd->add(new arg_t("unset"));
     unset_cmd->is_cmdvar=true;
     for(auto it: m_vars)
     {
-      unset_cmd->cmd_var_assigns.push_back(std::make_pair(new variable(it.first), nullptr));
+      unset_cmd->cmd_var_assigns.push_back(std::make_pair(new variable_t(it.first), nullptr));
     }
-    condlist* cl = new condlist(unset_cmd);
+    condlist_t* cl = new condlist_t(unset_cmd);
     sh->lst->cls.insert(sh->lst->cls.begin(), cl);
   }
 }
@@ -315,7 +315,7 @@ bool r_has_env_set(_obj* in, bool* result)
       return false;
     }; break;
     case _obj::block_cmd: {
-      cmd* t = dynamic_cast<cmd*>(in);
+      cmd_t* t = dynamic_cast<cmd_t*>(in);
       if(t->has_var_assign() || t->arg_string(0) == "cd")
         *result = true;
     }
@@ -330,8 +330,8 @@ bool r_get_var(_obj* in, countmap_t* defmap, countmap_t* callmap)
 {
   switch(in->type)
   {
-    case _obj::_variable: {
-      variable* t = dynamic_cast<variable*>(in);
+    case _obj::variable: {
+      variable_t* t = dynamic_cast<variable_t*>(in);
       if(t->definition)
       {
         if(!defmap->insert( std::make_pair(t->varname, 1) ).second)
@@ -353,7 +353,7 @@ bool r_get_unsets(_obj* in, set_t* unsets)
   switch(in->type)
   {
     case _obj::block_cmd: {
-      cmd* t = dynamic_cast<cmd*>(in);
+      cmd_t* t = dynamic_cast<cmd_t*>(in);
       if(t->is("unset"))
       {
         for(auto it: t->cmd_var_assigns)
@@ -373,7 +373,7 @@ bool r_get_cmd(_obj* in, countmap_t* all_cmds)
   switch(in->type)
   {
     case _obj::block_cmd: {
-      cmd* t = dynamic_cast<cmd*>(in);
+      cmd_t* t = dynamic_cast<cmd_t*>(in);
       std::string cmdname = t->arg_string(0);
       if(cmdname != "" && !all_cmds->insert( std::make_pair(cmdname, 1) ).second)
         (*all_cmds)[cmdname]++;
@@ -388,7 +388,7 @@ bool r_get_fct(_obj* in, countmap_t* fct_map)
   switch(in->type)
   {
     case _obj::block_function: {
-      function* t = dynamic_cast<function*>(in);
+      function_t* t = dynamic_cast<function_t*>(in);
       if(!fct_map->insert( std::make_pair(t->name, 1) ).second)
         (*fct_map)[t->name]++;
     }; break;
@@ -418,14 +418,14 @@ bool r_delete_fct(_obj* in, set_t* fcts)
 {
   switch(in->type)
   {
-    case _obj::_list: {
-      list* t = dynamic_cast<list*>(in);
+    case _obj::list: {
+      list_t* t = dynamic_cast<list_t*>(in);
       for(uint32_t i=0; i<t->cls.size(); i++)
       {
-        block* tb = t->cls[i]->first_block();
+        block_t* tb = t->cls[i]->first_block();
         if(tb != nullptr && tb->type == _obj::block_function)
         {
-          function* fc = dynamic_cast<function*>(tb);
+          function_t* fc = dynamic_cast<function_t*>(tb);
           if(fcts->find(fc->name)!=fcts->end())
           {
             delete t->cls[i];
@@ -444,16 +444,16 @@ bool r_delete_var(_obj* in, set_t* vars)
 {
   switch(in->type)
   {
-    case _obj::_list: {
-      list* t = dynamic_cast<list*>(in);
+    case _obj::list: {
+      list_t* t = dynamic_cast<list_t*>(in);
       for(uint32_t i=0; i<t->cls.size(); i++)
       {
-        block* tb = t->cls[i]->first_block();
+        block_t* tb = t->cls[i]->first_block();
         bool to_delete=false;
         bool has_deleted=false;
         if(tb != nullptr && tb->type == _obj::block_cmd)
         {
-          cmd* c = dynamic_cast<cmd*>(tb);
+          cmd_t* c = dynamic_cast<cmd_t*>(tb);
 
           for(uint32_t j=0; j<c->var_assigns.size(); j++)
           {
@@ -549,7 +549,7 @@ bool r_do_string_processor(_obj* in)
 {
   if(in->type == _obj::subarg_string)
   {
-    string_subarg* t = dynamic_cast<string_subarg*>(in);
+    subarg_string_t* t = dynamic_cast<subarg_string_t*>(in);
     auto v = get_processors(t->val);
     if(v.find("LXSH_PARSE_MINIFY") != v.end())
     {
@@ -634,9 +634,9 @@ std::string gen_json_struc(_obj* o)
   std::vector<std::pair<std::string,std::string>> vec;
   switch(o->type)
   {
-    case _obj::_variable :
+    case _obj::variable :
     {
-      variable* t = dynamic_cast<variable*>(o);
+      variable_t* t = dynamic_cast<variable_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("variable") ) );
       vec.push_back(std::make_pair(quote_string("varname"), quote_string(t->varname)));
       vec.push_back(std::make_pair(quote_string("definition"), boolstring(t->definition)));
@@ -646,18 +646,18 @@ std::string gen_json_struc(_obj* o)
       vec.push_back(std::make_pair(quote_string("manip"), gen_json_struc(t->manip) ) );
       break;
     }
-    case _obj::_redirect :
+    case _obj::redirect :
     {
-      redirect* t = dynamic_cast<redirect*>(o);
+      redirect_t* t = dynamic_cast<redirect_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("redirect") ) );
       vec.push_back(std::make_pair(quote_string("op"), quote_string(t->op)));
       vec.push_back(std::make_pair(quote_string("target"), gen_json_struc(t->target)));
       vec.push_back(std::make_pair(quote_string("here_document"), gen_json_struc(t->here_document)));
       break;
     }
-    case _obj::_arg :
+    case _obj::arg :
     {
-      arg* t = dynamic_cast<arg*>(o);
+      arg_t* t = dynamic_cast<arg_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("arg") ) );
       vec.push_back(std::make_pair(quote_string("forcequoted"), boolstring(t->forcequoted)));
       std::vector<std::string> tvec;
@@ -666,9 +666,9 @@ std::string gen_json_struc(_obj* o)
       vec.push_back(std::make_pair(quote_string("sa"), gen_json(tvec)));
       break;
     }
-    case _obj::_arglist :
+    case _obj::arglist :
     {
-      arglist* t = dynamic_cast<arglist*>(o);
+      arglist_t* t = dynamic_cast<arglist_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("arglist") ) );
       std::vector<std::string> tvec;
       for(auto it: t->args)
@@ -676,9 +676,9 @@ std::string gen_json_struc(_obj* o)
       vec.push_back(std::make_pair(quote_string("args"), gen_json(tvec)));
       break;
     }
-    case _obj::_pipeline :
+    case _obj::pipeline :
     {
-      pipeline* t = dynamic_cast<pipeline*>(o);
+      pipeline_t* t = dynamic_cast<pipeline_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("pipeline") ) );
       vec.push_back(std::make_pair(quote_string("negated"), boolstring(t->negated) ) );
       std::vector<std::string> tvec;
@@ -687,9 +687,9 @@ std::string gen_json_struc(_obj* o)
       vec.push_back(std::make_pair(quote_string("cmds"), gen_json(tvec)));
       break;
     }
-    case _obj::_condlist :
+    case _obj::condlist :
     {
-      condlist* t = dynamic_cast<condlist*>(o);
+      condlist_t* t = dynamic_cast<condlist_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("condlist") ) );
       vec.push_back(std::make_pair(quote_string("parallel"), boolstring(t->parallel) ) );
       std::vector<std::string> tvec;
@@ -705,9 +705,9 @@ std::string gen_json_struc(_obj* o)
       vec.push_back(std::make_pair(quote_string("or_ops"), gen_json(ttvec)));
       break;
     }
-    case _obj::_list :
+    case _obj::list :
     {
-      list* t = dynamic_cast<list*>(o);
+      list_t* t = dynamic_cast<list_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("list") ) );
       std::vector<std::string> tvec;
       for(auto it: t->cls)
@@ -717,7 +717,7 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::block_subshell :
     {
-      subshell* t = dynamic_cast<subshell*>(o);
+      subshell_t* t = dynamic_cast<subshell_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("subshell") ) );
 
       vec.push_back(std::make_pair(quote_string("lst"), gen_json_struc(t->lst)));
@@ -731,7 +731,7 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::block_brace :
     {
-      brace* t = dynamic_cast<brace*>(o);
+      brace_t* t = dynamic_cast<brace_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("brace") ) );
 
       vec.push_back(std::make_pair(quote_string("lst"), gen_json_struc(t->lst)));
@@ -760,7 +760,7 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::block_function :
     {
-      function* t = dynamic_cast<function*>(o);
+      function_t* t = dynamic_cast<function_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("function") ) );
       vec.push_back(std::make_pair(quote_string("name"), quote_string(t->name) ) );
 
@@ -775,7 +775,7 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::block_cmd :
     {
-      cmd* t = dynamic_cast<cmd*>(o);
+      cmd_t* t = dynamic_cast<cmd_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("cmd") ) );
 
       vec.push_back(std::make_pair(quote_string("args"), gen_json_struc(t->args)));
@@ -809,7 +809,7 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::block_case :
     {
-      case_block* t = dynamic_cast<case_block*>(o);
+      case_t* t = dynamic_cast<case_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("case") ) );
 
       vec.push_back(std::make_pair(quote_string("carg"), gen_json_struc(t->carg)));
@@ -838,7 +838,7 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::block_if :
     {
-      if_block* t = dynamic_cast<if_block*>(o);
+      if_t* t = dynamic_cast<if_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("if") ) );
 
       std::vector<std::string> condblocks;
@@ -863,7 +863,7 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::block_for :
     {
-      for_block* t = dynamic_cast<for_block*>(o);
+      for_t* t = dynamic_cast<for_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("for") ) );
       vec.push_back(std::make_pair(quote_string("var"), gen_json_struc(t->var)));
       vec.push_back(std::make_pair(quote_string("iter"), gen_json_struc(t->iter)));
@@ -878,7 +878,7 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::block_while :
     {
-      while_block* t = dynamic_cast<while_block*>(o);
+      while_t* t = dynamic_cast<while_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("while") ) );
       vec.push_back(std::make_pair(quote_string("cond"), gen_json_struc(t->cond) ) );
       vec.push_back(std::make_pair(quote_string("ops"), gen_json_struc(t->ops) ) );
@@ -892,21 +892,21 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::subarg_variable :
     {
-      variable_subarg* t = dynamic_cast<variable_subarg*>(o);
+      subarg_variable_t* t = dynamic_cast<subarg_variable_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("subarg_variable") ) );
       vec.push_back(std::make_pair(quote_string("var"), gen_json_struc(t->var) ) );
       break;
     }
     case _obj::subarg_subshell :
     {
-      subshell_subarg* t = dynamic_cast<subshell_subarg*>(o);
+      subarg_subshell_t* t = dynamic_cast<subarg_subshell_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("subarg_subshell") ) );
       vec.push_back(std::make_pair(quote_string("sbsh"), gen_json_struc(t->sbsh) ) );
       break;
     }
     case _obj::subarg_procsub :
     {
-      procsub_subarg* t = dynamic_cast<procsub_subarg*>(o);
+      subarg_procsub_t* t = dynamic_cast<subarg_procsub_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("subarg_procsub") ) );
       vec.push_back(std::make_pair(quote_string("is_output"), boolstring(t->is_output) ) );
       vec.push_back(std::make_pair(quote_string("sbsh"), gen_json_struc(t->sbsh) ) );
@@ -914,35 +914,35 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::subarg_arithmetic :
     {
-      arithmetic_subarg* t = dynamic_cast<arithmetic_subarg*>(o);
+      subarg_arithmetic_t* t = dynamic_cast<subarg_arithmetic_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("subarg_arithmetic") ) );
       vec.push_back(std::make_pair(quote_string("arith"), gen_json_struc(t->arith) ) );
       break;
     }
     case _obj::subarg_string :
     {
-      string_subarg* t = dynamic_cast<string_subarg*>(o);
+      subarg_string_t* t = dynamic_cast<subarg_string_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("subarg_string") ) );
       vec.push_back(std::make_pair(quote_string("val"), quote_string(t->val) ) );
       break;
     }
     case _obj::arithmetic_variable :
     {
-      variable_arithmetic* t = dynamic_cast<variable_arithmetic*>(o);
+      arithmetic_variable_t* t = dynamic_cast<arithmetic_variable_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("arithmetic_variable") ) );
       vec.push_back(std::make_pair(quote_string("var"), gen_json_struc(t->var) ) );
       break;
     }
     case _obj::arithmetic_subshell :
     {
-      subshell_arithmetic* t = dynamic_cast<subshell_arithmetic*>(o);
+      arithmetic_subshell_t* t = dynamic_cast<arithmetic_subshell_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("arithmetic_subshell") ) );
       vec.push_back(std::make_pair(quote_string("sbsh"), gen_json_struc(t->sbsh) ) );
       break;
     }
     case _obj::arithmetic_operation :
     {
-      operation_arithmetic* t = dynamic_cast<operation_arithmetic*>(o);
+      arithmetic_operation_t* t = dynamic_cast<arithmetic_operation_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("arithmetic_operation") ) );
       vec.push_back(std::make_pair(quote_string("val1"), gen_json_struc(t->val1) ) );
       vec.push_back(std::make_pair(quote_string("val2"), gen_json_struc(t->val2) ) );
@@ -950,14 +950,14 @@ std::string gen_json_struc(_obj* o)
     }
     case _obj::arithmetic_parenthesis :
     {
-      parenthesis_arithmetic* t = dynamic_cast<parenthesis_arithmetic*>(o);
+      arithmetic_parenthesis_t* t = dynamic_cast<arithmetic_parenthesis_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("arithmetic_parenthesis") ) );
       vec.push_back(std::make_pair(quote_string("val"), gen_json_struc(t->val) ) );
       break;
     }
     case _obj::arithmetic_number :
     {
-      number_arithmetic* t = dynamic_cast<number_arithmetic*>(o);
+      arithmetic_number_t* t = dynamic_cast<arithmetic_number_t*>(o);
       vec.push_back(std::make_pair(quote_string("type"), quote_string("arithmetic_number") ) );
       vec.push_back(std::make_pair(quote_string("val"), quote_string(t->val) ) );
       break;

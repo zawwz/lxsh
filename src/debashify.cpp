@@ -22,9 +22,9 @@ EXPRESSION : gen_bashtest_cmd
 // [[ a == b ]] : replace == with =
 // [[ a = b* ]] : case a in b*) true;; *) false;; esac
 // [[ a =~ b ]] : expr a : "b" >/dev/null
-block* gen_bashtest_cmd(std::vector<arg*> args)
+block_t* gen_bashtest_cmd(std::vector<arg_t*> args)
 {
-  block* ret = nullptr;
+  block_t* ret = nullptr;
 
   std::string arg1replace;
   if(args.size() == 3)
@@ -43,7 +43,7 @@ block* gen_bashtest_cmd(std::vector<arg*> args)
   if(arg1replace != "")
   {
     delete args[1];
-    args[1] = new arg(arg1replace);
+    args[1] = new arg_t(arg1replace);
   }
 
   if(args.size() == 3 && args[1]->string() == "=" && (arg_has_char('*', args[2]) || arg_has_char('?', args[2])) )
@@ -51,9 +51,9 @@ block* gen_bashtest_cmd(std::vector<arg*> args)
     // glob matcher: do a case
     delete args[1];
     args[1]=nullptr;
-    case_block* tc = new case_block(args[0]);
-    tc->cases.push_back( std::make_pair(std::vector<arg*>({args[2]}), make_list("true")) );
-    tc->cases.push_back( std::make_pair(std::vector<arg*>({new arg("*")}), make_list("false")) );
+    case_t* tc = new case_t(args[0]);
+    tc->cases.push_back( std::make_pair(std::vector<arg_t*>({args[2]}), make_list("true")) );
+    tc->cases.push_back( std::make_pair(std::vector<arg_t*>({new arg_t("*")}), make_list("false")) );
     ret = tc;
   }
   else if(args.size() == 3 && args[1]->string() == "=~")
@@ -63,15 +63,15 @@ block* gen_bashtest_cmd(std::vector<arg*> args)
     args[1]=nullptr;
     args[2]->insert(0, ".*");
     add_quotes(args[2]);
-    ret = make_cmd( std::vector<arg*>({ new arg("expr"), args[0], new arg(":"), args[2] }) );
-    ret->redirs.push_back(new redirect(">", new arg("/dev/null") ));
+    ret = make_cmd( std::vector<arg_t*>({ new arg_t("expr"), args[0], new arg_t(":"), args[2] }) );
+    ret->redirs.push_back(new redirect_t(">", new arg_t("/dev/null") ));
   }
   else
   {
     // regular [ ]
-    cmd* t = make_cmd(args);
-    t->args->insert(0, new arg("["));
-    t->add(new arg("]"));
+    cmd_t* t = make_cmd(args);
+    t->args->insert(0, new arg_t("["));
+    t->add(new arg_t("]"));
     ret = t;
   }
   // arg oblivious replacements:
@@ -85,22 +85,22 @@ block* gen_bashtest_cmd(std::vector<arg*> args)
 }
 
 // [[ a && b ]] : [ a ] && [ b ]
-bool debashify_bashtest(pipeline* pl)
+bool debashify_bashtest(pipeline_t* pl)
 {
   if(pl->cmds.size()<=0)
     return false;
 
   if(pl->cmds[0]->type != _obj::block_cmd)
     return false;
-  cmd* in = dynamic_cast<cmd*>(pl->cmds[0]);
+  cmd_t* in = dynamic_cast<cmd_t*>(pl->cmds[0]);
 
   if(in->arg_string(0) == "[[")
   {
-    brace* br = new brace(new list);
-    condlist* cl = new condlist;
+    brace_t* br = new brace_t(new list_t);
+    condlist_t* cl = new condlist_t;
     br->lst->add(cl);
 
-    arg *a=nullptr;
+    arg_t* a=nullptr;
     uint32_t j=1;
     bool or_op=false;
     std::string tmpstr;
@@ -112,8 +112,8 @@ bool debashify_bashtest(pipeline* pl)
 
       if(i >= in->args->size()-1 || logic_op)
       {
-        block* tbl = gen_bashtest_cmd(std::vector<arg*>(in->args->args.begin()+j, in->args->args.begin()+i));
-        cl->add(new pipeline(tbl), or_op);
+        block_t* tbl = gen_bashtest_cmd(std::vector<arg_t*>(in->args->args.begin()+j, in->args->args.begin()+i));
+        cl->add(new pipeline_t(tbl), or_op);
         or_op = tmpstr == "||";
         j=i+1;
         if(logic_op)
@@ -138,7 +138,7 @@ void warn(std::string const& in)
   std::cerr << "WARN: " << in << std::endl;
 }
 
-std::string get_declare_opt(cmd* in)
+std::string get_declare_opt(cmd_t* in)
 {
   if(in->cmd_var_assigns[0].second!=nullptr)
   {
@@ -157,11 +157,11 @@ ztd::option_set gen_echo_opts()
   return ret;
 }
 
-bool debashify_echo(pipeline* pl)
+bool debashify_echo(pipeline_t* pl)
 {
   if(pl->cmds[0]->type != _obj::block_cmd)
     return false;
-  cmd* in = dynamic_cast<cmd*>(pl->cmds[0]);
+  cmd_t* in = dynamic_cast<cmd_t*>(pl->cmds[0]);
 
   std::string const& cmdstr=in->arg_string(0);
   if(cmdstr == "echo")
@@ -234,9 +234,9 @@ bool debashify_echo(pipeline* pl)
           format_str += "\\n";
         format_str += '\'';
 
-        in->args->insert(1, new arg(format_str));
+        in->args->insert(1, new arg_t(format_str));
         delete in->args->args[0];
-        in->args->args[0] = new arg("printf");
+        in->args->args[0] = new arg_t("printf");
       }
       else
       {
@@ -246,7 +246,7 @@ bool debashify_echo(pipeline* pl)
         else
           format_str = "%s";
 
-        list* lst=nullptr;
+        list_t* lst=nullptr;
 
         // more than 1 arg and first arg can't expand: can split into two printf
         // printf '%s' arg1
@@ -254,15 +254,15 @@ bool debashify_echo(pipeline* pl)
         if(in->args->args.size()>2 && !in->args->args[1]->can_expand())
         {
           // extract arg 1
-          arg* arg1 = in->args->args[1];
+          arg_t* arg1 = in->args->args[1];
           in->args->args.erase(in->args->args.begin()+1);
           delete in->args->args[0];
-          in->args->args[0] = new arg("printf");
+          in->args->args[0] = new arg_t("printf");
 
-          lst = new list;
-          lst->add(new condlist(make_cmd({new arg("printf"), new arg(format_str), arg1 })));
-          in->args->insert(1, new arg("\\ "+format_str) );
-          lst->add(new condlist(in));
+          lst = new list_t;
+          lst->add(new condlist_t(make_cmd({new arg_t("printf"), new arg_t(format_str), arg1 })));
+          in->args->insert(1, new arg_t("\\ "+format_str) );
+          lst->add(new condlist_t(in));
         }
         else
         {
@@ -270,24 +270,24 @@ bool debashify_echo(pipeline* pl)
           if(newline)
             return has_processed_options;
 
-          in->args->insert(1, new arg(format_str+"\\ "));
+          in->args->insert(1, new arg_t(format_str+"\\ "));
           delete in->args->args[0];
-          in->args->args[0] = new arg("printf");
+          in->args->args[0] = new arg_t("printf");
         }
 
         if(newline)
         {
           if(lst == nullptr)
           {
-            lst = new list;
-            lst->add(new condlist(in));
+            lst = new list_t;
+            lst->add(new condlist_t(in));
           }
           lst->add(make_condlist("echo"));
         }
 
         if(lst != nullptr)
         {
-          pl->cmds[0] = new brace(lst);
+          pl->cmds[0] = new brace_t(lst);
         }
       }
     }
@@ -297,7 +297,7 @@ bool debashify_echo(pipeline* pl)
   return false;
 }
 
-bool debashify_readonly(list* in)
+bool debashify_readonly(list_t* in)
 {
   bool has_found=false;
   for(uint32_t i=0; i<in->cls.size(); i++)
@@ -306,7 +306,7 @@ bool debashify_readonly(list* in)
     if(in->cls[i]->pls[0]->cmds[0]->type != _obj::block_cmd)
       continue;
 
-    cmd* c1 = dynamic_cast<cmd*>(in->cls[i]->pls[0]->cmds[0]);
+    cmd_t* c1 = dynamic_cast<cmd_t*>(in->cls[i]->pls[0]->cmds[0]);
     std::string const& cmdstr=c1->arg_string(0);
     if(cmdstr == "readonly")
     {
@@ -333,7 +333,7 @@ bool debashify_readonly(list* in)
       else
       {
         delete c1->args;
-        c1->args = new arglist;
+        c1->args = new arglist_t;
         c1->var_assigns=c1->cmd_var_assigns;
         c1->cmd_var_assigns.resize(0);
       }
@@ -344,7 +344,7 @@ bool debashify_readonly(list* in)
   return has_found;
 }
 
-bool debashify_declare(list* in, debashify_params* params)
+bool debashify_declare(list_t* in, debashify_params* params)
 {
   bool has_found=false;
   for(uint32_t i=0; i<in->cls.size(); i++)
@@ -353,7 +353,7 @@ bool debashify_declare(list* in, debashify_params* params)
     if(in->cls[i]->pls[0]->cmds[0]->type != _obj::block_cmd)
       continue;
 
-    cmd* c1 = dynamic_cast<cmd*>(in->cls[i]->pls[0]->cmds[0]);
+    cmd_t* c1 = dynamic_cast<cmd_t*>(in->cls[i]->pls[0]->cmds[0]);
     std::string const& cmdstr=c1->arg_string(0);
     if(cmdstr == "declare" || cmdstr == "typeset")
     {
@@ -383,11 +383,11 @@ bool debashify_declare(list* in, debashify_params* params)
   return has_found;
 }
 
-cmd* make_cmd_varindex(std::string const& strcmd, std::string const& varname, arg* index)
+cmd_t* make_cmd_varindex(std::string const& strcmd, std::string const& varname, arg_t* index)
 {
-  cmd* c = new cmd(new arglist);
+  cmd_t* c = new cmd_t(new arglist_t);
   // cmd
-  c->args->add( new arg(strcmd) );
+  c->args->add( new arg_t(strcmd) );
   // cmd "$VAR"
   c->args->add( make_arg("\"$"+varname+"\"") );
   // cmd "$VAR" N
@@ -395,22 +395,22 @@ cmd* make_cmd_varindex(std::string const& strcmd, std::string const& varname, ar
   return c;
 }
 
-subshell* do_debashify_array_var_get(variable* in, debashify_params* params)
+subshell_t* do_debashify_array_var_get(variable_t* in, debashify_params* params)
 {
   if(in->manip != nullptr)
     throw std::runtime_error("Cannot debashify manipulations on ${VAR[]}");
 
   std::string varname = in->varname;
-  arg* index = in->index;
+  arg_t* index = in->index;
   in->index=nullptr;
 
   if(index->string() == "*")
   {
     delete index;
-    index = new arg("\\*");
+    index = new arg_t("\\*");
   }
 
-  cmd* c;
+  cmd_t* c;
   if(params->arrays[varname])
   {
     c = make_cmd_varindex("_lxsh_map_get", varname, index);
@@ -422,34 +422,34 @@ subshell* do_debashify_array_var_get(variable* in, debashify_params* params)
     params->require_fct("_lxsh_array_get");
   }
 
-  return new subshell(c);
+  return new subshell_t(c);
 }
 
-subshell* do_debashify_random(variable* in, debashify_params* params)
+subshell_t* do_debashify_random(variable_t* in, debashify_params* params)
 {
   if(in->manip != nullptr)
     throw std::runtime_error("Cannot debashify manipulations on ${RANDOM}");
-  cmd* c = make_cmd("_lxsh_random");
+  cmd_t* c = make_cmd("_lxsh_random");
   params->require_fct("_lxsh_random");
-  return new subshell(c);
+  return new subshell_t(c);
 }
 
 // does multiple debashifies:
 // - array
 // - RANDOM
-subshell_arithmetic* do_debashify_arithmetic(arithmetic* in, debashify_params* params)
+arithmetic_subshell_t* do_debashify_arithmetic_t(arithmetic_t* in, debashify_params* params)
 {
-  subshell_arithmetic* ret = nullptr;
+  arithmetic_subshell_t* ret = nullptr;
   if(in->type == _obj::arithmetic_variable)
   {
-    variable_arithmetic* t = dynamic_cast<variable_arithmetic*>(in);
+    arithmetic_variable_t* t = dynamic_cast<arithmetic_variable_t*>(in);
     if(t->var != nullptr && t->var->varname == "RANDOM")
     {
-      ret = new subshell_arithmetic(do_debashify_random(t->var, params));
+      ret = new arithmetic_subshell_t(do_debashify_random(t->var, params));
     }
     else if(t->var != nullptr && t->var->index != nullptr)
     {
-      ret = new subshell_arithmetic(do_debashify_array_var_get(t->var, params));
+      ret = new arithmetic_subshell_t(do_debashify_array_var_get(t->var, params));
     }
   }
   return ret;
@@ -461,8 +461,8 @@ bool debashify_arithmetic_replace(_obj* o, debashify_params* params)
   switch(o->type)
   {
     case _obj::subarg_arithmetic: {
-      arithmetic_subarg* t = dynamic_cast<arithmetic_subarg*>(o);
-      arithmetic* r = do_debashify_arithmetic(t->arith, params);
+      subarg_arithmetic_t* t = dynamic_cast<subarg_arithmetic_t*>(o);
+      arithmetic_t* r = do_debashify_arithmetic_t(t->arith, params);
       if(r!=nullptr)
       {
         ret=true;
@@ -471,15 +471,15 @@ bool debashify_arithmetic_replace(_obj* o, debashify_params* params)
       }
     } break;
     case _obj::arithmetic_operation: {
-      operation_arithmetic* t = dynamic_cast<operation_arithmetic*>(o);
-      arithmetic* r = do_debashify_arithmetic(t->val1, params);
+      arithmetic_operation_t* t = dynamic_cast<arithmetic_operation_t*>(o);
+      arithmetic_t* r = do_debashify_arithmetic_t(t->val1, params);
       if(r!=nullptr)
       {
         ret=true;
         delete t->val1;
         t->val1 = r;
       }
-      r = do_debashify_arithmetic(t->val2, params);
+      r = do_debashify_arithmetic_t(t->val2, params);
       if(r!=nullptr)
       {
         ret=true;
@@ -488,8 +488,8 @@ bool debashify_arithmetic_replace(_obj* o, debashify_params* params)
       }
     } break;
     case _obj::arithmetic_parenthesis: {
-      parenthesis_arithmetic* t = dynamic_cast<parenthesis_arithmetic*>(o);
-      arithmetic* r = do_debashify_arithmetic(t->val, params);
+      arithmetic_parenthesis_t* t = dynamic_cast<arithmetic_parenthesis_t*>(o);
+      arithmetic_t* r = do_debashify_arithmetic_t(t->val, params);
       if(r!=nullptr)
       {
         ret=true;
@@ -502,23 +502,23 @@ bool debashify_arithmetic_replace(_obj* o, debashify_params* params)
   return ret;
 }
 
-bool debashify_subarg_replace(arg* in, debashify_params* params)
+bool debashify_subarg_replace(arg_t* in, debashify_params* params)
 {
   bool has_replaced=false;
   for(auto it=in->sa.begin() ; it!=in->sa.end() ; it++)
   {
-    subarg* replacer=nullptr;
+    subarg_t* replacer=nullptr;
     bool quoted=(*it)->quoted;
     if((*it)->type == _obj::subarg_variable)
     {
-      variable_subarg* t = dynamic_cast<variable_subarg*>(*it);
+      subarg_variable_t* t = dynamic_cast<subarg_variable_t*>(*it);
       if(t->var != nullptr && t->var->varname == "RANDOM")
       {
-        replacer = new subshell_subarg(do_debashify_random(t->var, params));
+        replacer = new subarg_subshell_t(do_debashify_random(t->var, params));
       }
       if(t->var != nullptr && t->var->is_manip && t->var->index != nullptr)
       {
-        replacer = new subshell_subarg(do_debashify_array_var_get(t->var, params));
+        replacer = new subarg_subshell_t(do_debashify_array_var_get(t->var, params));
       }
     }
     if(replacer != nullptr)
@@ -532,7 +532,7 @@ bool debashify_subarg_replace(arg* in, debashify_params* params)
   return has_replaced;
 }
 
-bool debashify_array_set(cmd* in, debashify_params* params)
+bool debashify_array_set(cmd_t* in, debashify_params* params)
 {
   bool has_replaced=false;
   for(auto it = in->var_assigns.begin() ; it != in->var_assigns.end() ; it++)
@@ -546,23 +546,23 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       gen=gen.substr(2);
       gen.pop_back();
       // create cmd out of arguments
-      arglist* args = parse_arglist( make_context(gen) ).first;
-      cmd* c = new cmd(args);
+      arglist_t* args = parse_arglist( make_context(gen) ).first;
+      cmd_t* c = new cmd_t(args);
       // cmd first argument is _lxsh_X_create
       if(params->arrays[varname])
       {
-        c->args->insert(0, new arg("_lxsh_map_create") );
+        c->args->insert(0, new arg_t("_lxsh_map_create") );
         params->require_fct("_lxsh_map_create");
       }
       else
       {
-        c->args->insert(0, new arg("_lxsh_array_create") );
+        c->args->insert(0, new arg_t("_lxsh_array_create") );
         params->require_fct("_lxsh_array_create");
       }
-      subshell_subarg* sb = new subshell_subarg(new subshell(c));
+      subarg_subshell_t* sb = new subarg_subshell_t(new subshell_t(c));
       // insert new value
       delete it->second;
-      it->second = new arg("=");
+      it->second = new arg_t("=");
       it->second->add(sb);
       has_replaced=true;
     }
@@ -571,11 +571,11 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       // array value set: VAR[]=
       force_quotes(it->second);
       force_quotes(it->first->index);
-      string_subarg* tt=dynamic_cast<string_subarg*>(it->second->sa[0]);
+      subarg_string_t* tt=dynamic_cast<subarg_string_t*>(it->second->sa[0]);
 
       std::string varname = it->first->varname;
-      arg* index = it->first->index;
-      arg* value = it->second;
+      arg_t* index = it->first->index;
+      arg_t* value = it->second;
 
       it->first->index = nullptr;
       it->second = nullptr;
@@ -585,7 +585,7 @@ bool debashify_array_set(cmd* in, debashify_params* params)
         tt->val = tt->val.substr(2); // remove +=
 
         // create array get of value
-        cmd* c;
+        cmd_t* c;
         if(params->arrays[varname])
         {
           c = make_cmd_varindex("_lxsh_map_get", varname, copy(index));
@@ -596,7 +596,7 @@ bool debashify_array_set(cmd* in, debashify_params* params)
           c = make_cmd_varindex("_lxsh_array_get", varname, copy(index));
           params->require_fct("_lxsh_array_get");
         }
-        subshell_subarg* sb = new subshell_subarg(new subshell(c));
+        subarg_subshell_t* sb = new subarg_subshell_t(new subshell_t(c));
         sb->quoted=true;
         value->insert(0, "\"");
         value->insert(0, sb);
@@ -606,15 +606,15 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       else
         tt->val = tt->val.substr(1); // remove =
 
-      cmd* c = new cmd(new arglist);
+      cmd_t* c = new cmd_t(new arglist_t);
       if(params->arrays[varname])
       {
-        c->args->add(new arg("_lxsh_map_set") );
+        c->args->add(new arg_t("_lxsh_map_set") );
         params->require_fct("_lxsh_map_set");
       }
       else
       {
-        c->args->add(new arg("_lxsh_array_set") );
+        c->args->add(new arg_t("_lxsh_array_set") );
         params->require_fct("_lxsh_array_set");
       }
       // _lxsh_array_set "$VAR"
@@ -624,9 +624,9 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       // _lxsh_array_set "$VAR" N value
       c->args->add( value );
       // $(_lxsh_array_set "$VAR" N value)
-      subshell_subarg* sb = new subshell_subarg(new subshell(c));
+      subarg_subshell_t* sb = new subarg_subshell_t(new subshell_t(c));
 
-      it->second = new arg("=");
+      it->second = new arg_t("=");
       it->second->add(sb);
       has_replaced=true;
     }
@@ -642,8 +642,8 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       gen=gen.substr(3);
       gen.pop_back();
       // create cmd out of arguments
-      arglist* args = parse_arglist( make_context(gen) ).first;
-      cmd* c = new cmd(args);
+      arglist_t* args = parse_arglist( make_context(gen) ).first;
+      cmd_t* c = new cmd_t(args);
       // cmd first argument is _lxsh_array_create
       if(params->arrays[varname])
       {
@@ -651,15 +651,15 @@ bool debashify_array_set(cmd* in, debashify_params* params)
       }
       else
       {
-        c->args->insert(0, new arg("_lxsh_array_create") );
+        c->args->insert(0, new arg_t("_lxsh_array_create") );
         params->require_fct("_lxsh_array_create");
       }
       // second arg is varname
       c->args->insert(1, make_arg("\"$"+varname+"\"") );
-      subshell_subarg* sb = new subshell_subarg(new subshell(c));
+      subarg_subshell_t* sb = new subarg_subshell_t(new subshell_t(c));
       // insert new value
       delete it->second;
-      it->second = new arg("=");
+      it->second = new arg_t("=");
       it->second->add(sb);
       has_replaced=true;
     }
@@ -667,18 +667,18 @@ bool debashify_array_set(cmd* in, debashify_params* params)
   return has_replaced;
 }
 
-bool debashify_plusequal(cmd* in, debashify_params* params)
+bool debashify_plusequal(cmd_t* in, debashify_params* params)
 {
   bool has_replaced=false;
   for(auto it = in->var_assigns.begin() ; it != in->var_assigns.end() ; it++)
   {
     if(it->first != nullptr && it->second != nullptr && it->second->first_sa_string().substr(0,2) == "+=")
     {
-      string_subarg* tt=dynamic_cast<string_subarg*>(it->second->sa[0]);
-      variable* v = new variable(it->first->varname);
+      subarg_string_t* tt=dynamic_cast<subarg_string_t*>(it->second->sa[0]);
+      variable_t* v = new variable_t(it->first->varname);
       v->is_manip=true;
       tt->val = tt->val.substr(2); // remove +=
-      it->second->insert(0, new variable_subarg(v) );
+      it->second->insert(0, new subarg_variable_t(v) );
       it->second->insert(0, "=");
     }
   }
@@ -686,17 +686,17 @@ bool debashify_plusequal(cmd* in, debashify_params* params)
 }
 
 // replace <<< foo by printf %s\n "foo" |
-bool debashify_herestring(pipeline* pl)
+bool debashify_herestring(pipeline_t* pl)
 {
   if(pl->cmds.size()>0)
   {
-    block* c=pl->cmds[0];
+    block_t* c=pl->cmds[0];
     for(uint32_t i=0; i<c->redirs.size() ; i++)
     {
       if(c->redirs[i]->op == "<<<")
       {
         force_quotes(c->redirs[i]->target);
-        cmd* printcmd = make_cmd("printf %s\\\\n");
+        cmd_t* printcmd = make_cmd("printf %s\\\\n");
         printcmd->add(c->redirs[i]->target);
         pl->cmds.insert(pl->cmds.begin(), printcmd);
 
@@ -714,7 +714,7 @@ bool debashify_herestring(pipeline* pl)
 
 // replace &>, &>> and >&:
 // add 2>&1 as redirect
-bool debashify_combined_redirects(block* in)
+bool debashify_combined_redirects(block_t* in)
 {
   bool has_replaced=false;
 
@@ -727,14 +727,14 @@ bool debashify_combined_redirects(block* in)
       if( in->redirs[i]->op == "&>>" )
         newop = ">>";
       // create new redir with target
-      redirect* newredir = new redirect(newop, in->redirs[i]->target);
+      redirect_t* newredir = new redirect_t(newop, in->redirs[i]->target);
       in->redirs[i]->target=nullptr;
       // replace old redir
       delete in->redirs[i];
       in->redirs[i] = newredir;
       // insert merge redir
       i++;
-      in->redirs.insert(in->redirs.begin()+i, new redirect("2>&1"));
+      in->redirs.insert(in->redirs.begin()+i, new redirect_t("2>&1"));
 
       has_replaced=true;
     }
@@ -751,12 +751,12 @@ REPLACE TO:
   ( {PSUB;} [>|<] "$fifoN" ; rm "$fifoN") &
   CMD "$fifoN"
 */
-bool debashify_procsub(list* lst, debashify_params* params)
+bool debashify_procsub(list_t* lst, debashify_params* params)
 {
   bool has_replaced=false;
   for(uint32_t li=0; li<lst->cls.size(); li++)
   {
-    std::vector<std::pair<arg*,bool>> affected_args;
+    std::vector<std::pair<arg_t*,bool>> affected_args;
     // iterate all applicable args of the cl
     for(auto plit: lst->cls[li]->pls)
     {
@@ -764,14 +764,14 @@ bool debashify_procsub(list* lst, debashify_params* params)
       {
         if(cmit->type == _obj::block_cmd)
         {
-          cmd* t = dynamic_cast<cmd*>(cmit);
+          cmd_t* t = dynamic_cast<cmd_t*>(cmit);
           if(t->args != nullptr)
           {
             for(auto ait: t->args->args)
             {
               if(ait->size() == 1 && ait->sa[0]->type == _obj::subarg_procsub)
               {
-                procsub_subarg* st = dynamic_cast<procsub_subarg*>(ait->sa[0]);
+                subarg_procsub_t* st = dynamic_cast<subarg_procsub_t*>(ait->sa[0]);
                 affected_args.push_back( std::make_pair(ait, st->is_output) );
               }
             }
@@ -784,7 +784,7 @@ bool debashify_procsub(list* lst, debashify_params* params)
     {
       params->require_fct("_lxsh_random_tmpfile");
       has_replaced=true;
-      list* lst_insert = new list;
+      list_t* lst_insert = new list_t;
       std::string mkfifocmd="mkfifo";
       for(uint32_t i=0; i<affected_args.size(); i++)
       {
@@ -797,27 +797,27 @@ bool debashify_procsub(list* lst, debashify_params* params)
       for(uint32_t i=0; i<affected_args.size(); i++)
       {
         // create ( {PSUB;} > "$fifoN" ; rm "$fifoN") &
-        subshell* psub = new subshell(new list);
-        procsub_subarg* st = dynamic_cast<procsub_subarg*>(affected_args[i].first->sa[0]);
+        subshell_t* psub = new subshell_t(new list_t);
+        subarg_procsub_t* st = dynamic_cast<subarg_procsub_t*>(affected_args[i].first->sa[0]);
         // {PSUB;}
-        brace* cbr = new brace(st->sbsh->lst);
+        brace_t* cbr = new brace_t(st->sbsh->lst);
         // deindex list for delete
         st->sbsh->lst=nullptr;
         // {PSUB;} > "$_lxshfifoN"
-        cbr->redirs.push_back( new redirect( affected_args[i].second ? "<" : ">", make_arg(strf("\"$_lxshfifo%u\"", i)) ) );
+        cbr->redirs.push_back( new redirect_t( affected_args[i].second ? "<" : ">", make_arg(strf("\"$_lxshfifo%u\"", i)) ) );
         // ( {PSUB;} > "$_lxshfifoN" )
-        psub->lst->add( new condlist(cbr) );
+        psub->lst->add( new condlist_t(cbr) );
         // ( {PSUB;} > "$_lxshfifoN" ; rm "$_lxshfifoN" )
         psub->lst->add( make_condlist(strf("rm \"$_lxshfifo%u\"", i)) );
         // ( {PSUB;} > "$_lxshfifoN" ; rm "$_lxshfifoN" ) &
-        condlist* pscl = new condlist(psub);
+        condlist_t* pscl = new condlist_t(psub);
         pscl->parallel=true;
         lst_insert->add( pscl );
 
         // replace the arg
         delete affected_args[i].first->sa[0];
-        affected_args[i].first->sa[0] = new string_subarg("\"");
-        affected_args[i].first->add( new variable_subarg( new variable(strf("_lxshfifo%u", i)) ) );
+        affected_args[i].first->sa[0] = new subarg_string_t("\"");
+        affected_args[i].first->add( new subarg_variable_t( new variable_t(strf("_lxshfifo%u", i)) ) );
         affected_args[i].first->add( "\"" );
       }
       lst->insert(li, *lst_insert );
@@ -830,9 +830,9 @@ bool debashify_procsub(list* lst, debashify_params* params)
   return has_replaced;
 }
 
-condlist* debashify_manipulation_substring(variable* v, debashify_params* params)
+condlist_t* debashify_manipulation_substring(variable_t* v, debashify_params* params)
 {
-  string_subarg* first = dynamic_cast<string_subarg*>(v->manip->sa[0]);
+  subarg_string_t* first = dynamic_cast<subarg_string_t*>(v->manip->sa[0]);
   first->val = first->val.substr(1);
   if(first->val == "")
   {
@@ -840,7 +840,7 @@ condlist* debashify_manipulation_substring(variable* v, debashify_params* params
     v->manip->sa.erase(v->manip->sa.begin());
   }
   std::string manip = v->manip->first_sa_string();
-  arg *arg1=nullptr, *arg2=nullptr;
+  arg_t *arg1=nullptr, *arg2=nullptr;
   size_t colon_pos = manip.find(':');
   if(colon_pos != std::string::npos || v->manip->sa.size()>1)
   {
@@ -848,12 +848,12 @@ condlist* debashify_manipulation_substring(variable* v, debashify_params* params
     {
       if(v->manip->sa[i]->type == _obj::subarg_string)
       {
-        string_subarg* t = dynamic_cast<string_subarg*>(v->manip->sa[i]);
+        subarg_string_t* t = dynamic_cast<subarg_string_t*>(v->manip->sa[i]);
         size_t colon_pos = t->val.find(':');
         if(colon_pos != std::string::npos)
         {
-          arg1 = new arg;
-          arg2 = new arg;
+          arg1 = new arg_t;
+          arg2 = new arg_t;
           for(uint32_t j=0; j<i; j++)
             arg1->add(v->manip->sa[j]);
           std::string val=t->val.substr(0, colon_pos);
@@ -883,15 +883,15 @@ condlist* debashify_manipulation_substring(variable* v, debashify_params* params
     v->manip = nullptr;
   }
 
-  pipeline* pl = new pipeline(make_printf_variable(v->varname));
-  arg* retarg = new arg;
-  retarg->add(new arithmetic_subarg(make_arithmetic(arg1, "+", new arg("1"))));
+  pipeline_t* pl = new pipeline_t(make_printf_variable(v->varname));
+  arg_t* retarg = new arg_t;
+  retarg->add(new subarg_arithmetic_t(make_arithmetic(arg1, "+", new arg_t("1"))));
   retarg->add("-");
-  pl->add(make_cmd({new arg("cut"), new arg("-c"), retarg}));
+  pl->add(make_cmd({new arg_t("cut"), new arg_t("-c"), retarg}));
 
   if(arg2 != nullptr)
   {
-    retarg = new arg;
+    retarg = new arg_t;
     retarg->add("-");
     for(auto it: arg2->sa)
     {
@@ -900,56 +900,56 @@ condlist* debashify_manipulation_substring(variable* v, debashify_params* params
     arg2->sa.resize(0);
     delete arg2;
     arg2 = nullptr;
-    pl->add(make_cmd({new arg("cut"), new arg("-c"), retarg}));
+    pl->add(make_cmd({new arg_t("cut"), new arg_t("-c"), retarg}));
   }
 
   if(v->manip != nullptr)
     delete v->manip;
   v->manip = nullptr;
 
-  return new condlist(pl);
+  return new condlist_t(pl);
 }
 
-bool debashify_manipulation(arg* in, debashify_params* params)
+bool debashify_manipulation(arg_t* in, debashify_params* params)
 {
   bool has_replaced=false;
   for(uint32_t i=0; i<in->sa.size(); i++)
   {
     if(in->sa[i]->type == _obj::subarg_variable)
     {
-      variable* v = dynamic_cast<variable_subarg*>(in->sa[i])->var;
+      variable_t* v = dynamic_cast<subarg_variable_t*>(in->sa[i])->var;
       if(!v->is_manip || v->manip == nullptr)
         return false;
       std::string manip = v->manip->first_sa_string();
-      subarg* r = nullptr;
+      subarg_t* r = nullptr;
       if(v->is_manip && v->precedence && v->manip->string() == "!")
       {
-        arg* eval_arg = new arg;
+        arg_t* eval_arg = new arg_t;
         eval_arg->add("\\\"\\${");
-        eval_arg->add(new variable_subarg(new variable(v->varname)));
+        eval_arg->add(new subarg_variable_t(new variable_t(v->varname)));
         eval_arg->add("}\\\"");
-        cmd* eval_cmd = make_cmd({new arg("eval"), new arg("echo"), eval_arg});
-        r = new subshell_subarg(new subshell(eval_cmd));
+        cmd_t* eval_cmd = make_cmd({new arg_t("eval"), new arg_t("echo"), eval_arg});
+        r = new subarg_subshell_t(new subshell_t(eval_cmd));
       }
       else if(manip.size()>0 && manip[0] == '/')
       {
-        cmd* prnt = make_printf_variable(v->varname);
+        cmd_t* prnt = make_printf_variable(v->varname);
         // printf %s\\n "$var"
-        cmd* sed = make_cmd({std::string("sed")});
-        arg* sedarg=v->manip;
+        cmd_t* sed = make_cmd({std::string("sed")});
+        arg_t* sedarg=v->manip;
         v->manip = nullptr;
         sedarg->insert(0, "s");
         sedarg->add("/");
         force_quotes(sedarg);
         sed->add(sedarg);
         // sed "s///g"
-        pipeline* pl = new pipeline(prnt);
+        pipeline_t* pl = new pipeline_t(prnt);
         pl->add(sed);
-        r = new subshell_subarg(new subshell(new list(new condlist(pl))));
+        r = new subarg_subshell_t(new subshell_t(new list_t(new condlist_t(pl))));
       }
       else if(manip.size()>0 && manip[0] == ':' && !(manip.size()>1 && is_in(manip[1], "+-") ) )
       {
-        r = new subshell_subarg(new subshell(new list(debashify_manipulation_substring(v, params))));
+        r = new subarg_subshell_t(new subshell_t(new list_t(debashify_manipulation_substring(v, params))));
       }
 
       if(r != nullptr)
@@ -964,7 +964,7 @@ bool debashify_manipulation(arg* in, debashify_params* params)
   return has_replaced;
 }
 
-bool debashify_var(variable* in, debashify_params* params)
+bool debashify_var(variable_t* in, debashify_params* params)
 {
   return false;
 }
@@ -975,39 +975,39 @@ bool r_debashify(_obj* o, debashify_params* params)
   debashify_arithmetic_replace(o, params);
   switch(o->type)
   {
-    case _obj::_variable: {
-      variable* t = dynamic_cast<variable*>(o);
+    case _obj::variable: {
+      variable_t* t = dynamic_cast<variable_t*>(o);
       debashify_var(t, params);
     } break;
-    case _obj::_arg: {
-      arg* t = dynamic_cast<arg*>(o);
+    case _obj::arg: {
+      arg_t* t = dynamic_cast<arg_t*>(o);
       debashify_subarg_replace(t, params);
       debashify_manipulation(t, params);
     } break;
-    case _obj::_list: {
-      list* t = dynamic_cast<list*>(o);
+    case _obj::list: {
+      list_t* t = dynamic_cast<list_t*>(o);
       debashify_declare(t, params);
       debashify_readonly(t);
       debashify_procsub(t, params);
     } break;
-    case _obj::_pipeline: {
-      pipeline* t = dynamic_cast<pipeline*>(o);
+    case _obj::pipeline: {
+      pipeline_t* t = dynamic_cast<pipeline_t*>(o);
       debashify_echo(t);
       debashify_herestring(t);
       debashify_bashtest(t);
     } break;
     case _obj::block_cmd: {
-      cmd* t = dynamic_cast<cmd*>(o);
+      cmd_t* t = dynamic_cast<cmd_t*>(o);
       debashify_combined_redirects(t);
       debashify_array_set(t, params);
       debashify_plusequal(t, params);
     } break;
     case _obj::block_subshell: {
-      subshell* t = dynamic_cast<subshell*>(o);
+      subshell_t* t = dynamic_cast<subshell_t*>(o);
       debashify_combined_redirects(t);
     } break;
     case _obj::block_brace: {
-      brace* t = dynamic_cast<brace*>(o);
+      brace_t* t = dynamic_cast<brace_t*>(o);
       debashify_combined_redirects(t);
     } break;
     case _obj::block_main: {
@@ -1015,23 +1015,23 @@ bool r_debashify(_obj* o, debashify_params* params)
       debashify_combined_redirects(t);
     } break;
     case _obj::block_function: {
-      function* t = dynamic_cast<function*>(o);
+      function_t* t = dynamic_cast<function_t*>(o);
       debashify_combined_redirects(t);
     } break;
     case _obj::block_case: {
-      case_block* t = dynamic_cast<case_block*>(o);
+      case_t* t = dynamic_cast<case_t*>(o);
       debashify_combined_redirects(t);
     } break;
     case _obj::block_if: {
-      if_block* t = dynamic_cast<if_block*>(o);
+      if_t* t = dynamic_cast<if_t*>(o);
       debashify_combined_redirects(t);
     } break;
     case _obj::block_while: {
-      while_block* t = dynamic_cast<while_block*>(o);
+      while_t* t = dynamic_cast<while_t*>(o);
       debashify_combined_redirects(t);
     } break;
     case _obj::block_for: {
-      for_block* t = dynamic_cast<for_block*>(o);
+      for_t* t = dynamic_cast<for_t*>(o);
       debashify_combined_redirects(t);
     } break;
     default: break;

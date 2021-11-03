@@ -4,43 +4,43 @@
 #include "struc.hpp"
 
 // makers
-arg* make_arg(std::string const& in);
+arg_t* make_arg(std::string const& in);
 
-cmd* make_cmd(std::vector<const char*> const& args);
-cmd* make_cmd(std::vector<std::string> const& args);
-cmd* make_cmd(std::vector<arg*> const& args);
-cmd* make_cmd(std::string const& in);
+cmd_t* make_cmd(std::vector<const char*> const& args);
+cmd_t* make_cmd(std::vector<std::string> const& args);
+cmd_t* make_cmd(std::vector<arg_t*> const& args);
+cmd_t* make_cmd(std::string const& in);
 
-pipeline* make_pipeline(std::vector<block*> const& bls);
-pipeline* make_pipeline(std::string const& in);
+pipeline_t* make_pipeline(std::vector<block_t*> const& bls);
+pipeline_t* make_pipeline(std::string const& in);
 
-condlist* make_condlist(std::string const& in);
-list* make_list(std::string const& in);
+condlist_t* make_condlist(std::string const& in);
+list_t* make_list(std::string const& in);
 
-block* make_block(std::string const& in);
+block_t* make_block(std::string const& in);
 
 // copy
-arg* copy(arg* in);
-variable* copy(variable* in);
+arg_t* copy(arg_t* in);
+variable_t* copy(variable_t* in);
 
 // testers
-bool arg_has_char(char c, arg* in);
-bool possibly_expands(arg* in);
-bool possibly_expands(arglist* in);
+bool arg_has_char(char c, arg_t* in);
+bool possibly_expands(arg_t* in);
+bool possibly_expands(arglist_t* in);
 
 // modifiers
-void force_quotes(arg* in);
-void add_quotes(arg* in);
+void force_quotes(arg_t* in);
+void add_quotes(arg_t* in);
 
-cmd* make_printf(arg* in);
-inline cmd* make_printf_variable(std::string const& name) {
-  return make_printf(new arg(new variable_subarg(new variable(name))));
+cmd_t* make_printf(arg_t* in);
+inline cmd_t* make_printf_variable(std::string const& name) {
+  return make_printf(new arg_t(new subarg_variable_t(new variable_t(name))));
 }
 
-arithmetic* make_arithmetic(arg* a);
-arithmetic* make_arithmetic(arg* arg1, std::string op, arg* arg2);
+arithmetic_t* make_arithmetic(arg_t* a);
+arithmetic_t* make_arithmetic(arg_t* arg1, std::string op, arg_t* arg2);
 
 // operators
-inline bool operator==(arg a, std::string const& b) { return a.equals(b); }
+inline bool operator==(arg_t a, std::string const& b) { return a.equals(b); }
 
 #endif //STRUC_HELPER_HPP
