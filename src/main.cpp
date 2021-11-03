@@ -194,22 +194,28 @@ int main(int argc, char* argv[])
 
       // processing before output
       // minify
+      strmap_t varmap, fctmap;
       if(options['m'])
       {
         opt_minify=true;
         minify_generic(sh);
       }
-      if(options["minify-var"] && options["minify-fct"]) {
+      if(options['A']) {
+        read_minmap(options['A'].argument, &varmap, &fctmap);
+        recurse(r_replace_var, sh, &varmap);
+        recurse(r_replace_fct, sh, &fctmap);
+      }
+      else if(options["minify-var"] && options["minify-fct"]) {
         // optimization: get everything in one go
         allmaps_get(sh, re_var_exclude, re_fct_exclude, regex_null);
-        minify_var( sh, re_var_exclude );
-        minify_fct( sh, re_fct_exclude );
+        varmap = minify_var( sh, re_var_exclude );
+        fctmap = minify_fct( sh, re_fct_exclude );
       }
       else if(options["minify-var"]) {
-        minify_var( sh, re_var_exclude );
+        varmap = minify_var( sh, re_var_exclude );
       }
       else if(options["minify-fct"]) {
-        minify_fct( sh, re_fct_exclude );
+        fctmap = minify_fct( sh, re_fct_exclude );
       }
       // other processing
       if(options["unset-var"])
@@ -222,6 +228,10 @@ int main(int argc, char* argv[])
       }
       else
   #endif
+
+      if(options['P']) {
+        std::ofstream(options['P'].argument) << gen_minmap(varmap, "var") << gen_minmap(fctmap, "fct");
+      }
 
       if(options['o']) // file output
       {

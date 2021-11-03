@@ -20,6 +20,8 @@ ztd::option_set options( {
   ztd::option('c', "stdout",        false, "Output result script to stdout"),
   ztd::option('e', "exec",          false, "Directly execute script"),
   ztd::option("no-shebang",         false, "Don't output shebang"),
+  ztd::option('P', "map",           true , "Output var and fct minify map to given file", "file"),
+  ztd::option('A', "apply-map",     true , "Apply map from given file", "file"),
 #ifdef DEBUG_MODE
   ztd::option("\r  [Debugging]"),
   ztd::option('J', "json",          false, "Output the json structure"),
@@ -72,6 +74,18 @@ void get_opts()
     options["minify-var"].activated=true;
     options["minify-fct"].activated=true;
     options["remove-unused"].activated=true;
+  }
+  if(options['o'].argument == "-")
+    options['o'].argument = "/dev/stdout";
+  if(options['P'].argument == "-")
+    options['P'].argument = "/dev/stdout";
+  if(options['A'].argument == "-")
+    options['A'].argument = "/dev/stdin";
+  if(
+      options['A'] && ( options['P'] || options["minify-var"] || options["minify-fct"] )
+    ) {
+      printf("Incompatible options\n");
+      exit(ERR_OPT);
   }
 }
 

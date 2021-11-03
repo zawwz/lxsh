@@ -1,5 +1,6 @@
 #include "minify.hpp"
 
+#include <fstream>
 
 #include "parse.hpp"
 #include "recursive.hpp"
@@ -390,7 +391,7 @@ strmap_t gen_minimal_map(countmap_t const& vars, set_t const& excluded)
 
 // calls
 
-void minify_var(_obj* in, std::regex const& exclude)
+strmap_t minify_var(_obj* in, std::regex const& exclude)
 {
   // countmap_t vars;
   set_t excluded;
@@ -405,9 +406,10 @@ void minify_var(_obj* in, std::regex const& exclude)
   // perform replace
   recurse(r_replace_var, in, &varmap);
   require_rescan_var();
+  return varmap;
 }
 
-void minify_fct(_obj* in, std::regex const& exclude)
+strmap_t minify_fct(_obj* in, std::regex const& exclude)
 {
   // countmap_t fcts, cmdmap;
   set_t excluded, unsets;
@@ -428,6 +430,7 @@ void minify_fct(_obj* in, std::regex const& exclude)
   recurse(r_replace_fct, in, &fctmap);
   require_rescan_fct();
   require_rescan_cmd();
+  return fctmap;
 }
 
 bool delete_unused_fct(_obj* in, std::regex const& exclude)
@@ -664,4 +667,32 @@ void minify_generic(_obj* in)
   recurse(r_minify, in);
   recurse(r_minify_backtick, in);
   recurse(r_minify_useless_quotes, in);
+}
+
+std::string gen_minmap(strmap_t const& map, std::string const& prefix)
+{
+  std::string ret;
+  for(auto it: map) {
+    ret += strf("%s %s %s\n", prefix.c_str(), it.second.c_str(), it.first.c_str());
+  }
+  return ret;
+}
+
+void read_minmap(std::string const& filepath, strmap_t* varmap, strmap_t* fctmap)
+{
+  std::ifstream file(filepath);
+  std::string ln;
+  while(std::getline(file, ln)) {
+    size_t s1, s2, s3;
+    s1 = ln.find(' ');
+    s2 = ln.find(' ', s1+1);
+    s3 = ln.find(' ', s2+1);
+    std::string type = ln.substr(0, s1);
+    std::string from = ln.substr(s1+1, s2-s1-1);
+    std::string to   = ln.substr(s2+1, s3-s2-1);
+    if(type == "var")
+      varmap->insert(std::make_pair(from, to));
+    else if(type == "fct")
+      fctmap->insert(std::make_pair(from, to));
+  }
 }
