@@ -295,6 +295,18 @@ std::pair<arithmetic_t*, parse_context> parse_arithmetic(parse_context ctx)
         ctx.i++;
       ret = new arithmetic_number_t( std::string(ctx.data+j, ctx.i-j) );
     }
+    else if(word_eq("$((", ctx)) // arithmetics in arithmetics: equivalent to ()
+    {
+      auto pa = parse_arithmetic(ctx);
+      ret = new arithmetic_parenthesis_t(pa.first);
+      ctx = pa.second;
+      ctx.i++;
+      if(ctx.i >= ctx.size || ctx[ctx.i] != ')') {
+        parse_error( "Unexpected ')', Expecting '))'", ctx );
+        return std::make_pair(ret, ctx);
+      }
+      ctx.i++;
+    }
     else if(word_eq("$(", ctx))
     {
       ctx.i+=2;
@@ -313,7 +325,7 @@ std::pair<arithmetic_t*, parse_context> parse_arithmetic(parse_context ctx)
     {
       ctx.i++;
       auto pa = parse_arithmetic(ctx);
-      ret = pa.first;
+      ret = new arithmetic_parenthesis_t(pa.first);
       ctx = pa.second;
       ctx.i++;
     }
