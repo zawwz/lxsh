@@ -221,6 +221,11 @@ int main(int argc, char* argv[])
       if(options["unset-var"])
         add_unset_variables( sh, re_var_exclude );
 
+
+      if(options['P']) {
+        std::ofstream(options['P'].argument) << gen_minmap(varmap, "var") << gen_minmap(fctmap, "fct");
+      }
+
   #ifdef DEBUG_MODE
       if(options['J'])
       {
@@ -228,10 +233,6 @@ int main(int argc, char* argv[])
       }
       else
   #endif
-
-      if(options['P']) {
-        std::ofstream(options['P'].argument) << gen_minmap(varmap, "var") << gen_minmap(fctmap, "fct");
-      }
 
       if(options['o']) // file output
       {
