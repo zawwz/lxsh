@@ -1,5 +1,7 @@
 #include "debashify.hpp"
 
+#include <algorithm>
+
 #include <ztd/options.hpp>
 
 #include "processing.hpp"
@@ -964,6 +966,147 @@ bool debashify_manipulation(arg_t* in, debashify_params* params)
   return has_replaced;
 }
 
+uint32_t n_zerolead(std::string in)
+{
+  if(in == "0")
+    return 0;
+  uint32_t lead=0;
+  while(in[lead] == '0')
+    lead++;
+  return lead;
+}
+
+bool debashify_brace_expansion(arglist_t* in, debashify_params* params)
+{
+  bool has_replaced=false;
+  start:
+  for(uint32_t iarg=0; iarg<=in->args.size(); iarg++)
+  {
+    // don't treat non-pure-string arguments for now
+    if(in->args[iarg] == nullptr || in->args[iarg]->sa.size() != 1 || in->args[iarg]->sa[0]->type != _obj::subarg_string)
+      continue;
+
+    std::string& val = dynamic_cast<subarg_string_t*>(in->args[iarg]->sa[0])->val;
+
+    uint32_t i=0, start=0;
+    while(i<val.size())
+    {
+      switch(val[i]) {
+        case '{' : {
+          start=i;
+          i++;
+          size_t end=i;
+          uint32_t counter=0;
+          while(end < val.size() && ( counter != 0 || val[end] != '}') ) {
+            if(val[end] == '{')
+              counter++;
+            if(val[end] == '}')
+              counter--;
+            end++;
+          }
+          if(end >= val.size())
+            continue;
+
+          std::string s = val.substr(i, end-i);
+
+          std::vector<std::string> values;
+          if(s.find(',') != std::string::npos)
+          {
+            size_t l;
+            do
+            {
+              l = s.find(',');
+              values.push_back(s.substr(0, l));
+              s = s.substr(l+1);
+            } while(l != std::string::npos);
+          }
+          else if(s.find("..") != std::string::npos)
+          {
+            size_t l = s.find("..");
+
+
+            int64_t inc=1;
+            std::string val1, val2, val3;
+            val1 = s.substr(0, l);
+            val2 = s.substr(l+2);
+            if( (l = val2.find("..")) != std::string::npos) {
+              val3 = val2.substr(l+2);
+              val2 = val2.substr(0, l);
+            }
+
+            if(val3.size()>0) {
+              try {
+                inc = std::stol(val3);
+                if(inc < 0)
+                  inc *= -1;
+              }
+              catch(std::invalid_argument& e) {
+                continue;
+              }
+            }
+
+            int64_t seqstart, seqend;
+            uint32_t nlead=0;
+            bool ischar=false;
+
+            try {
+              seqstart = std::stol(val1);
+              seqend = std::stol(val2);
+              nlead = std::max(n_zerolead(val1), n_zerolead(val2));
+            }
+            catch(std::invalid_argument& e) {
+              if(val1.size()!=1 || val2.size()!=1)
+                continue;
+              ischar=true;
+              seqstart = val1[0];
+              seqend = val2[0];
+            }
+
+            if(seqend < seqstart) {
+              int64_t tint = seqend;
+              seqend = seqstart;
+              seqstart = tint;
+            }
+
+            for(int64_t ii = seqstart; ii <= seqend; ii += inc) {
+              if(ischar)
+                values.push_back( std::string(1, (char) ii) );
+              else
+                values.push_back(strf("%0*d", nlead+1, ii));
+            }
+
+          }
+
+          if(values.size()>0) {
+            for (unsigned n = values.size(); n-- > 0; ) {
+              in->args.insert(in->args.begin()+iarg+1, new arg_t(val.substr(0, start) + values[n] + val.substr(end+1)));
+            }
+            in->args.erase(in->args.begin()+iarg);
+            has_replaced=true;
+            goto start;
+          }
+
+        } break;
+        case '\'': {
+          i++;
+          while(val[i] != '\'')
+            i++;
+        } break;
+        case '"' : {
+          i++;
+          while(val[i] != '"') {
+            if(val[i] == '\\')
+              i++;
+            i++;
+          }
+        } break;
+        default: i++;
+      }
+    }
+  }
+  return has_replaced;
+}
+
 bool debashify_var(variable_t* in, debashify_params* params)
 {
   return false;
@@ -983,6 +1126,10 @@ bool r_debashify(_obj* o, debashify_params* params)
       arg_t* t = dynamic_cast<arg_t*>(o);
       debashify_subarg_replace(t, params);
       debashify_manipulation(t, params);
+    } break;
+    case _obj::arglist: {
+      arglist_t* t = dynamic_cast<arglist_t*>(o);
+      debashify_brace_expansion(t, params);
     } break;
     case _obj::list: {
       list_t* t = dynamic_cast<list_t*>(o);
