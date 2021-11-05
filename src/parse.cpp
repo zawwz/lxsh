@@ -297,6 +297,7 @@ std::pair<arithmetic_t*, parse_context> parse_arithmetic(parse_context ctx)
     }
     else if(word_eq("$((", ctx)) // arithmetics in arithmetics: equivalent to ()
     {
+      ctx.i += 3;
       auto pa = parse_arithmetic(ctx);
       ret = new arithmetic_parenthesis_t(pa.first);
       ctx = pa.second;
