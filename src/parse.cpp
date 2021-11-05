@@ -18,7 +18,7 @@ const std::set<std::string> posix_cmdvar = { "export", "unset", "local", "read",
 const std::set<std::string> bash_cmdvar  = { "readonly", "declare", "typeset" };
 
 const std::set<std::string> arithmetic_precedence_operators = { "!", "~", "+", "-" };
-const std::set<std::string> arithmetic_operators = { "+", "-", "*", "/", "+=", "-=", "*=", "/=", "=", "==", "!=", "&", "|", "^", "<<", ">>", "&&", "||" };
+const std::set<std::string> arithmetic_operators = { "+", "-", "*", "/", "%", "+=", "-=", "*=", "/=", "=", "==", "!=", "&", "|", "^", "<<", ">>", "&&", "||" };
 
 const std::set<std::string> all_reserved_words = { "if", "then", "else", "fi", "case", "esac", "for", "while", "do", "done", "{", "}" };
 const std::set<std::string> out_reserved_words = { "then", "else", "fi", "esac", "do", "done", "}" };
