@@ -11,7 +11,7 @@
 
 #define SPACES          " \t"
 #define SEPARATORS      " \t\n"
-#define ARG_END         " \t\n;#()&|<>"
+#define ARG_END         " \t\n;()&|<>"
 #define VARNAME_END     " \t\n;#()&|=\"'\\{}/-+"
 #define BLOCK_TOKEN_END " \t\n;#()&|=\"'\\"
 #define BASH_BLOCK_END  " \t\n;#()&|=\"'\\{}"
@@ -32,7 +32,7 @@
 #define ARG_OPTIMIZE_MANIP    "$\\`}"
 #define ARG_OPTIMIZE_DEFARR   "$\\`)"
 #define ARG_OPTIMIZE_BASHTEST "$\\`] \t\n"
-#define ARG_OPTIMIZE_ARG      "$\\` \t\n;#()&|<>\"'"
+#define ARG_OPTIMIZE_ARG      "$\\` \t\n;()&|<>\"'"
 #define ARG_OPTIMIZE_ARRAY    "$\\`\t\n&|}[]\"'"
 #define ARG_OPTIMIZE_ALL      "$\\` \t\n;#()&|<>}]\"'"
 
