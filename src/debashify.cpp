@@ -980,7 +980,7 @@ bool debashify_brace_expansion(arglist_t* in, debashify_params* params)
 {
   bool has_replaced=false;
   start:
-  for(uint32_t iarg=0; iarg<=in->args.size(); iarg++)
+  for(uint32_t iarg=0; iarg<in->args.size(); iarg++)
   {
     // don't treat non-pure-string arguments for now
     if(in->args[iarg] == nullptr || in->args[iarg]->sa.size() != 1 || in->args[iarg]->sa[0]->type != _obj::subarg_string)
@@ -1089,12 +1089,12 @@ bool debashify_brace_expansion(arglist_t* in, debashify_params* params)
         } break;
         case '\'': {
           i++;
-          while(val[i] != '\'')
+          while(i<val.size() && val[i] != '\'')
             i++;
         } break;
         case '"' : {
           i++;
-          while(val[i] != '"') {
+          while(i<val.size() && val[i] != '"') {
             if(val[i] == '\\')
               i++;
             i++;
