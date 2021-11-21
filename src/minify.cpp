@@ -628,6 +628,11 @@ bool r_has_backtick(_obj* in, bool* r)
         return false;
       }
     }; break;
+    case _obj::subarg_string: {
+      subarg_string_t* t = dynamic_cast<subarg_string_t*>(in);
+      if(t->val.find('\\') != std::string::npos)
+        *r = true;
+    }; break;
     default: break;
   }
   return true;
