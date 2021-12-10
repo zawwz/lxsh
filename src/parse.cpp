@@ -1085,27 +1085,35 @@ std::tuple<list_t*, parse_context, std::string> parse_list_until(parse_context c
 
     if(ctx.here_document != nullptr)
     {
-      uint8_t do_twice=2;
-      // case of : cat << EOF ;
-      while(do_twice>0)
+      bool has_parsed=false;
+      parse_context t_ctx=ctx;
+      if(t_ctx[t_ctx.i] == '\n')
       {
-        if(ctx[ctx.i] == '\n')
-        {
-          ctx = parse_heredocument(ctx+1);
-          break;
-        }
-        else if(ctx[ctx.i] == '#')
-        {
-          ctx.i = skip_until(ctx, "\n"); //skip to endline
-          ctx = parse_heredocument(ctx+1);
-          break;
-        }
-        skip_chars(ctx, SPACES);
-        do_twice--;
+        t_ctx = parse_heredocument(t_ctx+1);
+        has_parsed=true;
       }
-      // case of : cat << EOF ; ;
-      if(do_twice==0 && is_in(ctx[ctx.i], COMMAND_SEPARATOR))
-        parse_error( unexpected_token(ctx[ctx.i]), ctx);
+      else if(t_ctx[t_ctx.i] == '#')
+      {
+        t_ctx.i = skip_until(t_ctx, "\n"); //skip to endline
+        t_ctx = parse_heredocument(t_ctx+1);
+        has_parsed=true;
+      }
+      else if(t_ctx[t_ctx.i] == ';') {
+        t_ctx.i = skip_chars(t_ctx+1, SPACES);
+        if(t_ctx[t_ctx.i] == '\n')
+        {
+          t_ctx = parse_heredocument(t_ctx+1);
+          has_parsed=true;
+        }
+        else if(t_ctx[t_ctx.i] == '#')
+        {
+          t_ctx.i = skip_until(t_ctx, "\n"); //skip to endline
+          t_ctx = parse_heredocument(t_ctx+1);
+          has_parsed=true;
+        }
+      }
+      if(has_parsed)
+        ctx = t_ctx;
     }
 
     if(is_in(ctx[ctx.i], COMMAND_SEPARATOR))

@@ -591,14 +591,14 @@ bool r_minify_single_block(_obj* in)
           if(ret != nullptr) {
             // concatenate redirects
             for(uint32_t j=0; j<t->cmds[i]->redirs.size(); j++)
-            ret->redirs.insert(ret->redirs.begin()+j, t->cmds[i]->redirs[j]);
+              ret->redirs.insert(ret->redirs.begin()+j, t->cmds[i]->redirs[j]);
 
             // deindex
             t->cmds[i]->redirs.resize(0);
             if(t->cmds[i]->type == _obj::block_brace)
-            dynamic_cast<brace_t*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
+              dynamic_cast<brace_t*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
             else if(t->cmds[i]->type == _obj::block_subshell)
-            dynamic_cast<subshell_t*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
+              dynamic_cast<subshell_t*>(t->cmds[i])->lst->cls[0]->pls[0]->cmds[0] = nullptr;
 
             // replace value
             delete t->cmds[i];
