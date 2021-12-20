@@ -551,6 +551,9 @@ bool debashify_array_set(cmd_t* in, debashify_params* params)
       arglist_t* args = parse_arglist( make_context(gen) ).first;
       cmd_t* c = new cmd_t(args);
       // cmd first argument is _lxsh_X_create
+      if(c->args == nullptr) {
+        c->args = new arglist_t;
+      }
       if(params->arrays[varname])
       {
         c->args->insert(0, new arg_t("_lxsh_map_create") );
