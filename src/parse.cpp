@@ -1269,7 +1269,7 @@ parse_context parse_cmd_varassigns(cmd_t* in, parse_context ctx, bool cmdassign=
           parse_error("Unallowed special assign", ctx);
         }
         ctx.i++;
-        auto pp=parse_arg(ctx, ")", ARG_OPTIMIZE_DEFARR);
+        auto pp=parse_arg(ctx, ")", "", false, ARG_OPTIMIZE_DEFARR);
         ta=pp.first;
         ta->insert(0,"(");
         ta->add(")");
