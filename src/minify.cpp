@@ -166,6 +166,9 @@ void do_minify_quotes(arg_t* in)
           i=0;
         }
         std::string& val = dynamic_cast<subarg_string_t*>(*t)->val;
+        // don't attempt if <= 2 chars
+        if(in->sa.size() == 1 && val.size() <= 2)
+          return;
         while(i<val.size() && !( val[i] == '\'' || val[i] == '"') )
         {
           if(val[i] == '\\')
