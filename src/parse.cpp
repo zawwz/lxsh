@@ -103,11 +103,9 @@ parse_context make_context(std::string const& in, std::string const& filename, b
 
 parse_context make_context(parse_context ctx, std::string const& in, std::string const& filename, bool bash)
 {
-  if(in != "")
-  {
-    ctx.data = in.c_str();
-    ctx.size = in.size();
-  }
+  ctx.data = in.c_str();
+  ctx.size = in.size();
+
   if(filename != "")
     ctx.filename = filename.c_str();
   if(bash)
