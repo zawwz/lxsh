@@ -74,3 +74,5 @@ echo '$'
 cat << EOF
 "toto"
 EOF
+
+printf "%s\n" "" ""'' "toto"
