@@ -260,10 +260,10 @@ int exec_process(std::string const& runtime, std::vector<std::string> const& arg
   }
   catch(std::runtime_error& e)
   {
-    fclose(ffd);
-    unlink(fifopath.c_str());
     if(pid != 0)
       kill(pid, SIGINT);
+    fclose(ffd);
+    unlink(fifopath.c_str());
     throw e;
   }
 

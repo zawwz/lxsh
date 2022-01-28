@@ -139,6 +139,8 @@ int main(int argc, char* argv[])
       ctx = make_context(filecontents, file, parse_bash);
       if(is_exec)
       {
+        delete sh;
+        sh = nullptr;
         args.erase(args.begin());
         return exec_process(shebang.substr(2), args, ctx);
       }
