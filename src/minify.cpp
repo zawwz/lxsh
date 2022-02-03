@@ -293,7 +293,7 @@ void do_minify_dollar(subarg_string_t* in)
     // has \$
     if(i+1<val.size() && val[i] == '\\' && val[i+1] == '$') {
       // char after $ is a varname
-      if(i+2<val.size() && (is_varname(val[i+2]) || is_in(val[i+2], SPECIAL_VARS)) )
+      if(i+2<val.size() && (is_varname(val[i+2]) || is_in(val[i+2], SPECIAL_VARS) || val[i+2] == '{') )
         continue;
       val.erase(i, 1);
     }

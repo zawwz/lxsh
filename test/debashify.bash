@@ -41,3 +41,6 @@ echo "${TOTO:$N:2}"
 
 echo ${TOTO:-tutu}
 echo ${TITI:-bar}
+
+TATA=TOTO
+echo ${!TATA}
