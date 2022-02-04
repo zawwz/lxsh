@@ -44,3 +44,7 @@ echo ${TITI:-bar}
 
 TATA=TOTO
 echo ${!TATA}
+
+for I in A B C ; do
+  echo "$I"
+done > >(grep A)

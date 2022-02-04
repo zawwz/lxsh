@@ -782,6 +782,14 @@ bool debashify_procsub(list_t* lst, debashify_params* params)
             }
           }
         }
+        for(auto reit: cmit->redirs) {
+          arg_t* ait=reit->target;
+          if(ait != nullptr && ait->size() == 1 && ait->sa[0]->type == _obj::subarg_procsub)
+          {
+            subarg_procsub_t* st = dynamic_cast<subarg_procsub_t*>(ait->sa[0]);
+            affected_args.push_back( std::make_pair(ait, st->is_output) );
+          }
+        }
       }
     }
     // perform the replace
