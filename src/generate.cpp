@@ -132,9 +132,10 @@ std::string redirect_t::generate(int ind)
   std::string ret=op;
   if(target!=nullptr)
   {
-    if(!opt_minify)
+    std::string targetret=target->generate(0);
+    if(!(opt_minify && !is_in(targetret[0], "<>")))
       ret += ' ';
-    ret += target->generate(0);
+    ret += targetret;
   }
   return ret;
 }

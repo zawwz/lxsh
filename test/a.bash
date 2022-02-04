@@ -41,3 +41,7 @@ echo ${!BAR}
 
 a=a
 [[ $a = a && foo = fo* && bar =~ b.r || 2 < 3 ]]
+
+for I in A B C ; do
+  echo "$I"
+done > >(cat)

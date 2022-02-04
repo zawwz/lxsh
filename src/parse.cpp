@@ -664,6 +664,18 @@ parse_context parse_heredocument(parse_context ctx)
   return ctx;
 }
 
+std::pair<arg_t*, parse_context> parse_bash_procsub(parse_context ctx)
+{
+  if(!ctx.bash)
+  {
+    parse_error(strf("bash specific: %c()", ctx[ctx.i]), ctx);
+  }
+  bool is_output = ctx[ctx.i] == '>';
+  ctx.i+=2;
+  auto ps = parse_subshell(ctx);
+  return std::make_pair(new arg_t(new subarg_procsub_t(is_output, ps.first)), ps.second);
+}
+
 std::pair<redirect_t*, parse_context> parse_redirect(parse_context ctx)
 {
   bool is_redirect=false;
@@ -789,8 +801,12 @@ std::pair<redirect_t*, parse_context> parse_redirect(parse_context ctx)
       }
       else
       {
-        auto pa = parse_arg(ctx);
-        ret->target = pa.first;
+        std::pair<arg_t*, parse_context> pa;
+        if(ctx.i+1 < ctx.size && (ctx[ctx.i] == '<' || ctx[ctx.i] == '>') && ctx[ctx.i+1] == '(' ) // bash specific <()
+          pa = parse_bash_procsub(ctx);
+        else
+          pa = parse_arg(ctx);
+        ret->target=pa.first;
         ctx=pa.second;
       }
     }
@@ -860,17 +876,11 @@ std::pair<arglist_t*, parse_context> parse_arglist(parse_context ctx, bool hard_
     {
       if(ctx.i+1 < ctx.size && (ctx[ctx.i] == '<' || ctx[ctx.i] == '>') && ctx[ctx.i+1] == '(' ) // bash specific <()
       {
-        if(!ctx.bash)
-        {
-          parse_error(strf("bash specific: %c()", ctx[ctx.i]), ctx);
-        }
-        bool is_output = ctx[ctx.i] == '>';
-        ctx.i+=2;
+        auto pa=parse_bash_procsub(ctx);
         if(ret == nullptr)
           ret = new arglist_t;
-        auto ps = parse_subshell(ctx);
-        ret->add(new arg_t(new subarg_procsub_t(is_output, ps.first)));
-        ctx=ps.second;
+        ret->add(pa.first);
+        ctx=pa.second;
       }
       else if(redirs!=nullptr)
       {
