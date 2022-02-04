@@ -94,7 +94,14 @@ int main(int argc, char* argv[])
       {
         first_run=false;
         // resolve shebang
-        if(options["bash"])
+        if(options["lxsh"])
+        {
+          shebang_is_bin = true;
+          parse_bash = true;
+          binshebang = basename(shebang);
+          shebang = "#!/usr/bin/env lxsh";
+        }
+        else if(options["bash"])
         {
           parse_bash=true;
           shebang = "#!/usr/bin/env bash";
