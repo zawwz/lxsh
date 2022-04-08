@@ -109,7 +109,7 @@ std::pair<arg_t*, parse_context> parse_arg(parse_context ct, const char* end=ARG
 // redirect parser
 std::pair<redirect_t*, parse_context> parse_redirect(parse_context ct);
 // arglist parser
-std::pair<arglist_t*, parse_context> parse_arglist(parse_context ct, bool hard_error=false, std::vector<redirect_t*>* redirs=nullptr);
+std::pair<arglist_t*, parse_context> parse_arglist(parse_context ct, bool hard_error=false, std::vector<redirect_t*>* redirs=nullptr, bool stop_on_brace=false);
 // block parsers
 std::pair<block_t*, parse_context> parse_block(parse_context ct);
 std::pair<cmd_t*, parse_context> parse_cmd(parse_context ct);

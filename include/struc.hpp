@@ -233,6 +233,8 @@ public:
 
   std::vector<std::string> strargs(uint32_t start);
 
+  // get first argument as string
+  std::string first_arg_string();
   // potentially expands into more arguments than its size
   bool can_expand();
 

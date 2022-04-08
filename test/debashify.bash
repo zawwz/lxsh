@@ -47,4 +47,4 @@ echo ${!TATA}
 
 for I in A B C ; do
   echo "$I"
-done > >(grep A)
+done 2>&1 > >(grep A)

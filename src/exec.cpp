@@ -236,17 +236,18 @@ int exec_process(std::string const& runtime, std::vector<std::string> const& arg
   if(mkfifo(fifopath.c_str(), 0700)<0)
     throw std::runtime_error("Cannot create fifo "+fifopath);
 
-  for(uint32_t i=0; i<strargs.size(); i++)
-    runargs.push_back((char*) strargs[i].c_str());
-  runargs.push_back((char*) fifopath.c_str());
-  for(uint32_t i=0; i<args.size(); i++)
-    runargs.push_back((char*) args[i].c_str());
-  runargs.push_back(NULL);
-
   pid_t pid=0;
   FILE* ffd=0;
   try
   {
+
+    for(uint32_t i=0; i<strargs.size(); i++)
+      runargs.push_back((char*) strargs[i].c_str());
+    runargs.push_back((char*) fifopath.c_str());
+    for(uint32_t i=0; i<args.size(); i++)
+      runargs.push_back((char*) args[i].c_str());
+    runargs.push_back(NULL);
+
     pid = forkexec(runargs[0], runargs.data());
     ffd = fopen(fifopath.c_str(), "w");
     if(options["debashify"])

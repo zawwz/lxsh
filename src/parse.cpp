@@ -823,7 +823,7 @@ std::pair<redirect_t*, parse_context> parse_redirect(parse_context ctx)
 // must start at a read char
 // first char has to be read
 // ends at either &|;\n#()
-std::pair<arglist_t*, parse_context> parse_arglist(parse_context ctx, bool hard_error, std::vector<redirect_t*>* redirs)
+std::pair<arglist_t*, parse_context> parse_arglist(parse_context ctx, bool hard_error, std::vector<redirect_t*>* redirs, bool stop_on_brace)
 {
   arglist_t* ret = nullptr;
 
@@ -895,10 +895,12 @@ std::pair<arglist_t*, parse_context> parse_arglist(parse_context ctx, bool hard_
       }
       else
       {
-      argparse:
+      argparse: ;
+        auto pp=parse_arg(ctx);
+        if(stop_on_brace && pp.first!=nullptr && pp.first->string() == "}")
+          return std::make_pair(ret, ctx);
         if(ret == nullptr)
           ret = new arglist_t;
-        auto pp=parse_arg(ctx);
         ret->add(pp.first);
         ctx = pp.second;
       }
@@ -941,7 +943,7 @@ std::pair<pipeline_t*, parse_context> parse_pipeline(parse_context ctx)
     ret->add(pp.first);
     ctx = pp.second;
     ctx.i = skip_chars(ctx, SPACES);
-    if( ctx.i>=ctx.size || is_in(ctx[ctx.i], PIPELINE_END) || word_eq("||", ctx) )
+    if( ctx.i>=ctx.size || is_in(ctx[ctx.i], PIPELINE_END) || word_eq("||", ctx) || ctx[ctx.i] == '}' )
       return std::make_pair(ret, ctx);
     else if( ctx[ctx.i] != '|' )
     {
@@ -976,7 +978,7 @@ std::pair<condlist_t*, parse_context> parse_condlist(parse_context ctx)
     auto pp=parse_pipeline(ctx);
     ret->add(pp.first, optype);
     ctx = pp.second;
-    if(ctx.i>=ctx.size || is_in(ctx[ctx.i], CONTROL_END) || is_in(ctx[ctx.i], COMMAND_SEPARATOR)) // end here exactly: used for control later
+    if(ctx.i>=ctx.size || is_in(ctx[ctx.i], CONTROL_END) || is_in(ctx[ctx.i], COMMAND_SEPARATOR)  || ctx[ctx.i] == '}') // end here exactly: used for control later
     {
       return std::make_pair(ret, ctx);
     }
@@ -1738,7 +1740,7 @@ std::pair<block_t*, parse_context> parse_block(parse_context ctx)
   {
     uint32_t j=skip_chars(ctx, SPACES);
     ctx.i=j;
-    auto pp=parse_arglist(ctx, false, &ret->redirs); // in case of redirects
+    auto pp=parse_arglist(ctx, false, &ret->redirs, true); // in case of redirects
     if(pp.first != nullptr)
     {
       delete pp.first;

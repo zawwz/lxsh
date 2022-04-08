@@ -227,8 +227,15 @@ std::string arg_t::string()
 std::string arg_t::first_sa_string()
 {
   if(sa.size() <=0 || sa[0]->type != _obj::subarg_string)
-  return "";
+    return "";
   return dynamic_cast<subarg_string_t*>(sa[0])->val;
+}
+
+std::string arglist_t::first_arg_string()
+{
+  if(args.size()<=0 || args[0] == nullptr)
+    return "";
+  return args[0]->string();
 }
 
 bool arg_t::can_expand()
