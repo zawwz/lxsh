@@ -21,7 +21,6 @@ ztd::option_set options( {
   ztd::option('e', "exec",          false, "Directly execute script"),
   ztd::option("no-shebang",         false, "Don't output shebang"),
   ztd::option('P', "map",           true , "Output var and fct minify map to given file", "file"),
-  ztd::option('A', "apply-map",     true , "Apply map from given file", "file"),
 #ifdef DEBUG_MODE
   ztd::option("\r  [Debugging]"),
   ztd::option('J', "json",          false, "Output the json structure"),
@@ -29,6 +28,7 @@ ztd::option_set options( {
   ztd::option("\r  [Processing]"),
   ztd::option('m', "minify",        false, "Minify code without changing functionality"),
   ztd::option('M', "minify-full",   false, "Enable all minifying features: -m --minify-var --minify-fct --remove-unused"),
+  ztd::option('A', "apply-map",     true , "Apply var/fct minify map from given file", "file"),
   ztd::option('C', "no-cd",         false, "Don't cd when doing %include and %resolve"),
   ztd::option('I', "no-include",    false, "Don't resolve %include commands"),
   ztd::option('R', "no-resolve",    false, "Don't resolve %resolve commands"),
