@@ -287,12 +287,13 @@ public:
 class pipeline_t : public _obj
 {
 public:
-  pipeline_t(block_t* bl=nullptr) { type=_obj::pipeline; if(bl!=nullptr) cmds.push_back(bl); negated=false; }
+  pipeline_t(block_t* bl=nullptr) { type=_obj::pipeline; if(bl!=nullptr) cmds.push_back(bl); negated=false; bash_time=false; }
   ~pipeline_t() { for(auto it: cmds) delete it; }
   inline void add(block_t* bl) { this->cmds.push_back(bl); }
   std::vector<block_t*> cmds;
 
   bool negated; // negated return value (! at start)
+  bool bash_time; // has bash time command
 
   std::string generate(int ind, generate_context* ctx);
   std::string generate(int ind) { return this->generate(ind, nullptr); };

@@ -56,6 +56,10 @@ std::string pipeline_t::generate(int ind, generate_context* ctx)
 
   if(negated)
     ret += "! ";
+
+  if(bash_time)
+    ret += "time ";
+
   ret += cmds[0]->generate(ind, ctx);
   for(uint32_t i=1 ; i<cmds.size() ; i++)
   {

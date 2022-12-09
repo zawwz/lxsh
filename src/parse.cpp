@@ -931,12 +931,22 @@ std::pair<pipeline_t*, parse_context> parse_pipeline(parse_context ctx)
 {
   pipeline_t* ret = new pipeline_t;
 
-  if(ctx[ctx.i] == '!' && ctx.i+1<ctx.size && is_in(ctx[ctx.i+1], SPACES))
-  {
-    ret->negated = true;
-    ctx.i++;
-    ctx.i=skip_chars(ctx, SPACES);
+  while(true) {
+    auto wp = get_word(ctx, ARG_END);
+    if(ctx[ctx.i] == '!' && ctx.i+1<ctx.size && is_in(ctx[ctx.i+1], SPACES))
+    {
+      ret->negated = ret->negated ? false : true;
+      ctx.i++;
+      ctx.i=skip_chars(ctx, SPACES);
+    } else if(ctx.bash && wp.first == "time" ) {
+      ret->bash_time = true;
+      ctx.i+=4;
+      ctx.i=skip_chars(ctx, SPACES);
+    } else {
+      break;
+    }
   }
+
   while(ctx.i<ctx.size)
   {
     auto pp=parse_block(ctx);
