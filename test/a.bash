@@ -45,3 +45,5 @@ a=a
 for I in A B C ; do
   echo "$I"
 done > >(cat)
+
+{ time { true ; } ; } 2>&1

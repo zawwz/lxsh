@@ -38,6 +38,7 @@ ztd::option_set options( {
   ztd::option("debashify",          false, "Attempt to turn a bash-specific script into a POSIX shell script"),
   ztd::option("remove-unused",      false, "Remove unused functions and variables"),
   ztd::option("list-cmd",           false, "List all commands invoked in the script"),
+  ztd::option('p', "profiling",     false, "Insert profiling function"),
   ztd::option("\r  [Variable processing]"),
   ztd::option("exclude-var",        true,  "List of matching regex to ignore for variable processing, separated by spaces", "list"),
   ztd::option("no-exclude-reserved",false, "Don't exclude reserved variables"),

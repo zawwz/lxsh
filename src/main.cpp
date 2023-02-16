@@ -19,6 +19,7 @@
 #include "debashify.hpp"
 #include "exec.hpp"
 #include "shellcode.hpp"
+#include "profiling.hpp"
 
 #include "errcodes.h"
 
@@ -101,7 +102,7 @@ int main(int argc, char* argv[])
           binshebang = basename(shebang);
           shebang = "#!/usr/bin/env lxsh";
         }
-        else if(options["bash"])
+        else if(options["bash"] || options['p'])
         {
           parse_bash=true;
           shebang = "#!/usr/bin/env bash";
@@ -199,8 +200,13 @@ int main(int argc, char* argv[])
       if(options["debashify"])
         concat_sets(req_fcts, debashify(sh) );
 
-      add_lxsh_fcts(sh, req_fcts);
+      if(options['p']) {
+        req_fcts.insert("_lxsh_profile");
+        insert_profiling(sh);
+        sh->shebang = "#!/usr/bin/env bash";
+      }
 
+      add_lxsh_fcts(sh, req_fcts);
       // processing before output
       // minify
       strmap_t varmap, fctmap;

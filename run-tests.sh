@@ -1,5 +1,7 @@
 #!/bin/bash
 
+DEBUG=
+
 bin=${1-./lxsh}
 
 echo_red()
